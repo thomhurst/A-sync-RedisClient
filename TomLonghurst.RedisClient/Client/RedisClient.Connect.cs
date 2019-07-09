@@ -20,8 +20,7 @@ namespace TomLonghurst.RedisClient.Client
         public long ReconnectAttempts => Interlocked.Read(ref _reconnectAttempts);
 
         private readonly SemaphoreSlim _connectSemaphoreSlim = new SemaphoreSlim(1, 1);
-        private readonly SemaphoreSlim _connectSemaphoreSlim2 = new SemaphoreSlim(1, 1);
-        
+
         private readonly RedisClientConfig _redisClientConfig;
         
         private readonly Timer _connectionChecker;
