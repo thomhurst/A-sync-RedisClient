@@ -52,8 +52,10 @@ namespace RedisClientTest
             Assert.That(getValue.Count(), Is.EqualTo(3));
             
             var getValueSingle = await _client.StringGetAsync("TestyMcTestFace");
-            Assert.That(getValueSingle, Is.EqualTo(123));
+            Assert.That(getValueSingle.Value, Is.EqualTo("123"));
 
+            
+            await _client.StringSetAsync("KeyExists", "123", AwaitOptions.AwaitCompletion);
             var keyExistsFalse = await _client.KeyExistsAsync("KeyDoesntExist");
             Assert.That(keyExistsFalse, Is.EqualTo(false));
             var keyExistsTrue = await _client.KeyExistsAsync("KeyExists");
@@ -139,7 +141,7 @@ namespace RedisClientTest
             Assert.That(doesntExist, Is.EqualTo(false));
         }
 
-        [Test]
+        [Test, Ignore("No Cluster Support on Redis Server")]
         public async Task ClusterInfo()
         {
             var response = await _client.ClusterInfo();
