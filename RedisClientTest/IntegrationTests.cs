@@ -47,6 +47,7 @@ namespace RedisClientTest
             
             sw.Stop();
             var timeTaken = sw.ElapsedMilliseconds;
+            Console.WriteLine($"Time Taken: {timeTaken} ms");
         }
 
         [Test]
