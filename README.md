@@ -33,7 +33,6 @@ var client = await redisManager.GetRedisClientAsync();
 Each Redis Client can only perform one operation at a time. Because it's usually very fast, one is enough for most applications.
 However if your application takes heavy traffic, and you are seeing `RedisTimeoutException`s then consider upping the pool size. 
 
-
 ### Commands
 
 #### Ping
