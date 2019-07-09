@@ -47,7 +47,7 @@ namespace TomLonghurst.RedisClient.Client
 
         private Task<T> SendAndReceiveAsync<T>(string command,
             Func<T> responseReader,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken)
         {
             Log.Debug($"Executing Command: {command}");
 
@@ -56,15 +56,15 @@ namespace TomLonghurst.RedisClient.Client
 
         private async Task<T> SendAndReceiveAsync<T>(byte[] bytes,
             Func<T> responseReader,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            await TryConnectAsync(cancellationToken);
+            await TryConnectAsync(cancellationToken).ConfigureAwait(false);
 
             Interlocked.Increment(ref _outStandingOperations);
 
-            await _sendSemaphoreSlim.WaitAsync(cancellationToken);
+            await _sendSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
 
             Interlocked.Increment(ref _operationsPerformed);
             
@@ -101,7 +101,7 @@ namespace TomLonghurst.RedisClient.Client
 
         private async Task<string> ExpectData()
         {
-            return (await ReadData()).FromUtf8();
+            return (await ReadData().ConfigureAwait(false)).FromUtf8();
         }
         
         private string ExpectWord()
@@ -219,9 +219,15 @@ namespace TomLonghurst.RedisClient.Client
 		
             while ((c = _bufferedStream.ReadByte ()) != -1){
                 if (c == '\r')
+                {
                     continue;
+                }
+
                 if (c == '\n')
+                {
                     break;
+                }
+
                 stringBuilder.Append ((char) c);
             }
             return stringBuilder.ToString ();

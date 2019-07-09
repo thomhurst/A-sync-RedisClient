@@ -3,12 +3,12 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>latest</LangVersion>
-    <PackageVersion>0.0.22</PackageVersion>
+    <PackageVersion>0.0.24</PackageVersion>
     <Description>An Asynchronous Redis Client for .NET</Description>
     <Copyright>Tom Longhurst</Copyright>
-    <PackageProjectUrl>https://github.com/thomhurst/AsyncRedisClient</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/thomhurst/AsyncRedisClient</PackageLicenseUrl>
-    <RepositoryUrl>https://github.com/thomhurst/AsyncRedisClient</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/thomhurst/A-sync-RedisClient</PackageProjectUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/thomhurst/A-sync-RedisClient</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

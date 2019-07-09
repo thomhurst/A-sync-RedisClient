@@ -54,8 +54,13 @@ namespace TomLonghurst.RedisClient.Client
 #pragma warning restore 4014
             }
         }
-        
-        internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken = default)
+
+        internal static Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig)
+        {
+            return ConnectAsync(redisClientConfig, CancellationToken.None);
+        }
+
+        internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
         {
             var redisClient = new RedisClient(redisClientConfig);
             await redisClient.TryConnectAsync(cancellationToken);
@@ -69,7 +74,7 @@ namespace TomLonghurst.RedisClient.Client
                 return;
             }
 
-            await _connectSemaphoreSlim.WaitAsync();
+            await _connectSemaphoreSlim.WaitAsync().ConfigureAwait(false);
 
             try
             {
