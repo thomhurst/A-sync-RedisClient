@@ -92,65 +92,6 @@ namespace TomLonghurst.RedisClient.Constants
         internal const string Match = "MATCH";
         internal const string Count = "COUNT";
 
-        internal const string PfAdd = "PFADD";
-        internal const string PfCount = "PFCOUNT";
-        internal const string PfMerge = "PFMERGE";
-
-        internal const string RPush = "RPUSH";
-        internal const string LPush = "LPUSH";
-        internal const string RPushX = "RPUSHX";
-        internal const string LPushX = "LPUSHX";
-        internal const string LLen = "LLEN";
-        internal const string LRange = "LRANGE";
-        internal const string LTrim = "LTRIM";
-        internal const string LIndex = "LINDEX";
-        internal const string LInsert = "LINSERT";
-        internal const string Before = "BEFORE";
-        internal const string After = "AFTER";
-        internal const string LSet = "LSET";
-        internal const string LRem = "LREM";
-        internal const string LPop = "LPOP";
-        internal const string RPop = "RPOP";
-        internal const string BLPop = "BLPOP";
-        internal const string BRPop = "BRPOP";
-        internal const string RPopLPush = "RPOPLPUSH";
-        internal const string BRPopLPush = "BRPOPLPUSH";
-
-        internal const string SAdd = "SADD";
-        internal const string SRem = "SREM";
-        internal const string SPop = "SPOP";
-        internal const string SMove = "SMOVE";
-        internal const string SCard = "SCARD";
-        internal const string SIsMember = "SISMEMBER";
-        internal const string SInter = "SINTER";
-        internal const string SInterStore = "SINTERSTORE";
-        internal const string SUnion = "SUNION";
-        internal const string SUnionStore = "SUNIONSTORE";
-        internal const string SDiff = "SDIFF";
-        internal const string SDiffStore = "SDIFFSTORE";
-        internal const string SMembers = "SMEMBERS";
-        internal const string SRandMember = "SRANDMEMBER";
-
-        internal const string ZAdd = "ZADD";
-        internal const string ZRem = "ZREM";
-        internal const string ZIncrBy = "ZINCRBY";
-        internal const string ZRank = "ZRANK";
-        internal const string ZRevRank = "ZREVRANK";
-        internal const string ZRange = "ZRANGE";
-        internal const string ZRevRange = "ZREVRANGE";
-        internal const string ZRangeByScore = "ZRANGEBYSCORE";
-        internal const string ZRevRangeByScore = "ZREVRANGEBYSCORE";
-        internal const string ZCard = "ZCARD";
-        internal const string ZScore = "ZSCORE";
-        internal const string ZCount = "ZCOUNT";
-        internal const string ZRemRangeByRank = "ZREMRANGEBYRANK";
-        internal const string ZRemRangeByScore = "ZREMRANGEBYSCORE";
-        internal const string ZUnionStore = "ZUNIONSTORE";
-        internal const string ZInterStore = "ZINTERSTORE";
-        internal const string ZRangeByLex = "ZRANGEBYLEX";
-        internal const string ZLexCount = "ZLEXCOUNT";
-        internal const string ZRemRangeByLex = "ZREMRANGEBYLEX";
-
         internal const string HSet = "HSET";
         internal const string HSetNx = "HSETNX";
         internal const string HGet = "HGET";
@@ -178,47 +119,5 @@ namespace TomLonghurst.RedisClient.Constants
         internal const string PSubscribe = "PSUBSCRIBE";
         internal const string PUnSubscribe = "PUNSUBSCRIBE";
         internal const string Publish = "PUBLISH";
-
-
-        internal const string WithScores = "WITHSCORES";
-        internal const string Limit = "LIMIT";
-        internal const string By = "BY";
-        internal const string Asc = "ASC";
-        internal const string Desc = "DESC";
-        internal const string Alpha = "ALPHA";
-        internal const string Store = "STORE";
-
-        internal const string Eval = "EVAL";
-        internal const string EvalSha = "EVALSHA";
-        internal const string Script = "SCRIPT";
-        internal const string Load = "LOAD";
-        internal const string Flush = "FLUSH";
-        internal const string Slowlog = "SLOWLOG";
-
-        internal const string Ex = "EX";
-        internal const string Px = "PX";
-        internal const string Nx = "NX";
-        internal const string Xx = "XX";
-
-        // Sentinel commands
-        internal const string Sentinel = "SENTINEL";
-        internal const string Masters = "masters";
-        internal const string Sentinels = "sentinels";
-        internal const string Master = "master";
-        internal const string Slaves = "slaves";
-        internal const string Failover = "failover";
-        internal const string GetMasterAddrByName = "get-master-addr-by-name";
-
-        //Geo commands
-        internal const string GeoAdd = "GEOADD";
-        internal const string GeoDist = "GEODIST";
-        internal const string GeoHash = "GEOHASH";
-        internal const string GeoPos = "GEOPOS";
-        internal const string GeoRadius = "GEORADIUS";
-        internal const string GeoRadiusByMember = "GEORADIUSBYMEMBER";
-
-        internal const string WithCoord = "WITHCOORD";
-        internal const string WithDist = "WITHDIST";
-        internal const string WithHash = "WITHHASH";
     }
 }
