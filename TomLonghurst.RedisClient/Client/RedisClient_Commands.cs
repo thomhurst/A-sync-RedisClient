@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -10,7 +11,7 @@ using TomLonghurst.RedisClient.Models;
 
 namespace TomLonghurst.RedisClient.Client
 {
-    public partial class RedisClient
+    public partial class RedisClient : IDisposable
     {
         private async Task Authorize()
         {

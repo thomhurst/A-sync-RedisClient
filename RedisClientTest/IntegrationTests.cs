@@ -38,19 +38,26 @@ namespace RedisClientTest
         {
             var sw = Stopwatch.StartNew();
             
-            var ping = await _client.Ping();
+            var pong = await _client.Ping();
+            Assert.AreEqual(true, pong.IsSuccessful);
             
             var getDoesntExist = await _client.StringGetAsync(new [] { "Blah1", "Blah2" });
+            Assert.That(getDoesntExist.Count(), Is.EqualTo(0));
             
             await _client.StringSetAsync("TestyMcTestFace", "123", 120, AwaitOptions.FireAndForget);
             await _client.StringSetAsync("TestyMcTestFace2", "1234", 120, AwaitOptions.FireAndForget);
             await _client.StringSetAsync("TestyMcTestFace3", "1235", 120, AwaitOptions.FireAndForget);
             
             var getValue = await _client.StringGetAsync(new [] { "TestyMcTestFace", "TestyMcTestFace2", "TestyMcTestFace3" });
+            Assert.That(getValue.Count(), Is.EqualTo(3));
+            
             var getValueSingle = await _client.StringGetAsync("TestyMcTestFace");
+            Assert.That(getValueSingle, Is.EqualTo(123));
 
-            var keyExistsFalse = await _client.KeyExistsAsync("KeyExistsAsync");
-            var keyExistsTrue = await _client.KeyExistsAsync("TestyMcTestFace");
+            var keyExistsFalse = await _client.KeyExistsAsync("KeyDoesntExist");
+            Assert.That(keyExistsFalse, Is.EqualTo(false));
+            var keyExistsTrue = await _client.KeyExistsAsync("KeyExists");
+            Assert.That(keyExistsTrue, Is.EqualTo(true));
             
             var timeTaken = sw.ElapsedMilliseconds;
             Console.WriteLine($"Time Taken: {timeTaken} ms");
@@ -109,7 +116,7 @@ namespace RedisClientTest
         [Test]
         public async Task SetGetMultipleKey()
         {
-            var keyValues = new List<KeyValuePair<string, string>>()
+            var keyValues = new List<KeyValuePair<string, string>>
             {
                 new KeyValuePair<string, string>("MultiKey1", "1"),
                 new KeyValuePair<string, string>("MultiKey2", "2"),

@@ -145,7 +145,7 @@ namespace TomLonghurst.RedisClient.Client
             var results = new byte [count][];
             for (var i = 0; i < count; i++)
             {
-                results[i] = await ReadData();
+                results[i] = await ReadData().ConfigureAwait(false);
             }
 
             return results.FromUtf8();

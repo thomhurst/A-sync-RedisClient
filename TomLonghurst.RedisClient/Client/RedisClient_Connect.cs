@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace TomLonghurst.RedisClient.Client
 {
-    public partial class RedisClient
+    public partial class RedisClient : IDisposable
     {
         private static long _idCounter;
         public long ClientId { get; } = Interlocked.Increment(ref _idCounter);
