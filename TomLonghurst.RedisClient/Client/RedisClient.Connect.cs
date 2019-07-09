@@ -18,10 +18,9 @@ namespace TomLonghurst.RedisClient.Client
         private long _reconnectAttempts;
 
         public long ReconnectAttempts => Interlocked.Read(ref _reconnectAttempts);
-        
-        public string Client { get; set; }
 
         private readonly SemaphoreSlim _connectSemaphoreSlim = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _connectSemaphoreSlim2 = new SemaphoreSlim(1, 1);
         
         private readonly RedisClientConfig _redisClientConfig;
         
@@ -151,7 +150,7 @@ namespace TomLonghurst.RedisClient.Client
                     await SelectDb();
                 }
 
-                if (Client != null)
+                if (_redisClientConfig.ClientName != null)
                 {
                     await SetClientName();
                 }

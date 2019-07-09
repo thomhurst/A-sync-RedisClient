@@ -119,5 +119,7 @@ namespace TomLonghurst.RedisClient.Constants
         internal const string PSubscribe = "PSUBSCRIBE";
         internal const string PUnSubscribe = "PUNSUBSCRIBE";
         internal const string Publish = "PUBLISH";
+
+        internal const string ClusterInfo = "CLUSTER INFO";
     }
 }

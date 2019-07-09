@@ -216,8 +216,9 @@ namespace TomLonghurst.RedisClient.Client
         {
             var stringBuilder = new StringBuilder ();
             int c;
-		
-            while ((c = _bufferedStream.ReadByte ()) != -1){
+
+            while ((c = _bufferedStream.ReadByte()) != -1)
+            {
                 if (c == '\r')
                 {
                     continue;
@@ -228,8 +229,9 @@ namespace TomLonghurst.RedisClient.Client
                     break;
                 }
 
-                stringBuilder.Append ((char) c);
+                stringBuilder.Append((char) c);
             }
+
             return stringBuilder.ToString ();
         }
 

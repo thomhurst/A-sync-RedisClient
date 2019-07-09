@@ -23,7 +23,8 @@ namespace TomLonghurst.RedisClient.Client
         public int SendTimeout { get; set; } = 5000;
         public int ReceiveTimeout { get; set; } = 5000;
         public int Timeout { get; set; } = 5000;
-        public string Password { get; set; }
+        public string Password { get; private set; }
+        public string ClientName { get; set; }
         public RemoteCertificateValidationCallback CertificateValidationCallback { get; set; }
         public LocalCertificateSelectionCallback CertificateSelectionCallback { get; set; }
     }

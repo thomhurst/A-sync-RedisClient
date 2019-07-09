@@ -139,6 +139,14 @@ namespace RedisClientTest
             Assert.That(doesntExist, Is.EqualTo(false));
         }
 
+        [Test]
+        public async Task ClusterInfo()
+        {
+            var response = await _client.ClusterInfo();
+            var firstLine = response.Split("\n").First();
+            Assert.That(firstLine, Is.EqualTo("cluster_state:ok"));
+        }
+
         // Needs Access to Socket (which is private) to Close it
 //        [Test]
 //        public async Task Disconnected()

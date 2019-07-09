@@ -191,8 +191,22 @@ namespace TomLonghurst.RedisClient.Client
         {
             await RunWithTimeout(async delegate
             {
-                var command = $"{Commands.Client} {Commands.SetName} {Client}".ToRedisProtocol();
+                var command = $"{Commands.Client} {Commands.SetName} {_redisClientConfig.ClientName}".ToRedisProtocol();
                 await SendAndReceiveAsync(command, ExpectSuccess, cancellationToken);
+            }, cancellationToken);
+        }
+
+        public async Task<string> ClusterInfo()
+        {
+            return await ClusterInfo(CancellationToken.None);
+        }
+        
+        public async Task<string> ClusterInfo(CancellationToken cancellationToken)
+        {
+            return await await await RunWithTimeout(async delegate
+            {
+                var command = Commands.ClusterInfo.ToRedisProtocol();
+                return await SendAndReceiveAsync(command, ExpectData, cancellationToken);
             }, cancellationToken);
         }
     }
