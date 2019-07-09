@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <PackageVersion>0.0.22</PackageVersion>
+    <Description>An Asynchronous Redis Client for .NET</Description>
+    <Copyright>Tom Longhurst</Copyright>
+    <PackageProjectUrl>https://github.com/thomhurst/AsyncRedisClient</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/thomhurst/AsyncRedisClient</PackageLicenseUrl>
+    <RepositoryUrl>https://github.com/thomhurst/AsyncRedisClient</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
+  </ItemGroup>
+
+</Project>
