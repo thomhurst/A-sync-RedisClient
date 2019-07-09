@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,6 +46,7 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Task<T> SendAndReceiveAsync<T>(string command,
             Func<T> responseReader,
             CancellationToken cancellationToken)
@@ -54,6 +56,7 @@ namespace TomLonghurst.RedisClient.Client
             return SendAndReceiveAsync(command.ToUtf8Bytes(), responseReader, cancellationToken);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<T> SendAndReceiveAsync<T>(byte[] bytes,
             Func<T> responseReader,
             CancellationToken cancellationToken)
@@ -88,6 +91,7 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Task ExpectSuccess()
         {
             var response = ReadLine();
@@ -99,11 +103,13 @@ namespace TomLonghurst.RedisClient.Client
             return Task.CompletedTask;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<string> ExpectData()
         {
             return (await ReadData().ConfigureAwait(false)).FromUtf8();
         }
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string ExpectWord()
         {
             var word = ReadLine();
@@ -116,6 +122,7 @@ namespace TomLonghurst.RedisClient.Client
             return word.Substring(1);
         }
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int ExpectNumber()
         {
             var line = ReadLine();
@@ -128,6 +135,7 @@ namespace TomLonghurst.RedisClient.Client
             return number;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<IEnumerable<string>> ExpectArray()
         {
             var arrayWithCountLine = ReadLine();
@@ -151,6 +159,7 @@ namespace TomLonghurst.RedisClient.Client
             return results.FromUtf8();
         }
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<byte[]> ReadData()
         {
             var line = ReadLine();
@@ -212,6 +221,7 @@ namespace TomLonghurst.RedisClient.Client
             throw new UnexpectedRedisResponseException ($"Unexpected reply: {line}");
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string ReadLine()
         {
             var stringBuilder = new StringBuilder ();
@@ -252,6 +262,7 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<T> RunWithTimeout<T>(Func<T> action, CancellationToken originalCancellationToken)
         {
             originalCancellationToken.ThrowIfCancellationRequested();
