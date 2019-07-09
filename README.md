@@ -1,5 +1,7 @@
 # A[sync]RedisClient
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/b692f8fbb14142d3ad8f9ccb65d0889c)](https://app.codacy.com/app/thomhurst/A-sync-RedisClient?utm_source=github.com&utm_medium=referral&utm_content=thomhurst/A-sync-RedisClient&utm_campaign=Badge_Grade_Dashboard)
+
 ## Install
 
 Install via Nuget > `Install-Package TomLonghurst.RedisClient`
