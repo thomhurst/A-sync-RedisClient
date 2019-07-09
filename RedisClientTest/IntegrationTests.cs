@@ -34,6 +34,22 @@ namespace RedisClientTest
         }
 
         [Test]
+        public async Task PerformanceTest()
+        {
+            await _client.StringSetAsync("SingleKey", "123", AwaitOptions.AwaitCompletion);
+            
+            var sw = Stopwatch.StartNew();
+            
+            for (var i = 0; i < 1000; i++)
+            {
+                var redisValue = await _client.StringGetAsync("SingleKey");
+            }
+            
+            sw.Stop();
+            var timeTaken = sw.ElapsedMilliseconds;
+        }
+
+        [Test]
         public async Task Test1Async()
         {
             var sw = Stopwatch.StartNew();
