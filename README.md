@@ -59,6 +59,7 @@ var keyValues = new List<KeyValuePair<string, string>>()
                 new KeyValuePair<string, string>("key2", "2"),
                 new KeyValuePair<string, string>("key3", "3")
             };
+await _client.StringSetAsync(keyValues, AwaitOptions.AwaitCompletion);
 ```
             
 #### Get
@@ -83,7 +84,7 @@ await _client.DeleteKeyAsync(new [] { "key1", "key2" }, AwaitOptions.AwaitComple
 
 #### Key Exists
 ```csharp
-var exists = await _client.KeyExistsAsync("KeyExistsCheck");
+var exists = await _client.KeyExistsAsync("key");
 ```
 
 ### AwaitOptions
