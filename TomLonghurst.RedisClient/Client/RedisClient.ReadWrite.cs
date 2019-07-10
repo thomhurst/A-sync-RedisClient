@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Helpers;
+using TomLonghurst.RedisClient.Models;
 
 namespace TomLonghurst.RedisClient.Client
 {
@@ -136,7 +137,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<IEnumerable<string>> ExpectArray()
+        private async Task<IEnumerable<RedisValue<string>>> ExpectArray()
         {
             var arrayWithCountLine = ReadLine();
 
@@ -156,7 +157,7 @@ namespace TomLonghurst.RedisClient.Client
                 results[i] = await ReadData().ConfigureAwait(false);
             }
 
-            return results.FromUtf8();
+            return results.ToRedisValues();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

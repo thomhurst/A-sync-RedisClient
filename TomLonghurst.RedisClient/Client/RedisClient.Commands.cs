@@ -66,12 +66,12 @@ namespace TomLonghurst.RedisClient.Client
                 }, cancellationToken).ConfigureAwait(false));
         }
 
-        public async Task<IEnumerable<string>> StringGetAsync(IEnumerable<string> keys)
+        public async Task<IEnumerable<RedisValue<string>>> StringGetAsync(IEnumerable<string> keys)
         {
             return await StringGetAsync(keys, CancellationToken.None).ConfigureAwait(false);
         }
 
-        public async Task<IEnumerable<string>> StringGetAsync(IEnumerable<string> keys,
+        public async Task<IEnumerable<RedisValue<string>>> StringGetAsync(IEnumerable<string> keys,
             CancellationToken cancellationToken)
         {
             return await await await RunWithTimeout(async delegate
