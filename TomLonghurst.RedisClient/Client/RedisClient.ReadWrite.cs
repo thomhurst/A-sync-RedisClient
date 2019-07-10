@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -277,15 +278,30 @@ namespace TomLonghurst.RedisClient.Client
                         originalCancellationToken);
                 await action.Invoke(cancellationTokenWithTimeout);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException operationCanceledException)
             {
-                if (originalCancellationToken.IsCancellationRequested)
+                CheckTimeout(operationCanceledException, originalCancellationToken);
+            }
+            catch (SocketException socketException)
+            {
+                if (socketException.InnerException?.GetType().IsAssignableFrom(typeof(OperationCanceledException)) == true)
                 {
-                    throw;
+                    CheckTimeout(socketException.InnerException, originalCancellationToken);
+                    return;
                 }
 
-                throw new RedisOperationTimeoutException(this);
+                throw;
             }
+        }
+
+        private void CheckTimeout(Exception exception, CancellationToken originalCancellationToken)
+        {
+            if (originalCancellationToken.IsCancellationRequested)
+            {
+                throw exception;
+            }
+
+            throw new RedisOperationTimeoutException(this);
         }
     }
 }

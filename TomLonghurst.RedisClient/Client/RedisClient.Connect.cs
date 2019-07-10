@@ -65,7 +65,7 @@ namespace TomLonghurst.RedisClient.Client
             {
                 if (IsConnected)
                 {
-                    IsConnected = !(_socket.Poll(1, SelectMode.SelectRead) && _socket.Available == 0);
+                    IsConnected = !(_socket.Poll(1000, SelectMode.SelectRead) && _socket.Available == 0);
                 }
             }
             catch (Exception)
@@ -111,8 +111,6 @@ namespace TomLonghurst.RedisClient.Client
                 }
 
                 Interlocked.Increment(ref _reconnectAttempts);
-
-                _socket?.Close();
 
                 _socket = new RedisSocket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
                 {

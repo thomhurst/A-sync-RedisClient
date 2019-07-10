@@ -5,6 +5,12 @@ namespace TomLonghurst.RedisClient
     internal class RedisSocket : Socket
     {
         internal bool IsDisposed { get; private set; }
+
+        ~RedisSocket()
+        {
+            Close();
+            Dispose();
+        }
         
         internal RedisSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType) : base(addressFamily, socketType, protocolType)
         {
