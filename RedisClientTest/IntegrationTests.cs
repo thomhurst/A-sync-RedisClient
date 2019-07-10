@@ -34,6 +34,7 @@ namespace RedisClientTest
         }
 
         [Test]
+        [Ignore("")]
         public async Task PerformanceTest()
         {
             await _client.StringSetAsync("SingleKey", "123", AwaitOptions.AwaitCompletion);
@@ -58,8 +59,9 @@ namespace RedisClientTest
             var pong = await _client.Ping();
             Assert.AreEqual(true, pong.IsSuccessful);
             
-            var getDoesntExist = await _client.StringGetAsync(new [] { "Blah1", "Blah2" });
-            Assert.That(getDoesntExist.Count(), Is.EqualTo(0));
+            var getDoesntExist = (await _client.StringGetAsync(new [] { "Blah1", "Blah2" })).ToList();
+            Assert.That(getDoesntExist.Count, Is.EqualTo(2));
+            Assert.That(getDoesntExist.Count(value => value.HasValue), Is.EqualTo(0));
             
             await _client.StringSetAsync("TestyMcTestFace", "123", 120, AwaitOptions.FireAndForget);
             await _client.StringSetAsync("TestyMcTestFace2", "1234", 120, AwaitOptions.FireAndForget);
@@ -100,16 +102,18 @@ namespace RedisClientTest
         [Test]
         public async Task GetNonExistingKeys()
         {
-            var nonExistingKeys = await _client.StringGetAsync(new [] { "Blah1", "Blah2" });
-            Assert.That(nonExistingKeys, Is.Empty);
+            var nonExistingKeys = (await _client.StringGetAsync(new [] { "Blah1", "Blah2" })).ToList();
+            Assert.That(nonExistingKeys.Count, Is.EqualTo(2));
+            Assert.That(nonExistingKeys.Count(value => value.HasValue), Is.EqualTo(0));
         }
         
         [Test]
         public async Task GetExistingKeyAmongstNonExistingKeys()
         {
             await _client.StringSetAsync("Exists", "123", 30, AwaitOptions.AwaitCompletion);
-            var nonExistingKeys = await _client.StringGetAsync(new [] { "Blah1", "Blah2", "Exists", "Blah4", "Blah5" });
-            Assert.That(nonExistingKeys.Count(), Is.EqualTo(1));
+            var values = (await _client.StringGetAsync(new [] { "Blah1", "Blah2", "Exists", "Blah4", "Blah5" })).ToList();
+            Assert.That(values.Count, Is.EqualTo(5));
+            Assert.That(values.Count(value => value.HasValue), Is.EqualTo(1));
         }
         
         [Test]

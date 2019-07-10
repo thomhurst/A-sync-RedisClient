@@ -48,7 +48,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Task<T> SendAndReceiveAsync<T>(string command,
+        private ValueTask<T> SendAndReceiveAsync<T>(string command,
             Func<T> responseReader,
             CancellationToken cancellationToken)
         {
@@ -58,7 +58,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<T> SendAndReceiveAsync<T>(byte[] bytes,
+        private async ValueTask<T> SendAndReceiveAsync<T>(byte[] bytes,
             Func<T> responseReader,
             CancellationToken cancellationToken)
         {
@@ -93,7 +93,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Task ExpectSuccess()
+        private object ExpectSuccess()
         {
             var response = ReadLine();
             if (response.StartsWith("-"))
@@ -101,11 +101,11 @@ namespace TomLonghurst.RedisClient.Client
                 throw new RedisFailedCommandException(response);
             }
 
-            return Task.CompletedTask;
+            return new object();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<string> ExpectData()
+        private async ValueTask<string> ExpectData()
         {
             return (await ReadData().ConfigureAwait(false)).FromUtf8();
         }
@@ -137,7 +137,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<IEnumerable<RedisValue<string>>> ExpectArray()
+        private async ValueTask<IEnumerable<RedisValue<string>>> ExpectArray()
         {
             var arrayWithCountLine = ReadLine();
 
@@ -161,7 +161,7 @@ namespace TomLonghurst.RedisClient.Client
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<byte[]> ReadData()
+        private async ValueTask<byte[]> ReadData()
         {
             var line = ReadLine();
 
@@ -264,7 +264,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<T> RunWithTimeout<T>(Func<T> action, CancellationToken originalCancellationToken)
+        private async ValueTask<T> RunWithTimeout<T>(Func<T> action, CancellationToken originalCancellationToken)
         {
             originalCancellationToken.ThrowIfCancellationRequested();
 
