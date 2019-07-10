@@ -22,7 +22,7 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        public async ValueTask<RedisClient> GetRedisClientAsync()
+        public async Task<RedisClient> GetRedisClientAsync()
         {
             if (_lazyRedisClients.Count == 1)
             {
