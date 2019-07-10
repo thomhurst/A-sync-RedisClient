@@ -85,9 +85,9 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask<string> ExpectData()
+        private string ExpectData()
         {
-            return (await ReadData().ConfigureAwait(false)).FromUtf8();
+            return ReadData().FromUtf8();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -117,7 +117,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask<IEnumerable<RedisValue<string>>> ExpectArray()
+        private IEnumerable<RedisValue<string>> ExpectArray()
         {
             var arrayWithCountLine = ReadLine();
 
@@ -134,14 +134,14 @@ namespace TomLonghurst.RedisClient.Client
             var results = new byte [count][];
             for (var i = 0; i < count; i++)
             {
-                results[i] = await ReadData().ConfigureAwait(false);
+                results[i] = ReadData();
             }
 
             return results.ToRedisValues();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask<byte[]> ReadData()
+        private byte[] ReadData()
         {
             var line = ReadLine();
 
@@ -169,15 +169,7 @@ namespace TomLonghurst.RedisClient.Client
 
                     var bytesRead = 0;
                     do {
-                        int read;
-                        if (byteSizeOfData >= 1024 * 1024)
-                        {
-                            read = await _bufferedStream.ReadAsync(byteBuffer, bytesRead, byteSizeOfData - bytesRead);
-                        }
-                        else
-                        {
-                            read = _bufferedStream.Read(byteBuffer, bytesRead, byteSizeOfData - bytesRead);
-                        }
+                        var read = _bufferedStream.Read(byteBuffer, bytesRead, byteSizeOfData - bytesRead);
 
                         if (read < 1)
                         {
