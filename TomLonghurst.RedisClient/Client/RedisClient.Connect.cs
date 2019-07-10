@@ -31,7 +31,21 @@ namespace TomLonghurst.RedisClient.Client
         
         private const int BufferSize = 16 * 1024;
 
-        public bool IsConnected { get; private set; }
+        private bool _isConnected;
+
+        public bool IsConnected
+        {
+            get
+            {
+                if (_socket == null || _socket.IsDisposed)
+                {
+                    _isConnected = false;
+                }
+                
+                return _isConnected;
+            }
+            private set => _isConnected = value;
+        }
 
         private RedisClient(RedisClientConfig redisClientConfig)
         {
@@ -49,12 +63,10 @@ namespace TomLonghurst.RedisClient.Client
         {
             try
             {
-                if (_socket == null || _socket.IsDisposed)
+                if (IsConnected)
                 {
-                    IsConnected = false;
+                    IsConnected = !(_socket.Poll(1, SelectMode.SelectRead) && _socket.Available == 0);
                 }
-
-                IsConnected = !(_socket.Poll(1, SelectMode.SelectRead) && _socket.Available == 0);
             }
             catch (Exception)
             {
