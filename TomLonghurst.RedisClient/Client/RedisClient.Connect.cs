@@ -155,6 +155,8 @@ namespace TomLonghurst.RedisClient.Client
 
                 _bufferedStream = new BufferedStream(networkStream, BufferSize);
 
+                IsConnected = true;
+                
                 if (!string.IsNullOrEmpty(_redisClientConfig.Password))
                 {
                     await Authorize();
@@ -169,8 +171,6 @@ namespace TomLonghurst.RedisClient.Client
                 {
                     await SetClientName();
                 }
-
-                IsConnected = true;
             }
             finally
             {
