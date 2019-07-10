@@ -264,7 +264,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask<T> RunWithTimeout<T>(Func<T> action, CancellationToken originalCancellationToken)
+        private async ValueTask<T> RunWithTimeout<T>(Func<CancellationToken, ValueTask<T>> action, CancellationToken originalCancellationToken)
         {
             originalCancellationToken.ThrowIfCancellationRequested();
 
@@ -273,7 +273,30 @@ namespace TomLonghurst.RedisClient.Client
                 var cancellationTokenWithTimeout =
                     CancellationTokenHelper.CancellationTokenWithTimeout(_redisClientConfig.Timeout,
                         originalCancellationToken);
-                return await Task.Run(action, cancellationTokenWithTimeout);
+                return await action.Invoke(cancellationTokenWithTimeout);
+            }
+            catch (OperationCanceledException)
+            {
+                if (originalCancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+
+                throw new RedisOperationTimeoutException();
+            }
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private async ValueTask RunWithTimeout(Func<CancellationToken, ValueTask> action, CancellationToken originalCancellationToken)
+        {
+            originalCancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                var cancellationTokenWithTimeout =
+                    CancellationTokenHelper.CancellationTokenWithTimeout(_redisClientConfig.Timeout,
+                        originalCancellationToken);
+                await action.Invoke(cancellationTokenWithTimeout);
             }
             catch (OperationCanceledException)
             {

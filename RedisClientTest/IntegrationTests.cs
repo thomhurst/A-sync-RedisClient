@@ -65,7 +65,7 @@ namespace RedisClientTest
             
             await _client.StringSetAsync("TestyMcTestFace", "123", 120, AwaitOptions.FireAndForget);
             await _client.StringSetAsync("TestyMcTestFace2", "1234", 120, AwaitOptions.FireAndForget);
-            await _client.StringSetAsync("TestyMcTestFace3", "1235", 120, AwaitOptions.FireAndForget);
+            await _client.StringSetAsync("TestyMcTestFace3", "12345", 120, AwaitOptions.FireAndForget);
             
             var getValue = await _client.StringGetAsync(new [] { "TestyMcTestFace", "TestyMcTestFace2", "TestyMcTestFace3" });
             Assert.That(getValue.Count(), Is.EqualTo(3));
