@@ -55,25 +55,11 @@ namespace TomLonghurst.RedisClient.Client
             {
                 if (_redisClientConfig.Ssl)
                 {
-                    if (bytes.Length >= 1024 * 1024)
-                    {
-                        await _sslStream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
-                    }
-                    else
-                    {
-                        _sslStream.Write(bytes, 0, bytes.Length);
-                    }
+                    _sslStream.Write(bytes, 0, bytes.Length);
                 }
                 else
                 {
-                    if (bytes.Length >= 1024 * 1024)
-                    {
-                        await _bufferedStream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
-                    }
-                    else
-                    {
-                        _socket.Send(bytes);
-                    }
+                    _socket.Send(bytes);
                 }
 
                 return responseReader.Invoke();
