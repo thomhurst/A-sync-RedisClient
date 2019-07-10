@@ -276,7 +276,7 @@ namespace TomLonghurst.RedisClient.Client
                     throw;
                 }
 
-                throw new RedisOperationTimeoutException();
+                throw new RedisOperationTimeoutException(this);
             }
         }
         
@@ -299,7 +299,7 @@ namespace TomLonghurst.RedisClient.Client
                     throw;
                 }
 
-                throw new RedisOperationTimeoutException();
+                throw new RedisOperationTimeoutException(this);
             }
         }
     }
