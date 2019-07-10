@@ -31,6 +31,8 @@ namespace TomLonghurst.RedisClient.Client
         
         private const int BufferSize = 16 * 1024;
 
+        public bool IsConnected { get; private set; }
+
         private RedisClient(RedisClientConfig redisClientConfig)
         {
             _redisClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
@@ -45,6 +47,20 @@ namespace TomLonghurst.RedisClient.Client
         
         private void CheckConnection(object state)
         {
+            try
+            {
+                if (_socket == null || _socket.IsDisposed)
+                {
+                    IsConnected = false;
+                }
+
+                IsConnected = !(_socket.Poll(1, SelectMode.SelectRead) && _socket.Available == 0);
+            }
+            catch (Exception)
+            {
+                IsConnected = false;
+            }
+            
             if (!IsConnected)
             {
 #pragma warning disable 4014
@@ -153,6 +169,8 @@ namespace TomLonghurst.RedisClient.Client
                 {
                     await SetClientName();
                 }
+
+                IsConnected = true;
             }
             finally
             {

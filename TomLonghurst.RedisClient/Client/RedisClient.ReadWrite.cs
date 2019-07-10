@@ -27,26 +27,6 @@ namespace TomLonghurst.RedisClient.Client
 
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
-        public bool IsConnected
-        {
-            get
-            {
-                try
-                {
-                    if (_socket == null || _socket.IsDisposed)
-                    {
-                        return false;
-                    }
-
-                    return !(_socket.Poll(1, SelectMode.SelectRead) && _socket.Available == 0);
-                }
-                catch (SocketException)
-                {
-                    return false;
-                }
-            }
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ValueTask<T> SendAndReceiveAsync<T>(string command,
             Func<T> responseReader,
