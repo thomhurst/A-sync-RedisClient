@@ -29,7 +29,7 @@ namespace TomLonghurst.RedisClient.Client
         private BufferedStream _bufferedStream;
         private SslStream _sslStream;
         
-        private const int BufferSize = 16 * 1024;
+        private const int BufferSize = 1024 * 1024;
 
         private bool _isConnected;
 
