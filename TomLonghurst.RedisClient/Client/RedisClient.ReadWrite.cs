@@ -58,7 +58,7 @@ namespace TomLonghurst.RedisClient.Client
 
                 if (_redisClientConfig.Ssl)
                 {
-                    _sslStream.Write(bytes, 0, bytes.Length);
+                    await _sslStream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
                 }
                 else
                 {
@@ -67,12 +67,7 @@ namespace TomLonghurst.RedisClient.Client
 
                 return responseReader.Invoke();
             }
-            catch (SocketException innerException)
-            {
-                IsConnected = false;
-                throw new RedisConnectionException(innerException);
-            }
-            catch (NotSupportedException innerException)
+            catch (Exception innerException)
             {
                 IsConnected = false;
                 throw new RedisConnectionException(innerException);
