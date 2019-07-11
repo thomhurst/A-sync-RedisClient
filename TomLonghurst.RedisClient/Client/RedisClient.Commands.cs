@@ -59,7 +59,7 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<RedisValue<string>> StringGetAsync(string key,
             CancellationToken cancellationToken)
         {
-            return new RedisValue<string>(await RunWithTimeout(async token =>
+            return new RedisValue<string>(await await RunWithTimeout(async token =>
                 {
                     var command = $"{Commands.Get} {key}".ToRedisProtocol();
                     return await SendAndReceiveAsync(command, ExpectData, token);
@@ -74,7 +74,7 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<IEnumerable<RedisValue<string>>> StringGetAsync(IEnumerable<string> keys,
             CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
+            return await await RunWithTimeout(async token =>
             {
                 var keysAsString = string.Join(" ", keys);
                 var command = $"{Commands.MGet} {keysAsString}".ToRedisProtocol();
@@ -203,7 +203,7 @@ namespace TomLonghurst.RedisClient.Client
         
         public async Task<string> ClusterInfo(CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
+            return await await RunWithTimeout(async token =>
             {
                 var command = Commands.ClusterInfo.ToRedisProtocol();
                 return await SendAndReceiveAsync(command, ExpectData, token);

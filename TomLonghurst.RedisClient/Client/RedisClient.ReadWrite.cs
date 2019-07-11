@@ -92,9 +92,9 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string ExpectData()
+        private async Task<string> ExpectData()
         {
-            return ReadData().FromUtf8();
+            return (await ReadData()).FromUtf8();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -124,7 +124,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private IEnumerable<RedisValue<string>> ExpectArray()
+        private async Task<IEnumerable<RedisValue<string>>> ExpectArray()
         {
             var arrayWithCountLine = ReadLine();
 
@@ -141,14 +141,14 @@ namespace TomLonghurst.RedisClient.Client
             var results = new byte [count][];
             for (var i = 0; i < count; i++)
             {
-                results[i] = ReadData();
+                results[i] = await ReadData();
             }
 
             return results.ToRedisValues();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private byte[] ReadData()
+        private async Task<byte[]> ReadData()
         {
             var line = ReadLine();
 
@@ -176,7 +176,7 @@ namespace TomLonghurst.RedisClient.Client
 
                     var bytesRead = 0;
                     do {
-                        var read = _bufferedStream.Read(byteBuffer, bytesRead, byteSizeOfData - bytesRead);
+                        var read = await _bufferedStream.ReadAsync(byteBuffer, bytesRead, byteSizeOfData - bytesRead);
 
                         if (read < 1)
                         {
