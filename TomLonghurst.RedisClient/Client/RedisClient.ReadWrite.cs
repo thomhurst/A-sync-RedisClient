@@ -237,24 +237,6 @@ namespace TomLonghurst.RedisClient.Client
             return stringBuilder.ToString ();
         }
 
-        private async Task TryConnectAsync(CancellationToken cancellationToken)
-        {
-            if (IsConnected)
-            {
-                return;
-            }
-            
-            try
-            {
-                await ConnectAsync(cancellationToken);
-            }
-            catch (Exception innerException)
-            {
-                IsConnected = false;
-                throw new RedisConnectionException(innerException);
-            }
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async ValueTask<T> RunWithTimeout<T>(Func<CancellationToken, ValueTask<T>> action, CancellationToken originalCancellationToken)
         {

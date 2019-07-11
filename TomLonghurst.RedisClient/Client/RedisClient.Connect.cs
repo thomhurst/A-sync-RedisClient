@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using TomLonghurst.RedisClient.Exceptions;
 
 namespace TomLonghurst.RedisClient.Client
 {
@@ -76,10 +77,7 @@ namespace TomLonghurst.RedisClient.Client
             if (!IsConnected)
             {
 #pragma warning disable 4014
-                RunWithTimeout(async token =>
-                {
-                    await TryConnectAsync(token);
-                }, CancellationToken.None);
+                TryConnectAsync(CancellationToken.None);
 #pragma warning restore 4014
             }
         }
@@ -94,6 +92,27 @@ namespace TomLonghurst.RedisClient.Client
             var redisClient = new RedisClient(redisClientConfig);
             await redisClient.TryConnectAsync(cancellationToken);
             return redisClient;
+        }
+
+        private async Task TryConnectAsync(CancellationToken cancellationToken)
+        {
+            if (IsConnected)
+            {
+                return;
+            }
+
+            try
+            {
+                await RunWithTimeout(async token =>
+                {
+                    await ConnectAsync(token);
+                }, cancellationToken);
+            }
+            catch (Exception innerException)
+            {
+                IsConnected = false;
+                throw new RedisConnectionException(innerException);
+            }
         }
         
         private async Task ConnectAsync(CancellationToken cancellationToken)
