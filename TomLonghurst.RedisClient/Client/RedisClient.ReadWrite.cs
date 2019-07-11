@@ -58,7 +58,7 @@ namespace TomLonghurst.RedisClient.Client
 
                 if (_redisClientConfig.Ssl)
                 {
-                    await _sslStream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
+                    _sslStream.Write(bytes, 0, bytes.Length);
                 }
                 else
                 {
