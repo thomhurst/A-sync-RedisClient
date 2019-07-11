@@ -18,7 +18,7 @@ namespace TomLonghurst.RedisClient.Client
             await RunWithTimeout(async token =>
             {
                 var command = $"{Commands.Auth} {_redisClientConfig.Password}".ToRedisProtocol();
-                await SendAndReceiveAsync(command, ExpectSuccess, CancellationToken.None, false);
+                await SendAndReceiveAsync(command, ExpectSuccess, CancellationToken.None, true);
             }, cancellationToken);
         }
         
@@ -27,7 +27,7 @@ namespace TomLonghurst.RedisClient.Client
             await RunWithTimeout(async token =>
             {
                 var command = $"{Commands.Select} {_redisClientConfig.Db}".ToRedisProtocol();
-                await SendAndReceiveAsync(command, ExpectSuccess, CancellationToken.None, false);
+                await SendAndReceiveAsync(command, ExpectSuccess, CancellationToken.None, true);
             }, cancellationToken);
         }
 
@@ -201,7 +201,7 @@ namespace TomLonghurst.RedisClient.Client
             await RunWithTimeout(async token => 
             {
                 var command = $"{Commands.Client} {Commands.SetName} {_redisClientConfig.ClientName}".ToRedisProtocol();
-                await SendAndReceiveAsync(command, ExpectSuccess, token, false);
+                await SendAndReceiveAsync(command, ExpectSuccess, token, true);
             }, cancellationToken).ConfigureAwait(false);
         }
 
