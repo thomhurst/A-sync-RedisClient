@@ -78,7 +78,7 @@ namespace TomLonghurst.RedisClient.Client
 #pragma warning disable 4014
                 RunWithTimeout(async token =>
                 {
-                    await TryConnectAsync(CancellationToken.None);
+                    await TryConnectAsync(token);
                 }, CancellationToken.None);
 #pragma warning restore 4014
             }
