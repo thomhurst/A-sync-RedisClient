@@ -51,9 +51,11 @@ namespace TomLonghurst.RedisClient.Client
             await _sendSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
 
             Interlocked.Increment(ref _operationsPerformed);
-            
+
             try
             {
+                await TryConnectAsync(cancellationToken).ConfigureAwait(false);
+
                 if (_redisClientConfig.Ssl)
                 {
                     _sslStream.Write(bytes, 0, bytes.Length);
@@ -64,6 +66,16 @@ namespace TomLonghurst.RedisClient.Client
                 }
 
                 return responseReader.Invoke();
+            }
+            catch (SocketException innerException)
+            {
+                IsConnected = false;
+                throw new RedisConnectionException(innerException);
+            }
+            catch (NotSupportedException innerException)
+            {
+                IsConnected = false;
+                throw new RedisConnectionException(innerException);
             }
             finally
             {
@@ -231,6 +243,7 @@ namespace TomLonghurst.RedisClient.Client
             }
             catch (Exception innerException)
             {
+                IsConnected = false;
                 throw new RedisConnectionException(innerException);
             }
         }
