@@ -13,27 +13,41 @@ namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient : IDisposable
     {
-        private async ValueTask Authorize()
+        private async ValueTask Authorize(CancellationToken cancellationToken)
         {
-            var command = $"{Commands.Auth} {_redisClientConfig.Password}".ToRedisProtocol();
-            await SendAndReceiveAsync(command, ExpectSuccess, CancellationToken.None, false);
+            await RunWithTimeout(async token =>
+            {
+                var command = $"{Commands.Auth} {_redisClientConfig.Password}".ToRedisProtocol();
+                await SendAndReceiveAsync(command, ExpectSuccess, CancellationToken.None, false);
+            }, cancellationToken);
         }
         
-        private async ValueTask SelectDb()
+        private async ValueTask SelectDb(CancellationToken cancellationToken)
         {
-            var command = $"{Commands.Select} {_redisClientConfig.Db}".ToRedisProtocol();
-            await SendAndReceiveAsync(command, ExpectSuccess, CancellationToken.None, false);
+            await RunWithTimeout(async token =>
+            {
+                var command = $"{Commands.Select} {_redisClientConfig.Db}".ToRedisProtocol();
+                await SendAndReceiveAsync(command, ExpectSuccess, CancellationToken.None, false);
+            }, cancellationToken);
         }
 
         public async Task<Pong> Ping()
         {
-            var pingCommand = Commands.Ping.ToRedisProtocol();
+            return await Ping(CancellationToken.None);
+        }
 
-            var sw = Stopwatch.StartNew();
-            var pingResponse = await SendAndReceiveAsync(pingCommand, ExpectWord, CancellationToken.None);
-            sw.Stop();
-            
-            return new Pong(sw.Elapsed, pingResponse);
+        public async Task<Pong> Ping(CancellationToken cancellationToken)
+        {
+            return await RunWithTimeout(async token =>
+            {
+                var pingCommand = Commands.Ping.ToRedisProtocol();
+
+                var sw = Stopwatch.StartNew();
+                var pingResponse = await SendAndReceiveAsync(pingCommand, ExpectWord, CancellationToken.None);
+                sw.Stop();
+
+                return new Pong(sw.Elapsed, pingResponse);
+            }, cancellationToken);
         }
 
         public async Task<bool> KeyExistsAsync(string key)
@@ -180,11 +194,6 @@ namespace TomLonghurst.RedisClient.Client
                     await task;
                 }
             }, cancellationToken).ConfigureAwait(false);
-        }
-
-        private async ValueTask SetClientName()
-        {
-            await SetClientName(CancellationToken.None).ConfigureAwait(false);
         }
 
         private async ValueTask SetClientName(CancellationToken cancellationToken)

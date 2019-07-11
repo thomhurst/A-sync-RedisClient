@@ -76,7 +76,10 @@ namespace TomLonghurst.RedisClient.Client
             if (!IsConnected)
             {
 #pragma warning disable 4014
-                TryConnectAsync(CancellationToken.None);
+                RunWithTimeout(async token =>
+                {
+                    await TryConnectAsync(CancellationToken.None);
+                }, CancellationToken.None);
 #pragma warning restore 4014
             }
         }
@@ -169,17 +172,17 @@ namespace TomLonghurst.RedisClient.Client
                 
                 if (!string.IsNullOrEmpty(_redisClientConfig.Password))
                 {
-                    await Authorize();
+                    await Authorize(cancellationToken);
                 }
 
                 if (_redisClientConfig.Db != 0)
                 {
-                    await SelectDb();
+                    await SelectDb(cancellationToken);
                 }
 
                 if (_redisClientConfig.ClientName != null)
                 {
-                    await SetClientName();
+                    await SetClientName(cancellationToken);
                 }
             }
             finally
