@@ -30,21 +30,26 @@ namespace TomLonghurst.RedisClient.Client
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ValueTask<T> SendAndReceiveAsync<T>(string command,
             Func<T> responseReader,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            bool tryConnect = true)
         {
             Log.Debug($"Executing Command: {command}");
 
-            return SendAndReceiveAsync(command.ToUtf8Bytes(), responseReader, cancellationToken);
+            return SendAndReceiveAsync(command.ToUtf8Bytes(), responseReader, cancellationToken, tryConnect);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async ValueTask<T> SendAndReceiveAsync<T>(byte[] bytes,
             Func<T> responseReader,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            bool tryConnect)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            await TryConnectAsync(cancellationToken).ConfigureAwait(false);
+            if (tryConnect)
+            {
+                await TryConnectAsync(cancellationToken).ConfigureAwait(false);
+            }
 
             Interlocked.Increment(ref _outStandingOperations);
 
@@ -54,7 +59,10 @@ namespace TomLonghurst.RedisClient.Client
 
             try
             {
-                await TryConnectAsync(cancellationToken).ConfigureAwait(false);
+                if (tryConnect)
+                {
+                    await TryConnectAsync(cancellationToken).ConfigureAwait(false);
+                }
 
                 if (_redisClientConfig.Ssl)
                 {
@@ -66,6 +74,10 @@ namespace TomLonghurst.RedisClient.Client
                 }
 
                 return responseReader.Invoke();
+            }
+            catch (RedisConnectionException)
+            {
+                throw;
             }
             catch (Exception innerException)
             {
@@ -234,7 +246,7 @@ namespace TomLonghurst.RedisClient.Client
             
             try
             {
-                await Task.Run(async () => await ConnectAsync(), cancellationToken);
+                await ConnectAsync(cancellationToken);
             }
             catch (Exception innerException)
             {

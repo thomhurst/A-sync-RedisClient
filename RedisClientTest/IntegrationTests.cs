@@ -34,7 +34,7 @@ namespace RedisClientTest
             _tomLonghurstRedisClient = await _redisManager.GetRedisClientAsync();
         }
 
-        //[Ignore("")]
+        [Ignore("")]
         [Test]
         public async Task PerformanceTest()
         {

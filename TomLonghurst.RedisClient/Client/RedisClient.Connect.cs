@@ -93,14 +93,14 @@ namespace TomLonghurst.RedisClient.Client
             return redisClient;
         }
         
-        private async Task ConnectAsync()
+        private async Task ConnectAsync(CancellationToken cancellationToken)
         {
             if (IsConnected)
             {
                 return;
             }
 
-            await _connectSemaphoreSlim.WaitAsync().ConfigureAwait(false);
+            await _connectSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
 
             try
             {

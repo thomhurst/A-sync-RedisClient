@@ -16,13 +16,13 @@ namespace TomLonghurst.RedisClient.Client
         private async ValueTask Authorize()
         {
             var command = $"{Commands.Auth} {_redisClientConfig.Password}".ToRedisProtocol();
-            await SendAndReceiveAsync(command, ExpectSuccess, CancellationToken.None);
+            await SendAndReceiveAsync(command, ExpectSuccess, CancellationToken.None, false);
         }
         
         private async ValueTask SelectDb()
         {
             var command = $"{Commands.Select} {_redisClientConfig.Db}".ToRedisProtocol();
-            await SendAndReceiveAsync(command, ExpectSuccess, CancellationToken.None);
+            await SendAndReceiveAsync(command, ExpectSuccess, CancellationToken.None, false);
         }
 
         public async Task<Pong> Ping()
@@ -192,7 +192,7 @@ namespace TomLonghurst.RedisClient.Client
             await RunWithTimeout(async token => 
             {
                 var command = $"{Commands.Client} {Commands.SetName} {_redisClientConfig.ClientName}".ToRedisProtocol();
-                await SendAndReceiveAsync(command, ExpectSuccess, token);
+                await SendAndReceiveAsync(command, ExpectSuccess, token, false);
             }, cancellationToken).ConfigureAwait(false);
         }
 
