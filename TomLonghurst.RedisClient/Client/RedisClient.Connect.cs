@@ -27,6 +27,9 @@ namespace TomLonghurst.RedisClient.Client
         private readonly Timer _connectionChecker;
         
         private RedisSocket _socket;
+
+        public Socket Socket => _socket;
+
         private BufferedStream _bufferedStream;
         private SslStream _sslStream;
         
@@ -72,6 +75,7 @@ namespace TomLonghurst.RedisClient.Client
             catch (Exception)
             {
                 IsConnected = false;
+                DisposeNetwork();
             }
             
             if (!IsConnected)
@@ -111,6 +115,7 @@ namespace TomLonghurst.RedisClient.Client
             catch (Exception innerException)
             {
                 IsConnected = false;
+                DisposeNetwork();
                 throw new RedisConnectionException(innerException);
             }
         }
@@ -126,7 +131,6 @@ namespace TomLonghurst.RedisClient.Client
 
             try
             {
-
                 if (IsConnected)
                 {
                     return;
@@ -179,6 +183,7 @@ namespace TomLonghurst.RedisClient.Client
 
                     if (!_sslStream.IsEncrypted)
                     {
+                        Dispose();
                         throw new SecurityException($"Could not establish an encrypted connection to Redis - {_redisClientConfig.Host}");
                     }
 
@@ -212,9 +217,14 @@ namespace TomLonghurst.RedisClient.Client
 
         public void Dispose()
         {
+            DisposeNetwork();
             _connectionChecker?.Dispose();
             _sendSemaphoreSlim?.Dispose();
             _connectSemaphoreSlim?.Dispose();
+        }
+
+        private void DisposeNetwork()
+        {
             _socket?.Close();
             _socket?.Dispose();
             _bufferedStream?.Dispose();

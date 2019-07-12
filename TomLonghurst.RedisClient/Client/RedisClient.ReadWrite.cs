@@ -80,6 +80,7 @@ namespace TomLonghurst.RedisClient.Client
             }
             catch (Exception innerException)
             {
+                DisposeNetwork();
                 IsConnected = false;
                 throw new RedisConnectionException(innerException);
             }
