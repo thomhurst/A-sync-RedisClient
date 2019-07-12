@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -7,6 +8,7 @@ using System.Net.Sockets;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using Pipelines.Sockets.Unofficial;
 using TomLonghurst.RedisClient.Exceptions;
 
 namespace TomLonghurst.RedisClient.Client
@@ -32,6 +34,8 @@ namespace TomLonghurst.RedisClient.Client
 
         private BufferedStream _bufferedStream;
         private SslStream _sslStream;
+        
+        private IDuplexPipe pipe;
         
         private const int BufferSize = 16 * 1024;
 
@@ -188,6 +192,12 @@ namespace TomLonghurst.RedisClient.Client
                     }
 
                     networkStream = _sslStream;
+                    
+                    pipe = StreamConnection.GetDuplex(_sslStream);
+                }
+                else
+                {
+                    pipe = SocketConnection.Create(_socket);
                 }
 
                 _bufferedStream = new BufferedStream(networkStream, BufferSize);

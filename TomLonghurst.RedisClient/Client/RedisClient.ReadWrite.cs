@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO.Pipelines;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -28,22 +31,13 @@ namespace TomLonghurst.RedisClient.Client
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ValueTask<T> SendAndReceiveAsync<T>(string command,
+        private async ValueTask<T> SendAndReceiveAsync<T>(string command,
             Func<T> responseReader,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
         {
             Log.Debug($"Executing Command: {command}");
 
-            return SendAndReceiveAsync(command.ToUtf8Bytes(), responseReader, cancellationToken, isReconnectionAttempt);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask<T> SendAndReceiveAsync<T>(byte[] bytes,
-            Func<T> responseReader,
-            CancellationToken cancellationToken,
-            bool isReconnectionAttempt)
-        {
             cancellationToken.ThrowIfCancellationRequested();
 
             Interlocked.Increment(ref _outStandingOperations);
@@ -63,14 +57,7 @@ namespace TomLonghurst.RedisClient.Client
                     await TryConnectAsync(cancellationToken).ConfigureAwait(false);
                 }
 
-                if (_redisClientConfig.Ssl)
-                {
-                    _sslStream.Write(bytes, 0, bytes.Length);
-                }
-                else
-                {
-                    _socket.Send(bytes);
-                }
+                Write(command);
 
                 return responseReader.Invoke();
             }
@@ -94,10 +81,25 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private object ExpectSuccess()
+        private unsafe void Write(string value)
         {
-            var response = ReadLine();
+            fixed (char* charPointer = value)
+            {
+                var expectedLength = Encoding.UTF8.GetByteCount(value);
+                var span = pipe.Output.GetSpan(expectedLength);
+                
+                fixed (byte* bytePointer = span)
+                {
+                    Encoding.UTF8.GetBytes(charPointer, value.Length, bytePointer, expectedLength);
+                }
+                pipe.Output.Advance(expectedLength);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private async Task<object> ExpectSuccess()
+        {
+            var response = await ReadLine();
             if (response.StartsWith("-"))
             {
                 throw new RedisFailedCommandException(response);
@@ -107,15 +109,15 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string ExpectData()
+        private async Task<string> ExpectData()
         {
-            return ReadData().FromUtf8();
+            return (await ReadData()).FromUtf8();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string ExpectWord()
+        private async Task<string> ExpectWord()
         {
-            var word = ReadLine();
+            var word = await ReadLine();
 
             if (!word.StartsWith("+"))
             {
@@ -126,9 +128,9 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int ExpectNumber()
+        private async Task<int> ExpectNumber()
         {
-            var line = ReadLine();
+            var line = await ReadLine();
 
             if (!line.StartsWith(":") || !int.TryParse(line.Substring(1), out var number))
             {
@@ -139,9 +141,9 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private IEnumerable<RedisValue<string>> ExpectArray()
+        private async Task<IEnumerable<RedisValue<string>>> ExpectArray()
         {
-            var arrayWithCountLine = ReadLine();
+            var arrayWithCountLine = await ReadLine();
 
             if (!arrayWithCountLine.StartsWith("*"))
             {
@@ -156,16 +158,16 @@ namespace TomLonghurst.RedisClient.Client
             var results = new byte [count][];
             for (var i = 0; i < count; i++)
             {
-                results[i] = ReadData();
+                results[i] = await ReadData();
             }
 
             return results.ToRedisValues();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private byte[] ReadData()
+        private async Task<byte[]> ReadData()
         {
-            var line = ReadLine();
+            var line = await ReadLine();
 
             if (string.IsNullOrWhiteSpace(line))
             {
@@ -219,8 +221,39 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string ReadLine()
+        private async Task<string> ReadLine()
         {
+            var pipeReader = pipe.Input;
+            if (pipeReader == null)
+            {
+                return null;
+            }
+
+            while (true)
+            {
+                if (!pipeReader.TryRead(out var result))
+                {
+                    result = await pipeReader.ReadAsync().ConfigureAwait(false);
+                }
+
+                var buffer = result.Buffer;
+                int handledBytes = 0;
+                if (!buffer.IsEmpty)
+                {
+                    handledBytes = Process(ref buffer);
+                }
+
+                pipeReader.AdvanceTo(buffer.Start, buffer.End);
+
+                if (result.IsCompleted)
+                {
+                    break;
+                }
+            }
+
+            Console.WriteLine("PIPE RESULT: " + result.Buffer.IsEmpty);
+            
+            //span.IndexOf('\n')-1
             var stringBuilder = new StringBuilder();
             int c;
 
@@ -240,6 +273,85 @@ namespace TomLonghurst.RedisClient.Client
             }
 
             return stringBuilder.ToString();
+        }
+
+        private string ParseResult(ByteSpanReader reader)
+        {
+            var prefix = reader.PeekByte();
+            if (prefix < 0)
+            {
+                return string.Empty;
+            }
+            switch (prefix)
+            {
+                case '+': // simple string
+                    reader.Consume(1);
+                    return ReadLineTerminatedString(ResultType.SimpleString, ref reader);
+                case '-': // error
+                    reader.Consume(1);
+                    return ReadLineTerminatedString(ResultType.Error, ref reader);
+                case ':': // integer
+                    reader.Consume(1);
+                    return ReadLineTerminatedString(ResultType.Integer, ref reader);
+                case '$': // bulk string
+                    reader.Consume(1);
+                    return ReadBulkString(ref reader, includeDetilInExceptions, server);
+                case '*': // array
+                    reader.Consume(1);
+                    return ReadArray(arena, in buffer, ref reader, includeDetilInExceptions, server);
+                default:
+                    // string s = Format.GetString(buffer);
+                    if (allowInlineProtocol) return ParseInlineProtocol(arena, ReadLineTerminatedString(ResultType.SimpleString, ref reader));
+                    throw new InvalidOperationException("Unexpected response prefix: " + (char)prefix);
+            }
+        }
+
+        
+        private static string ReadLineTerminatedString(ByteSpanReader reader)
+        {
+            int crlfOffsetFromCurrent = ByteSpanReader.FindNextCrLf(reader);
+            if (crlfOffsetFromCurrent < 0)
+            {
+                return null;
+            }
+
+            var payload = reader.ConsumeAsBuffer(crlfOffsetFromCurrent);
+            reader.Consume(2);
+
+            return new RawResult(type, payload, false);
+        }
+        
+        private static RawResult ReadBulkString(ref ByteSpanReader reader, bool includeDetailInExceptions, ServerEndPoint server)
+        {
+            var prefix = ReadLineTerminatedString(ResultType.Integer, ref reader);
+            if (prefix.HasValue)
+            {
+                if (!prefix.TryGetInt64(out long i64)) throw ExceptionFactory.ConnectionFailure(includeDetailInExceptions, ConnectionFailureType.ProtocolFailure, "Invalid bulk string length", server);
+                int bodySize = checked((int)i64);
+                if (bodySize < 0)
+                {
+                    return new RawResult(ResultType.BulkString, ReadOnlySequence<byte>.Empty, true);
+                }
+
+                if (reader.TryConsumeAsBuffer(bodySize, out var payload))
+                {
+                    switch (reader.TryConsumeCRLF())
+                    {
+                        case ConsumeResult.NeedMoreData:
+                            break; // see NilResult below
+                        case ConsumeResult.Success:
+                            return new RawResult(ResultType.BulkString, payload, false);
+                        default:
+                            throw ExceptionFactory.ConnectionFailure(includeDetailInExceptions, ConnectionFailureType.ProtocolFailure, "Invalid bulk string terminator", server);
+                    }
+                }
+            }
+            return RawResult.Nil;
+        }
+        
+        private int Process(ref ReadOnlySequence<byte> buffer)
+        {
+            return -1;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

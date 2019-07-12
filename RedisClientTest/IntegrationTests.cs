@@ -165,6 +165,13 @@ namespace RedisClientTest
         }
 
         [Test]
+        public async Task Blah()
+        {
+            var redisValue = await _tomLonghurstRedisClient.StringGetAsync("KeyExists");
+            Console.WriteLine(redisValue);
+        }
+
+        [Test]
         public async Task SetGetMultipleKey()
         {
             var keyValues = new List<KeyValuePair<string, string>>
