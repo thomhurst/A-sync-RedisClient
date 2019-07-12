@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
@@ -6,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Pipelines.Sockets.Unofficial;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Helpers;
@@ -17,7 +19,7 @@ namespace TomLonghurst.RedisClient.Client
     {
         private static readonly Logger Log = new Logger();
 
-        private readonly SemaphoreSlim _sendSemaphoreSlim = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _sendAndReceiveSemaphoreSlim = new SemaphoreSlim(1, 1);
 
         private long _outStandingOperations;
 
@@ -51,7 +53,7 @@ namespace TomLonghurst.RedisClient.Client
 
             if (!isReconnectionAttempt)
             {
-                await _sendSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
+                await _sendAndReceiveSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
             }
 
             Interlocked.Increment(ref _operationsPerformed);
@@ -63,14 +65,7 @@ namespace TomLonghurst.RedisClient.Client
                     await TryConnectAsync(cancellationToken).ConfigureAwait(false);
                 }
 
-                if (_redisClientConfig.Ssl)
-                {
-                    _sslStream.Write(bytes, 0, bytes.Length);
-                }
-                else
-                {
-                    _socket.Send(bytes);
-                }
+                Write(bytes);
 
                 return responseReader.Invoke();
             }
@@ -89,19 +84,51 @@ namespace TomLonghurst.RedisClient.Client
                 Interlocked.Decrement(ref _outStandingOperations);
                 if (!isReconnectionAttempt)
                 {
-                    _sendSemaphoreSlim.Release();
+                    _sendAndReceiveSemaphoreSlim.Release();
                 }
+                
+                RecreatePipe();
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private object ExpectSuccess()
+        private void RecreatePipe()
         {
-            var response = ReadLine();
+            if (_redisClientConfig.Ssl)
+            {
+                pipe = StreamConnection.GetDuplex(_sslStream, SendPipeOptions, ReceivePipeOptions);
+            }
+            else
+            {
+                pipe = SocketConnection.Create(_socket, SendPipeOptions, ReceivePipeOptions);
+            }
+        }
+
+        private void Write(byte[] bytes)
+        {
+            pipe.Output.Write(bytes);
+
+            WriteLineEnd();
+        }
+
+        private void WriteLineEnd()
+        {
+            var span = pipe.Output.GetSpan(2);
+            span[0] = (byte) '\r';
+            span[1] = (byte) '\n';
+            pipe.Output.Advance(2);
+            // pipe.Output.Complete();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private async Task<object> ExpectSuccess()
+        {
+            var response = await ReadLineAsync();
             if (response.StartsWith("-"))
             {
                 throw new RedisFailedCommandException(response);
             }
+            
+            // pipe.Input.Complete();
 
             return new object();
         }
@@ -216,6 +243,68 @@ namespace TomLonghurst.RedisClient.Client
             }
 
             throw new UnexpectedRedisResponseException($"Unexpected reply: {line}");
+        }
+
+        private async Task<string> ReadLineAsync()
+        {
+
+            var stringBuilder = new StringBuilder();
+
+            var reader = pipe.Input;
+
+//            while (true)
+//            {
+
+            var result = await reader.ReadAsync();
+
+            var buffer = result.Buffer;
+            SequencePosition? position;
+
+            do
+            {
+                // Look for a EOL in the buffer
+                position = buffer.PositionOf((byte) '\n');
+
+                if (position != null)
+                {
+                    // Process the line
+                    ProcessLine(buffer.Slice(0, position.Value), stringBuilder);
+                    buffer = buffer.Slice(buffer.GetPosition(0, position.Value));
+                }
+            } while (position == null);
+
+            // Tell the PipeReader how much of the buffer we have consumed
+            reader.AdvanceTo(buffer.Start, buffer.End);
+//            }
+
+            return stringBuilder.ToString();
+        }
+
+        private void ProcessLine(ReadOnlySequence<byte> buffer, StringBuilder stringBuilder)
+        {
+            if (stringBuilder == null)
+            {
+                stringBuilder = new StringBuilder();
+            }
+
+            if (buffer.IsSingleSegment)
+            {
+                stringBuilder.Append(Encoding.UTF8.GetString(buffer.First.Span));
+            }
+            else
+            {
+                stringBuilder.Append(
+                    string.Create((int) buffer.Length, buffer, (span, sequence) =>
+                    {
+                        foreach (var segment in sequence)
+                        {
+                            Encoding.UTF8.GetChars(segment.Span, span);
+
+                            span = span.Slice(segment.Length);
+                        }
+                    })
+                );
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

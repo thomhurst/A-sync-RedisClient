@@ -73,10 +73,10 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<RedisValue<string>> StringGetAsync(string key,
             CancellationToken cancellationToken)
         {
-            return new RedisValue<string>(await RunWithTimeout(async token =>
+            return new RedisValue<string>(await await RunWithTimeout(async token =>
                 {
                     var command = $"{Commands.Get} {key}".ToRedisProtocol();
-                    return await SendAndReceiveAsync(command, ExpectData, token);
+                    return await SendAndReceiveAsync(command, ReadLineAsync, token);
                 }, cancellationToken).ConfigureAwait(false));
         }
 

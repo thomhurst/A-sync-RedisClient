@@ -136,6 +136,13 @@ namespace RedisClientTest
         }
         
         [Test]
+        public async Task GetKey()
+        {
+            var nonExistingKey = await _tomLonghurstRedisClient.StringGetAsync("KeyExists");
+            Assert.That(nonExistingKey.Value, Is.EqualTo("123"));
+        }
+        
+        [Test]
         public async Task GetExistingKeyAmongstNonExistingKeys()
         {
             await _tomLonghurstRedisClient.StringSetAsync("Exists", "123", 30, AwaitOptions.AwaitCompletion);

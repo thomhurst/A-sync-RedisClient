@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -7,6 +8,7 @@ using System.Net.Sockets;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using Pipelines.Sockets.Unofficial;
 using TomLonghurst.RedisClient.Exceptions;
 
 namespace TomLonghurst.RedisClient.Client
@@ -36,6 +38,7 @@ namespace TomLonghurst.RedisClient.Client
         private const int BufferSize = 16 * 1024;
 
         private bool _isConnected;
+        private IDuplexPipe pipe;
 
         public bool IsConnected
         {
@@ -143,6 +146,9 @@ namespace TomLonghurst.RedisClient.Client
                     SendTimeout = _redisClientConfig.SendTimeout,
                     ReceiveTimeout = _redisClientConfig.ReceiveTimeout
                 };
+                
+                SocketConnection.SetRecommendedClientOptions(_socket);
+                
                 if (IPAddress.TryParse(_redisClientConfig.Host, out var ip))
                 {
                     await _socket.ConnectAsync(ip, _redisClientConfig.Port);
@@ -165,8 +171,6 @@ namespace TomLonghurst.RedisClient.Client
                     return;
                 }
 
-                _socket.NoDelay = true;
-
                 Log.Debug("Socket Connected");
 
                 Stream networkStream = new NetworkStream(_socket);
@@ -188,6 +192,12 @@ namespace TomLonghurst.RedisClient.Client
                     }
 
                     networkStream = _sslStream;
+
+                    pipe = StreamConnection.GetDuplex(_sslStream, SendPipeOptions, ReceivePipeOptions);
+                }
+                else
+                {
+                    pipe = SocketConnection.Create(_socket, SendPipeOptions, ReceivePipeOptions);
                 }
 
                 _bufferedStream = new BufferedStream(networkStream, BufferSize);
@@ -219,7 +229,7 @@ namespace TomLonghurst.RedisClient.Client
         {
             DisposeNetwork();
             _connectionChecker?.Dispose();
-            _sendSemaphoreSlim?.Dispose();
+            _sendAndReceiveSemaphoreSlim?.Dispose();
             _connectSemaphoreSlim?.Dispose();
         }
 
