@@ -64,7 +64,11 @@ namespace TomLonghurst.RedisClient.Client
 
                 if (_redisClientConfig.Ssl)
                 {
+#if NETCORE
+                    _sslStream.Write(bytes.AsSpan());
+#elif NETSTANDARD
                     _sslStream.Write(bytes, 0, bytes.Length);
+#endif
                 }
                 else
                 {
