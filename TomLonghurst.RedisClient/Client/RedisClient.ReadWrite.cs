@@ -16,13 +16,13 @@ namespace TomLonghurst.RedisClient.Client
     public partial class RedisClient : IDisposable
     {
         private static readonly Logger Log = new Logger();
-        
+
         private readonly SemaphoreSlim _sendSemaphoreSlim = new SemaphoreSlim(1, 1);
 
         private long _outStandingOperations;
 
         public long OutstandingOperations => Interlocked.Read(ref _outStandingOperations);
-        
+
         private long _operationsPerformed;
 
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
@@ -110,7 +110,7 @@ namespace TomLonghurst.RedisClient.Client
         {
             return ReadData().FromUtf8();
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string ExpectWord()
         {
@@ -123,7 +123,7 @@ namespace TomLonghurst.RedisClient.Client
 
             return word.Substring(1);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int ExpectNumber()
         {
@@ -160,7 +160,7 @@ namespace TomLonghurst.RedisClient.Client
 
             return results.ToRedisValues();
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte[] ReadData()
         {
@@ -185,21 +185,23 @@ namespace TomLonghurst.RedisClient.Client
                     return null;
                 }
 
-                if (int.TryParse (line.Substring(1), out var byteSizeOfData)){
+                if (int.TryParse(line.Substring(1), out var byteSizeOfData))
+                {
                     var byteBuffer = new byte [byteSizeOfData];
 
                     var bytesRead = 0;
-                    do {
+                    do
+                    {
                         var read = _bufferedStream.Read(byteBuffer, bytesRead, byteSizeOfData - bytesRead);
 
                         if (read < 1)
                         {
-                            throw new UnexpectedRedisResponseException($"Invalid termination mid stream: {byteBuffer.FromUtf8()}");
+                            throw new UnexpectedRedisResponseException(
+                                $"Invalid termination mid stream: {byteBuffer.FromUtf8()}");
                         }
 
-                        bytesRead += read; 
-                    }
-                    while (bytesRead < byteSizeOfData);
+                        bytesRead += read;
+                    } while (bytesRead < byteSizeOfData);
 
                     if (_bufferedStream.ReadByte() != '\r' || _bufferedStream.ReadByte() != '\n')
                     {
@@ -208,17 +210,17 @@ namespace TomLonghurst.RedisClient.Client
 
                     return byteBuffer;
                 }
-                
+
                 throw new UnexpectedRedisResponseException("Invalid length");
             }
-            
-            throw new UnexpectedRedisResponseException ($"Unexpected reply: {line}");
+
+            throw new UnexpectedRedisResponseException($"Unexpected reply: {line}");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string ReadLine()
         {
-            var stringBuilder = new StringBuilder ();
+            var stringBuilder = new StringBuilder();
             int c;
 
             while ((c = _bufferedStream.ReadByte()) != -1)
@@ -236,61 +238,67 @@ namespace TomLonghurst.RedisClient.Client
                 stringBuilder.Append((char) c);
             }
 
-            return stringBuilder.ToString ();
+            return stringBuilder.ToString();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask<T> RunWithTimeout<T>(Func<CancellationToken, ValueTask<T>> action, CancellationToken originalCancellationToken)
+        private async ValueTask<T> RunWithTimeout<T>(Func<CancellationToken, ValueTask<T>> action,
+            CancellationToken originalCancellationToken)
         {
             originalCancellationToken.ThrowIfCancellationRequested();
+            var cancellationTokenWithTimeout =
+                CancellationTokenHelper.CancellationTokenWithTimeout(_redisClientConfig.Timeout,
+                    originalCancellationToken);
 
             try
             {
-                var cancellationTokenWithTimeout =
-                    CancellationTokenHelper.CancellationTokenWithTimeout(_redisClientConfig.Timeout,
-                        originalCancellationToken);
-                return await action.Invoke(cancellationTokenWithTimeout);
-            }
-            catch (OperationCanceledException)
-            {
-                if (originalCancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-
-                throw new RedisOperationTimeoutException(this);
-            }
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask RunWithTimeout(Func<CancellationToken, ValueTask> action, CancellationToken originalCancellationToken)
-        {
-            originalCancellationToken.ThrowIfCancellationRequested();
-
-            try
-            {
-                var cancellationTokenWithTimeout =
-                    CancellationTokenHelper.CancellationTokenWithTimeout(_redisClientConfig.Timeout,
-                        originalCancellationToken);
-                await action.Invoke(cancellationTokenWithTimeout);
+                return await action.Invoke(cancellationTokenWithTimeout.Token);
             }
             catch (OperationCanceledException operationCanceledException)
             {
-                CheckTimeout(operationCanceledException, originalCancellationToken);
+                throw TimeoutOrCancelledException(operationCanceledException, originalCancellationToken);
+            }
+            finally
+            {
+                cancellationTokenWithTimeout.Dispose();
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private async ValueTask RunWithTimeout(Func<CancellationToken, ValueTask> action,
+            CancellationToken originalCancellationToken)
+        {
+            originalCancellationToken.ThrowIfCancellationRequested();
+
+            var cancellationTokenWithTimeout =
+                CancellationTokenHelper.CancellationTokenWithTimeout(_redisClientConfig.Timeout,
+                    originalCancellationToken);
+
+            try
+            {
+                await action.Invoke(cancellationTokenWithTimeout.Token);
+            }
+            catch (OperationCanceledException operationCanceledException)
+            {
+                throw TimeoutOrCancelledException(operationCanceledException, originalCancellationToken);
             }
             catch (SocketException socketException)
             {
-                if (socketException.InnerException?.GetType().IsAssignableFrom(typeof(OperationCanceledException)) == true)
+                if (socketException.InnerException?.GetType().IsAssignableFrom(typeof(OperationCanceledException)) ==
+                    true)
                 {
-                    CheckTimeout(socketException.InnerException, originalCancellationToken);
-                    return;
+                    throw TimeoutOrCancelledException(socketException.InnerException, originalCancellationToken);
                 }
 
                 throw;
             }
+            finally
+            {
+                cancellationTokenWithTimeout.Dispose();
+            }
         }
 
-        private void CheckTimeout(Exception exception, CancellationToken originalCancellationToken)
+        private Exception TimeoutOrCancelledException(Exception exception, CancellationToken originalCancellationToken)
         {
             if (originalCancellationToken.IsCancellationRequested)
             {
