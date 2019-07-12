@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Buffers;
-using System.Runtime.CompilerServices;
+using System.Buffers.Text;
 using System.Text;
 using Pipelines.Sockets.Unofficial.Arenas;
 using TomLonghurst.RedisClient.Extensions;
@@ -9,7 +9,7 @@ namespace TomLonghurst.RedisClient
 {
     internal readonly struct RawResult
     {
-        internal ref RawResult this[int index] => ref GetItems()[index];
+        //internal ref RawResult this[int index] => ref GetItems()[index];
 
         internal int ItemsCount => (int)_items.Length;
         internal ReadOnlySequence<byte> Payload { get; }
@@ -124,75 +124,75 @@ namespace TomLonghurst.RedisClient
             }
             public ReadOnlySequence<byte> Current { get; private set; }
         }
-        internal RedisChannel AsRedisChannel(byte[] channelPrefix, RedisChannel.PatternMode mode)
-        {
-            switch (Type)
-            {
-                case ResultType.SimpleString:
-                case ResultType.BulkString:
-                    if (channelPrefix == null)
-                    {
-                        return new RedisChannel(GetBlob(), mode);
-                    }
-                    if (StartsWith(channelPrefix))
-                    {
-                        byte[] copy = Payload.Slice(channelPrefix.Length).ToArray();
-                        return new RedisChannel(copy, mode);
-                    }
-                    return default(RedisChannel);
-                default:
-                    throw new InvalidCastException("Cannot convert to RedisChannel: " + Type);
-            }
-        }
-
-        internal RedisKey AsRedisKey()
-        {
-            switch (Type)
-            {
-                case ResultType.SimpleString:
-                case ResultType.BulkString:
-                    return (RedisKey)GetBlob();
-                default:
-                    throw new InvalidCastException("Cannot convert to RedisKey: " + Type);
-            }
-        }
-
-        internal RedisValue AsRedisValue()
-        {
-            if (IsNull) return RedisValue.Null;
-            switch (Type)
-            {
-                case ResultType.Integer:
-                    long i64;
-                    if (TryGetInt64(out i64)) return (RedisValue)i64;
-                    break;
-                case ResultType.SimpleString:
-                case ResultType.BulkString:
-                    return (RedisValue)GetBlob();
-            }
-            throw new InvalidCastException("Cannot convert to RedisValue: " + Type);
-        }
-
-        internal Lease<byte> AsLease()
-        {
-            if (IsNull) return null;
-            switch (Type)
-            {
-                case ResultType.SimpleString:
-                case ResultType.BulkString:
-                    var payload = Payload;
-                    var lease = Lease<byte>.Create(checked((int)payload.Length), false);
-                    payload.CopyTo(lease.Span);
-                    return lease;
-            }
-            throw new InvalidCastException("Cannot convert to Lease: " + Type);
-        }
-
-        internal bool IsEqual(in CommandBytes expected)
-        {
-            if (expected.Length != Payload.Length) return false;
-            return new CommandBytes(Payload).Equals(expected);
-        }
+//        internal RedisChannel AsRedisChannel(byte[] channelPrefix, RedisChannel.PatternMode mode)
+//        {
+//            switch (Type)
+//            {
+//                case ResultType.SimpleString:
+//                case ResultType.BulkString:
+//                    if (channelPrefix == null)
+//                    {
+//                        return new RedisChannel(GetBlob(), mode);
+//                    }
+//                    if (StartsWith(channelPrefix))
+//                    {
+//                        byte[] copy = Payload.Slice(channelPrefix.Length).ToArray();
+//                        return new RedisChannel(copy, mode);
+//                    }
+//                    return default(RedisChannel);
+//                default:
+//                    throw new InvalidCastException("Cannot convert to RedisChannel: " + Type);
+//            }
+//        }
+//
+//        internal RedisKey AsRedisKey()
+//        {
+//            switch (Type)
+//            {
+//                case ResultType.SimpleString:
+//                case ResultType.BulkString:
+//                    return (RedisKey)GetBlob();
+//                default:
+//                    throw new InvalidCastException("Cannot convert to RedisKey: " + Type);
+//            }
+//        }
+//
+//        internal RedisValue AsRedisValue()
+//        {
+//            if (IsNull) return RedisValue.Null;
+//            switch (Type)
+//            {
+//                case ResultType.Integer:
+//                    long i64;
+//                    if (TryGetInt64(out i64)) return (RedisValue)i64;
+//                    break;
+//                case ResultType.SimpleString:
+//                case ResultType.BulkString:
+//                    return (RedisValue)GetBlob();
+//            }
+//            throw new InvalidCastException("Cannot convert to RedisValue: " + Type);
+//        }
+//
+//        internal Lease<byte> AsLease()
+//        {
+//            if (IsNull) return null;
+//            switch (Type)
+//            {
+//                case ResultType.SimpleString:
+//                case ResultType.BulkString:
+//                    var payload = Payload;
+//                    var lease = Lease<byte>.Create(checked((int)payload.Length), false);
+//                    payload.CopyTo(lease.Span);
+//                    return lease;
+//            }
+//            throw new InvalidCastException("Cannot convert to Lease: " + Type);
+//        }
+//
+//        internal bool IsEqual(in CommandBytes expected)
+//        {
+//            if (expected.Length != Payload.Length) return false;
+//            return new CommandBytes(Payload).Equals(expected);
+//        }
 
         internal bool IsEqual(byte[] expected)
         {
@@ -215,14 +215,14 @@ namespace TomLonghurst.RedisClient
             return true;
         }
 
-        internal bool StartsWith(in CommandBytes expected)
-        {
-            var len = expected.Length;
-            if (len > Payload.Length) return false;
-
-            var rangeToCheck = Payload.Slice(0, len);
-            return new CommandBytes(rangeToCheck).Equals(expected);
-        }
+//        internal bool StartsWith(in CommandBytes expected)
+//        {
+//            var len = expected.Length;
+//            if (len > Payload.Length) return false;
+//
+//            var rangeToCheck = Payload.Slice(0, len);
+//            return new CommandBytes(rangeToCheck).Equals(expected);
+//        }
         internal bool StartsWith(byte[] expected)
         {
             if (expected == null)
@@ -278,19 +278,31 @@ namespace TomLonghurst.RedisClient
 
         internal unsafe string GetString()
         {
-            if (IsNull) return null;
-            if (Payload.IsEmpty) return "";
+            if (IsNull)
+            {
+                return null;
+            }
+
+            if (Payload.IsEmpty)
+            {
+                return "";
+            }
 
             if (Payload.IsSingleSegment)
             {
                 return Payload.First.Span.GetString();
             }
+            
             var decoder = Encoding.UTF8.GetDecoder();
             int charCount = 0;
             foreach(var segment in Payload)
             {
                 var span = segment.Span;
-                if (span.IsEmpty) continue;
+                
+                if (span.IsEmpty)
+                {
+                    continue;
+                }
 
                 fixed(byte* bPtr = span)
                 {
@@ -307,7 +319,11 @@ namespace TomLonghurst.RedisClient
                 foreach (var segment in Payload)
                 {
                     var span = segment.Span;
-                    if (span.IsEmpty) continue;
+                    
+                    if (span.IsEmpty)
+                    {
+                        continue;
+                    }
 
                     fixed (byte* bPtr = span)
                     {
@@ -320,24 +336,24 @@ namespace TomLonghurst.RedisClient
             return s;
         }
 
-        internal bool TryGetDouble(out double val)
-        {
-            if (IsNull)
-            {
-                val = 0;
-                return false;
-            }
-            if (TryGetInt64(out long i64))
-            {
-                val = i64;
-                return true;
-            }
-            return Format.TryParseDouble(GetString(), out val);
-        }
-
+//        internal bool TryGetDouble(out double val)
+//        {
+//            if (IsNull)
+//            {
+//                val = 0;
+//                return false;
+//            }
+//            if (TryGetInt64(out long i64))
+//            {
+//                val = i64;
+//                return true;
+//            }
+//            return Format.TryParseDouble(GetString(), out val);
+//        }
+//
         internal bool TryGetInt64(out long value)
         {
-            if(IsNull || Payload.IsEmpty || Payload.Length > PhysicalConnection.MaxInt64TextLen)
+            if(IsNull || Payload.IsEmpty || Payload.Length > 20)
             {
                 value = 0;
                 return false;
@@ -345,13 +361,16 @@ namespace TomLonghurst.RedisClient
 
             if (Payload.IsSingleSegment)
             {
-                return Format.TryParseInt64(Payload.First.Span, out value);
+                return TryParseInt64(Payload.First.Span, out value);
             }
 
             Span<byte> span = stackalloc byte[(int)Payload.Length]; // we already checked the length was <= MaxInt64TextLen
             Payload.CopyTo(span);
-            return Format.TryParseInt64(span, out value);
+            return TryParseInt64(span, out value);
         }
+        
+        private static bool TryParseInt64(ReadOnlySpan<byte> s, out long value)
+            => Utf8Parser.TryParse(s, out value, out int bytes, standardFormat: 'D') & bytes == s.Length;
     }
 }
 

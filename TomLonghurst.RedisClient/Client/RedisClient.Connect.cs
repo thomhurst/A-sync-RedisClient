@@ -31,8 +31,7 @@ namespace TomLonghurst.RedisClient.Client
         private RedisSocket _socket;
 
         public Socket Socket => _socket;
-
-        private BufferedStream _bufferedStream;
+        
         private SslStream _sslStream;
         
         private IDuplexPipe pipe;
@@ -200,8 +199,6 @@ namespace TomLonghurst.RedisClient.Client
                     pipe = SocketConnection.Create(_socket);
                 }
 
-                _bufferedStream = new BufferedStream(networkStream, BufferSize);
-
                 IsConnected = true;
                 
                 if (!string.IsNullOrEmpty(_redisClientConfig.Password))
@@ -231,13 +228,13 @@ namespace TomLonghurst.RedisClient.Client
             _connectionChecker?.Dispose();
             _sendSemaphoreSlim?.Dispose();
             _connectSemaphoreSlim?.Dispose();
+            _arena?.Dispose();
         }
 
         private void DisposeNetwork()
         {
             _socket?.Close();
             _socket?.Dispose();
-            _bufferedStream?.Dispose();
             _sslStream?.Dispose();
         }
     }

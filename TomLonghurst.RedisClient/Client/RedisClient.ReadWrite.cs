@@ -1,18 +1,15 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO.Pipelines;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Pipelines.Sockets.Unofficial.Arenas;
 using TomLonghurst.RedisClient.Exceptions;
-using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Helpers;
-using TomLonghurst.RedisClient.Models;
 
 namespace TomLonghurst.RedisClient.Client
 {
@@ -27,6 +24,8 @@ namespace TomLonghurst.RedisClient.Client
         public long OutstandingOperations => Interlocked.Read(ref _outStandingOperations);
 
         private long _operationsPerformed;
+        
+        private readonly Arena<RawResult> _arena = new Arena<RawResult>(ArenaOptions.Default);
 
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
@@ -58,6 +57,7 @@ namespace TomLonghurst.RedisClient.Client
                 }
 
                 Write(command);
+                await FlushWriteAsync();
 
                 return responseReader.Invoke();
             }
@@ -79,6 +79,11 @@ namespace TomLonghurst.RedisClient.Client
                     _sendSemaphoreSlim.Release();
                 }
             }
+        }
+
+        private async Task FlushWriteAsync()
+        {
+            await pipe.Output.FlushAsync().ConfigureAwait(false);
         }
 
         private unsafe void Write(string value)
@@ -111,7 +116,7 @@ namespace TomLonghurst.RedisClient.Client
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<string> ExpectData()
         {
-            return (await ReadData()).FromUtf8();
+            return (await ReadRaw()).FirstOrDefault().GetString();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -140,97 +145,18 @@ namespace TomLonghurst.RedisClient.Client
             return number;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<IEnumerable<RedisValue<string>>> ExpectArray()
+        private async Task<List<RawResult>> ReadRaw()
         {
-            var arrayWithCountLine = await ReadLine();
-
-            if (!arrayWithCountLine.StartsWith("*"))
+            var results = new List<RawResult>();
+            
+            while (true)
             {
-                throw new UnexpectedRedisResponseException(arrayWithCountLine);
-            }
-
-            if (!int.TryParse(arrayWithCountLine.Substring(1), out var count))
-            {
-                throw new UnexpectedRedisResponseException("Error getting message count");
-            }
-
-            var results = new byte [count][];
-            for (var i = 0; i < count; i++)
-            {
-                results[i] = await ReadData();
-            }
-
-            return results.ToRedisValues();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<byte[]> ReadData()
-        {
-            var line = await ReadLine();
-
-            if (string.IsNullOrWhiteSpace(line))
-            {
-                throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
-            }
-
-            var firstChar = line.First();
-
-            if (firstChar == '-')
-            {
-                throw new RedisFailedCommandException(line);
-            }
-
-            if (firstChar == '$')
-            {
-                if (line == "$-1")
+                var pipeReader = pipe.Input;
+                if (pipeReader == null)
                 {
                     return null;
                 }
-
-                if (int.TryParse(line.Substring(1), out var byteSizeOfData))
-                {
-                    var byteBuffer = new byte [byteSizeOfData];
-
-                    var bytesRead = 0;
-                    do
-                    {
-                        var read = _bufferedStream.Read(byteBuffer, bytesRead, byteSizeOfData - bytesRead);
-
-                        if (read < 1)
-                        {
-                            throw new UnexpectedRedisResponseException(
-                                $"Invalid termination mid stream: {byteBuffer.FromUtf8()}");
-                        }
-
-                        bytesRead += read;
-                    } while (bytesRead < byteSizeOfData);
-
-                    if (_bufferedStream.ReadByte() != '\r' || _bufferedStream.ReadByte() != '\n')
-                    {
-                        throw new UnexpectedRedisResponseException($"Invalid termination: {byteBuffer.FromUtf8()}");
-                    }
-
-                    return byteBuffer;
-                }
-
-                throw new UnexpectedRedisResponseException("Invalid length");
-            }
-
-            throw new UnexpectedRedisResponseException($"Unexpected reply: {line}");
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<string> ReadLine()
-        {
-            var pipeReader = pipe.Input;
-            if (pipeReader == null)
-            {
-                return null;
-            }
-
-            while (true)
-            {
+                
                 if (!pipeReader.TryRead(out var result))
                 {
                     result = await pipeReader.ReadAsync().ConfigureAwait(false);
@@ -240,48 +166,72 @@ namespace TomLonghurst.RedisClient.Client
                 int handledBytes = 0;
                 if (!buffer.IsEmpty)
                 {
-                    handledBytes = Process(ref buffer);
+                    handledBytes = Process(ref buffer, out results);
                 }
 
                 pipeReader.AdvanceTo(buffer.Start, buffer.End);
 
+                Console.WriteLine("PIPE RESULT: " + result.Buffer);
+                
                 if (result.IsCompleted)
                 {
+                    pipeReader.Complete();
                     break;
                 }
             }
 
-            Console.WriteLine("PIPE RESULT: " + result.Buffer.IsEmpty);
+            return results;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private async Task<string> ReadLine()
+        {
             
-            //span.IndexOf('\n')-1
-            var stringBuilder = new StringBuilder();
-            int c;
-
-            while ((c = _bufferedStream.ReadByte()) != -1)
-            {
-                if (c == '\r')
-                {
-                    continue;
-                }
-
-                if (c == '\n')
-                {
-                    break;
-                }
-
-                stringBuilder.Append((char) c);
-            }
-
-            return stringBuilder.ToString();
+            return (await ReadRaw()).First().GetString();
         }
 
-        private string ParseResult(ByteSpanReader reader)
+        private int Process(ref ReadOnlySequence<byte> buffer, out List<RawResult> results)
+        {
+            int messageCount = 0;
+            
+            results = new List<RawResult>();
+
+            while (!buffer.IsEmpty)
+            {
+                var reader = new ByteSpanReader(buffer);
+                var result = ParseResult(ref reader, in buffer);
+                results.Add(result);
+                try
+                {
+                    if (result.HasValue)
+                    {
+                        buffer = reader.SliceFromCurrent();
+
+                        messageCount++;
+                        //MatchResult(result);
+                    }
+                    else
+                    {
+                        break; // remaining buffer isn't enough; give up
+                    }
+                }
+                finally
+                {
+                    _arena.Reset();
+                }
+            }
+            return messageCount;
+        }
+
+        private RawResult ParseResult(ref ByteSpanReader reader, in ReadOnlySequence<byte> buffer)
         {
             var prefix = reader.PeekByte();
+            
             if (prefix < 0)
             {
-                return string.Empty;
+                return RawResult.Nil;
             }
+            
             switch (prefix)
             {
                 case '+': // simple string
@@ -295,24 +245,30 @@ namespace TomLonghurst.RedisClient.Client
                     return ReadLineTerminatedString(ResultType.Integer, ref reader);
                 case '$': // bulk string
                     reader.Consume(1);
-                    return ReadBulkString(ref reader, includeDetilInExceptions, server);
+                    return ReadBulkString(ref reader);
                 case '*': // array
                     reader.Consume(1);
-                    return ReadArray(arena, in buffer, ref reader, includeDetilInExceptions, server);
-                default:
-                    // string s = Format.GetString(buffer);
-                    if (allowInlineProtocol) return ParseInlineProtocol(arena, ReadLineTerminatedString(ResultType.SimpleString, ref reader));
-                    throw new InvalidOperationException("Unexpected response prefix: " + (char)prefix);
+                    return ReadArray(ref reader, in buffer);
+// TODO
+                //                default:
+//                    // string s = Format.GetString(buffer);
+//                    if (allowInlineProtocol)
+//                    {
+//                        return ParseInlineProtocol(arena, ReadLineTerminatedString(ResultType.SimpleString, ref reader));
+//                    }
+//                    throw new InvalidOperationException("Unexpected response prefix: " + (char)prefix);
             }
+            
+            throw new InvalidOperationException("Unexpected response prefix: " + (char)prefix);
         }
 
         
-        private static string ReadLineTerminatedString(ByteSpanReader reader)
+        private RawResult ReadLineTerminatedString(ResultType type, ref ByteSpanReader reader)
         {
             int crlfOffsetFromCurrent = ByteSpanReader.FindNextCrLf(reader);
             if (crlfOffsetFromCurrent < 0)
             {
-                return null;
+                return RawResult.Nil;
             }
 
             var payload = reader.ConsumeAsBuffer(crlfOffsetFromCurrent);
@@ -321,12 +277,17 @@ namespace TomLonghurst.RedisClient.Client
             return new RawResult(type, payload, false);
         }
         
-        private static RawResult ReadBulkString(ref ByteSpanReader reader, bool includeDetailInExceptions, ServerEndPoint server)
+        private RawResult ReadBulkString(ref ByteSpanReader reader)
         {
             var prefix = ReadLineTerminatedString(ResultType.Integer, ref reader);
             if (prefix.HasValue)
             {
-                if (!prefix.TryGetInt64(out long i64)) throw ExceptionFactory.ConnectionFailure(includeDetailInExceptions, ConnectionFailureType.ProtocolFailure, "Invalid bulk string length", server);
+                if (!prefix.TryGetInt64(out long i64))
+                {
+                    // TODO
+                    // throw ExceptionFactory.ConnectionFailure(includeDetailInExceptions, ConnectionFailureType.ProtocolFailure, "Invalid bulk string length", server);
+                }
+                
                 int bodySize = checked((int)i64);
                 if (bodySize < 0)
                 {
@@ -342,16 +303,70 @@ namespace TomLonghurst.RedisClient.Client
                         case ConsumeResult.Success:
                             return new RawResult(ResultType.BulkString, payload, false);
                         default:
-                            throw ExceptionFactory.ConnectionFailure(includeDetailInExceptions, ConnectionFailureType.ProtocolFailure, "Invalid bulk string terminator", server);
+                            throw new Exception();
+                            // TODO
+                            // throw ExceptionFactory.ConnectionFailure(includeDetailInExceptions, ConnectionFailureType.ProtocolFailure, "Invalid bulk string terminator", server);
                     }
                 }
             }
             return RawResult.Nil;
         }
         
-        private int Process(ref ReadOnlySequence<byte> buffer)
+        private RawResult ReadArray(ref ByteSpanReader reader, in ReadOnlySequence<byte> buffer)
         {
-            return -1;
+            var itemCount = ReadLineTerminatedString(ResultType.Integer, ref reader);
+            if (itemCount.HasValue)
+            {
+                if (!itemCount.TryGetInt64(out long i64))
+                {
+                    // TODO
+                    throw new Exception();
+                    //throw ExceptionFactory.ConnectionFailure(includeDetailInExceptions, ConnectionFailureType.ProtocolFailure, "Invalid array length", server);
+                }
+                
+                int itemCountActual = checked((int)i64);
+
+                if (itemCountActual < 0)
+                {
+                    //for null response by command like EXEC, RESP array: *-1\r\n
+                    return RawResult.NullMultiBulk;
+                }
+                else if (itemCountActual == 0)
+                {
+                    //for zero array response by command like SCAN, Resp array: *0\r\n
+                    return RawResult.EmptyMultiBulk;
+                }
+
+                var oversized = _arena.Allocate(itemCountActual);
+                var result = new RawResult(oversized, false);
+
+                if (oversized.IsSingleSegment)
+                {
+                    var span = oversized.FirstSpan;
+                    for(int i = 0; i < span.Length; i++)
+                    {
+                        if (!(span[i] = ParseResult(ref reader, in buffer)).HasValue)
+                        {
+                            return RawResult.Nil;
+                        }
+                    }
+                }
+                else
+                {
+                    foreach(var span in oversized.Spans)
+                    {
+                        for (int i = 0; i < span.Length; i++)
+                        {
+                            if (!(span[i] = ParseResult(ref reader, in buffer)).HasValue)
+                            {
+                                return RawResult.Nil;
+                            }
+                        }
+                    }
+                }
+                return result;
+            }
+            return RawResult.Nil;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -88,13 +88,13 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<IEnumerable<RedisValue<string>>> StringGetAsync(IEnumerable<string> keys,
             CancellationToken cancellationToken)
         {
-            return await await RunWithTimeout(async token =>
+            return (await await RunWithTimeout(async token =>
             {
                 var keysAsString = string.Join(" ", keys);
                 var command = $"{Commands.MGet} {keysAsString}".ToRedisProtocol();
 
-                return await SendAndReceiveAsync(command, ExpectArray, token);
-            }, cancellationToken).ConfigureAwait(false);
+                return await SendAndReceiveAsync(command, ReadRaw, token);
+            }, cancellationToken).ConfigureAwait(false)).Select(x => new RedisValue<string>(x.GetString()));
         }
 
         public async Task StringSetAsync(string key, string value, int timeToLiveInSeconds, AwaitOptions awaitOptions)
