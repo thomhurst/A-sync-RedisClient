@@ -97,3 +97,7 @@ Wait for the operation to complete on the Redis server before resuming program e
 
 #### FireAndForget
 Resume with program execution instantly and forget about checking the result
+
+If you enjoy, please buy me a coffee :)
+
+<a href="https://www.buymeacoffee.com/tomhurst" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: auto !important;width: auto !important;" ></a>
