@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -107,9 +106,13 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string ExpectData()
+        private async Task<string> ExpectData()
         {
+#if NETCORE
+            return (await ReadData()).FromUtf8();
+#elif NETSTANDARD
             return ReadData().FromUtf8();
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -139,7 +142,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private IEnumerable<RedisValue<string>> ExpectArray()
+        private async Task<IEnumerable<RedisValue<string>>> ExpectArray()
         {
             var arrayWithCountLine = ReadLine();
 
@@ -153,69 +156,17 @@ namespace TomLonghurst.RedisClient.Client
                 throw new UnexpectedRedisResponseException("Error getting message count");
             }
 
-            var results = new byte [count][];
+            var results = new string [count];
             for (var i = 0; i < count; i++)
             {
-                results[i] = ReadData();
+#if NETCORE
+                results[i] = (await ReadData()).FromUtf8();
+#elif NETSTANDARD
+                results[i] = ReadData().FromUtf8();
+#endif
             }
 
             return results.ToRedisValues();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private byte[] ReadData()
-        {
-            var line = ReadLine();
-
-            if (string.IsNullOrWhiteSpace(line))
-            {
-                throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
-            }
-
-            var firstChar = line.First();
-
-            if (firstChar == '-')
-            {
-                throw new RedisFailedCommandException(line);
-            }
-
-            if (firstChar == '$')
-            {
-                if (line == "$-1")
-                {
-                    return null;
-                }
-
-                if (int.TryParse(line.Substring(1), out var byteSizeOfData))
-                {
-                    var byteBuffer = new byte [byteSizeOfData];
-
-                    var bytesRead = 0;
-                    do
-                    {
-                        var read = _bufferedStream.Read(byteBuffer, bytesRead, byteSizeOfData - bytesRead);
-
-                        if (read < 1)
-                        {
-                            throw new UnexpectedRedisResponseException(
-                                $"Invalid termination mid stream: {byteBuffer.FromUtf8()}");
-                        }
-
-                        bytesRead += read;
-                    } while (bytesRead < byteSizeOfData);
-
-                    if (_bufferedStream.ReadByte() != '\r' || _bufferedStream.ReadByte() != '\n')
-                    {
-                        throw new UnexpectedRedisResponseException($"Invalid termination: {byteBuffer.FromUtf8()}");
-                    }
-
-                    return byteBuffer;
-                }
-
-                throw new UnexpectedRedisResponseException("Invalid length");
-            }
-
-            throw new UnexpectedRedisResponseException($"Unexpected reply: {line}");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
