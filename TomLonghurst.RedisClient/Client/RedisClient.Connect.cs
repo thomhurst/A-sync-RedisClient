@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using Nerdbank.Streams;
 using TomLonghurst.RedisClient.Exceptions;
 
 namespace TomLonghurst.RedisClient.Client
@@ -188,7 +189,7 @@ namespace TomLonghurst.RedisClient.Client
                     }
 
                     networkStream = _sslStream;
-                    _sslPipe = new SslPipe(_sslStream);
+                    _sslPipe = _sslStream.UsePipe();
                 }
 
                 //_bufferedStream = new BufferedStream(networkStream, BufferSize);

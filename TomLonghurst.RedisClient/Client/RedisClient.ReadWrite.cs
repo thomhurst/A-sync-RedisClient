@@ -28,7 +28,7 @@ namespace TomLonghurst.RedisClient.Client
         public long OutstandingOperations => Interlocked.Read(ref _outStandingOperations);
 
         private long _operationsPerformed;
-        private SslPipe _sslPipe;
+        private IDuplexPipe _sslPipe;
 
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
@@ -189,7 +189,7 @@ namespace TomLonghurst.RedisClient.Client
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<object> ExpectSuccess()
         {
-            var response = await ReadLine();
+            var response = await GetNextMessage();
             if (response.StartsWith("-"))
             {
                 throw new RedisFailedCommandException(response);
