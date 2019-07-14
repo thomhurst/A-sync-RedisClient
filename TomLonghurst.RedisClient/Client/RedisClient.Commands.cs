@@ -13,7 +13,7 @@ namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient : IDisposable
     {
-        private async ValueTask Authorize(CancellationToken cancellationToken)
+        private async ValueTask AuthorizeAsync(CancellationToken cancellationToken)
         {
             await RunWithTimeout(async token =>
             {
@@ -22,7 +22,7 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken);
         }
         
-        private async ValueTask SelectDb(CancellationToken cancellationToken)
+        private async ValueTask SelectDbAsync(CancellationToken cancellationToken)
         {
             await RunWithTimeout(async token =>
             {
@@ -31,19 +31,19 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken);
         }
 
-        public async Task<Pong> Ping()
+        public async Task<Pong> PingAsync()
         {
-            return await Ping(CancellationToken.None);
+            return await PingAsync(CancellationToken.None);
         }
 
-        public async Task<Pong> Ping(CancellationToken cancellationToken)
+        public async Task<Pong> PingAsync(CancellationToken cancellationToken)
         {
             return await RunWithTimeout(async token =>
             {
                 var pingCommand = Commands.Ping.ToRedisProtocol();
 
                 var sw = Stopwatch.StartNew();
-                var pingResponse = await SendAndReceiveAsync(pingCommand, ExpectWord, CancellationToken.None);
+                var pingResponse = await await SendAndReceiveAsync(pingCommand, ExpectWord, CancellationToken.None);
                 sw.Stop();
 
                 return new Pong(sw.Elapsed, pingResponse);
@@ -58,7 +58,7 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<bool> KeyExistsAsync(string key,
             CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
+            return await await RunWithTimeout(async token =>
             {
                 var command = $"{Commands.Exists} {key}".ToRedisProtocol();
                 return await SendAndReceiveAsync(command, ExpectNumber, token);
@@ -73,10 +73,10 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<RedisValue<string>> StringGetAsync(string key,
             CancellationToken cancellationToken)
         {
-            return new RedisValue<string>(await RunWithTimeout(async token =>
+            return new RedisValue<string>(await await RunWithTimeout(async token =>
                 {
                     var command = $"{Commands.Get} {key}".ToRedisProtocol();
-                    return await SendAndReceiveAsync(command, ExpectData, token);
+                    return await SendAndReceiveAsync(command, GetNextMessage, token);
                 }, cancellationToken).ConfigureAwait(false));
         }
 
@@ -88,7 +88,7 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<IEnumerable<RedisValue<string>>> StringGetAsync(IEnumerable<string> keys,
             CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
+            return await await RunWithTimeout(async token =>
             {
                 var keysAsString = string.Join(" ", keys);
                 var command = $"{Commands.MGet} {keysAsString}".ToRedisProtocol();
@@ -205,14 +205,14 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<string> ClusterInfo()
+        public async Task<string> ClusterInfoAsync()
         {
-            return await ClusterInfo(CancellationToken.None).ConfigureAwait(false);
+            return await ClusterInfoAsync(CancellationToken.None).ConfigureAwait(false);
         }
         
-        public async Task<string> ClusterInfo(CancellationToken cancellationToken)
+        public async Task<string> ClusterInfoAsync(CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
+            return await await RunWithTimeout(async token =>
             {
                 var command = Commands.ClusterInfo.ToRedisProtocol();
                 return await SendAndReceiveAsync(command, ExpectData, token);

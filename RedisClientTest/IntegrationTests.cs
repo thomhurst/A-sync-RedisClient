@@ -84,7 +84,7 @@ namespace RedisClientTest
         {
             var sw = Stopwatch.StartNew();
             
-            var pong = await _tomLonghurstRedisClient.Ping();
+            var pong = await _tomLonghurstRedisClient.PingAsync();
             Assert.AreEqual(true, pong.IsSuccessful);
             
             var getDoesntExist = (await _tomLonghurstRedisClient.StringGetAsync(new [] { "Blah1", "Blah2" })).ToList();
@@ -115,7 +115,7 @@ namespace RedisClientTest
         [Test]
         public async Task Ping()
         {
-            var pong = await _tomLonghurstRedisClient.Ping();
+            var pong = await _tomLonghurstRedisClient.PingAsync();
             Assert.AreEqual(true, pong.IsSuccessful);
             Assert.AreEqual("PONG", pong.Message);
         }
@@ -142,6 +142,13 @@ namespace RedisClientTest
             var values = (await _tomLonghurstRedisClient.StringGetAsync(new [] { "Blah1", "Blah2", "Exists", "Blah4", "Blah5" })).ToList();
             Assert.That(values.Count, Is.EqualTo(5));
             Assert.That(values.Count(value => value.HasValue), Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task GetKey()
+        {
+            var redisValue = await _tomLonghurstRedisClient.StringGetAsync("KeyExists");
+            Assert.That(redisValue.Value, Is.EqualTo("123"));
         }
         
         [Test]
@@ -193,7 +200,7 @@ namespace RedisClientTest
         [Test, Ignore("No Cluster Support on Redis Server")]
         public async Task ClusterInfo()
         {
-            var response = await _tomLonghurstRedisClient.ClusterInfo();
+            var response = await _tomLonghurstRedisClient.ClusterInfoAsync();
             var firstLine = response.Split("\n").First();
             Assert.That(firstLine, Is.EqualTo("cluster_state:ok"));
         }

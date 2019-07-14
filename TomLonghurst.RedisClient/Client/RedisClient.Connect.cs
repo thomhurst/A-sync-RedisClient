@@ -30,7 +30,7 @@ namespace TomLonghurst.RedisClient.Client
 
         public Socket Socket => _socket;
 
-        private BufferedStream _bufferedStream;
+        //private BufferedStream _bufferedStream;
         private SslStream _sslStream;
         
         private const int BufferSize = 16 * 1024;
@@ -188,20 +188,21 @@ namespace TomLonghurst.RedisClient.Client
                     }
 
                     networkStream = _sslStream;
+                    _sslPipe = new SslPipe(_sslStream);
                 }
 
-                _bufferedStream = new BufferedStream(networkStream, BufferSize);
+                //_bufferedStream = new BufferedStream(networkStream, BufferSize);
 
                 IsConnected = true;
                 
                 if (!string.IsNullOrEmpty(_redisClientConfig.Password))
                 {
-                    await Authorize(cancellationToken);
+                    await AuthorizeAsync(cancellationToken);
                 }
 
                 if (_redisClientConfig.Db != 0)
                 {
-                    await SelectDb(cancellationToken);
+                    await SelectDbAsync(cancellationToken);
                 }
 
                 if (_redisClientConfig.ClientName != null)
@@ -227,7 +228,7 @@ namespace TomLonghurst.RedisClient.Client
         {
             _socket?.Close();
             _socket?.Dispose();
-            _bufferedStream?.Dispose();
+            //_bufferedStream?.Dispose();
             _sslStream?.Dispose();
         }
     }
