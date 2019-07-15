@@ -85,7 +85,8 @@ namespace TomLonghurst.RedisClient.Client
                     var command = $"{Commands.Get} {key}".ToRedisProtocol();
                     return await SendAndReceiveAsync(command, ExpectData, token);
                 }, cancellationToken).ConfigureAwait(false))
-                .Also(delegate(RedisValue<string> redisValue) { _manager.SetCache(redisValue.Key, redisValue.Value); });
+                .Also(delegate(RedisValue<string> redisValue) { AddKeyToValueResponse(key, redisValue); })
+                .Also(delegate(RedisValue<string> redisValue) { _manager.SetCache(key, redisValue); });
         }
 
         public async Task<IList<RedisValue<string>>> StringGetAsync(IEnumerable<string> keys)
@@ -117,7 +118,7 @@ namespace TomLonghurst.RedisClient.Client
                     {
                         if (redisValue.HasValue)
                         {
-                            _manager.SetCache(redisValue.Key, redisValue.Value);
+                            _manager.SetCache(redisValue.Key, redisValue);
                         }
                     }
                 });
