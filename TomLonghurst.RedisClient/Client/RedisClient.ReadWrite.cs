@@ -140,7 +140,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private IEnumerable<RedisValue<string>> ExpectArray()
+        private IList<RedisValue<string>> ExpectArray()
         {
             var arrayWithCountLine = ReadLine();
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Caching;
 using System.Threading.Tasks;
 
 namespace TomLonghurst.RedisClient.Client
@@ -8,7 +9,30 @@ namespace TomLonghurst.RedisClient.Client
     public class RedisClientManager
     {
         private readonly List<Lazy<Task<RedisClient>>> _lazyRedisClients = new List<Lazy<Task<RedisClient>>>();
+        private readonly MemoryCache _memoryCache = MemoryCache.Default;
 
+        internal void SetCache(string key, object value)
+        {
+            _memoryCache.Set(key, value, DateTimeOffset.Now.AddSeconds(15));
+        }
+        
+        internal T GetCache<T>(string key)
+        {
+            var obj = _memoryCache.Get(key);
+            
+            if (obj == null)
+            {
+                return default;
+            }
+
+            if (obj.GetType() == typeof(T) || obj.GetType().IsAssignableFrom(typeof(T)))
+            {
+                return (T) obj;
+            }
+            
+            return default;
+        }
+        
         public RedisClientManager(RedisClientConfig clientConfig, int redisClientPoolSize)
         {
             if (redisClientPoolSize < 1)
@@ -18,7 +42,7 @@ namespace TomLonghurst.RedisClient.Client
 
             for (var i = 0; i < redisClientPoolSize; i++)
             {
-                _lazyRedisClients.Add(new Lazy<Task<RedisClient>>(() => RedisClient.ConnectAsync(clientConfig)));
+                _lazyRedisClients.Add(new Lazy<Task<RedisClient>>(() => RedisClient.ConnectAsync(clientConfig, this)));
             }
         }
 
@@ -58,6 +82,11 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<IEnumerable<RedisClient>> GetAllRedisClientsAsync()
         {
             return await Task.WhenAll(_lazyRedisClients.Select(lazyRedisClient => lazyRedisClient.Value));
+        }
+
+        public void DeleteCache(string key)
+        {
+            _memoryCache.Remove(key);
         }
     }
 }

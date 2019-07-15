@@ -23,7 +23,8 @@ namespace TomLonghurst.RedisClient.Client
         private readonly SemaphoreSlim _connectSemaphoreSlim = new SemaphoreSlim(1, 1);
 
         private readonly RedisClientConfig _redisClientConfig;
-        
+        private readonly RedisClientManager _manager;
+
         private readonly Timer _connectionChecker;
         
         private RedisSocket _socket;
@@ -51,9 +52,10 @@ namespace TomLonghurst.RedisClient.Client
             private set => _isConnected = value;
         }
 
-        private RedisClient(RedisClientConfig redisClientConfig)
+        private RedisClient(RedisClientConfig redisClientConfig, RedisClientManager manager)
         {
             _redisClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
+            _manager = manager;
 
             _connectionChecker = new Timer(CheckConnection, null, 30000, 30000);
         }
@@ -86,14 +88,14 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        internal static Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig)
+        internal static Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, RedisClientManager manager)
         {
-            return ConnectAsync(redisClientConfig, CancellationToken.None);
+            return ConnectAsync(redisClientConfig, manager, CancellationToken.None);
         }
 
-        internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
+        internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, RedisClientManager manager, CancellationToken cancellationToken)
         {
-            var redisClient = new RedisClient(redisClientConfig);
+            var redisClient = new RedisClient(redisClientConfig, manager);
             await redisClient.TryConnectAsync(cancellationToken);
             return redisClient;
         }

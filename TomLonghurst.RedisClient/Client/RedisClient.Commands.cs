@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -73,28 +74,66 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<RedisValue<string>> StringGetAsync(string key,
             CancellationToken cancellationToken)
         {
+            var localCache = _manager.GetCache<RedisValue<string>>(key);
+            if (localCache != null && localCache.HasValue)
+            {
+                return localCache;
+            }
+            
             return new RedisValue<string>(await RunWithTimeout(async token =>
                 {
                     var command = $"{Commands.Get} {key}".ToRedisProtocol();
                     return await SendAndReceiveAsync(command, ExpectData, token);
-                }, cancellationToken).ConfigureAwait(false));
+                }, cancellationToken).ConfigureAwait(false))
+                .Also(delegate(RedisValue<string> redisValue) { _manager.SetCache(redisValue.Key, redisValue.Value); });
         }
 
-        public async Task<IEnumerable<RedisValue<string>>> StringGetAsync(IEnumerable<string> keys)
+        public async Task<IList<RedisValue<string>>> StringGetAsync(IEnumerable<string> keys)
         {
             return await StringGetAsync(keys, CancellationToken.None).ConfigureAwait(false);
         }
 
-        public async Task<IEnumerable<RedisValue<string>>> StringGetAsync(IEnumerable<string> keys,
+        public async Task<IList<RedisValue<string>>> StringGetAsync(IEnumerable<string> keys,
             CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
-            {
-                var keysAsString = string.Join(" ", keys);
-                var command = $"{Commands.MGet} {keysAsString}".ToRedisProtocol();
+            keys = keys.ToList();
 
-                return await SendAndReceiveAsync(command, ExpectArray, token);
-            }, cancellationToken).ConfigureAwait(false);
+            var localCache = keys.Select(key => _manager.GetCache<RedisValue<string>>(key)).ToList();
+            if (localCache.Count(x => x != null && x.HasValue) == keys.Count())
+            {
+                return localCache.ToList();
+            }
+            
+            return (await RunWithTimeout(async token =>
+                {
+                    var keysAsString = string.Join(" ", keys);
+                    var command = $"{Commands.MGet} {keysAsString}".ToRedisProtocol();
+
+                    return await SendAndReceiveAsync(command, ExpectArray, token);
+                }, cancellationToken).ConfigureAwait(false))
+                .Also(delegate(IList<RedisValue<string>> list) { AddKeysToValuesResponse((IList<string>) keys, list); })
+                .Also(delegate(IList<RedisValue<string>> list) {
+                    foreach (var redisValue in list)
+                    {
+                        if (redisValue.HasValue)
+                        {
+                            _manager.SetCache(redisValue.Key, redisValue.Value);
+                        }
+                    }
+                });
+        }
+
+        private void AddKeysToValuesResponse<T>(IList<string> keys, IList<RedisValue<T>> values)
+        {
+            for (var i = 0; i < values.Count; i++)
+            {
+                AddKeyToValueResponse(keys[i], values[i]);
+            }
+        }
+
+        private void AddKeyToValueResponse<T>(string key, RedisValue<T> value)
+        {
+            value.Key = key;
         }
 
         public async Task StringSetAsync(string key, string value, int timeToLiveInSeconds, AwaitOptions awaitOptions)
@@ -183,9 +222,15 @@ namespace TomLonghurst.RedisClient.Client
             AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
+            var keysList = keys.ToList();
+            foreach (var key in keysList)
+            {
+                _manager.DeleteCache(key);
+            }
+
             await RunWithTimeout(async token => 
             {
-                var keysAsString = string.Join(" ", keys);
+                var keysAsString = string.Join(" ", keysList);
                 var command = $"{Commands.Del} {keysAsString}".ToRedisProtocol();
                 var task = SendAndReceiveAsync(command, ExpectSuccess, token);
 
