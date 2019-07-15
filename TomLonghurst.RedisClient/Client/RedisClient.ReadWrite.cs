@@ -74,7 +74,7 @@ namespace TomLonghurst.RedisClient.Client
 
                 return responseReader.Invoke();
             }
-            catch (RedisConnectionException)
+            catch (RedisException)
             {
                 throw;
             }
