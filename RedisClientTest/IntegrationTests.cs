@@ -175,8 +175,11 @@ namespace RedisClientTest
             };
             
             await _tomLonghurstRedisClient.StringSetAsync(keyValues, AwaitOptions.AwaitCompletion);
-            var redisValues = await _tomLonghurstRedisClient.StringGetAsync(new [] { "MultiKey1", "MultiKey1", "MultiKey3" });
+            var redisValues = (await _tomLonghurstRedisClient.StringGetAsync(new [] { "MultiKey1", "MultiKey2", "MultiKey3" })).ToList();
             Assert.That(redisValues.Count(), Is.EqualTo(3));
+            Assert.That(redisValues[0].Value, Is.EqualTo("1"));
+            Assert.That(redisValues[1].Value, Is.EqualTo("2"));
+            Assert.That(redisValues[2].Value, Is.EqualTo("3"));
         }
 
         [Test]
