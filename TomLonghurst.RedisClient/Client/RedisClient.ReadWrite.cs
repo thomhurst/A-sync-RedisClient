@@ -74,12 +74,13 @@ namespace TomLonghurst.RedisClient.Client
 
                 return responseReader.Invoke();
             }
-            catch (RedisException)
-            {
-                throw;
-            }
             catch (Exception innerException)
             {
+                if (innerException.IsSameOrSubclassOf(typeof(RedisException)) || innerException.IsSameOrSubclassOf(typeof(OperationCanceledException)))
+                {
+                    throw;
+                }
+                
                 DisposeNetwork();
                 IsConnected = false;
                 throw new RedisConnectionException(innerException);
