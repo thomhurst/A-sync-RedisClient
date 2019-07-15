@@ -13,7 +13,10 @@ namespace TomLonghurst.RedisClient.Client
 
         internal void SetCache(string key, object value)
         {
-            _memoryCache.Set(key, value, DateTimeOffset.Now.AddSeconds(15));
+            if (value != null)
+            {
+                _memoryCache.Set(key, value, DateTimeOffset.Now.AddSeconds(15));
+            }
         }
         
         internal T GetCache<T>(string key)
