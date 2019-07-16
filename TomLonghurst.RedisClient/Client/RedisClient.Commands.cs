@@ -107,7 +107,7 @@ namespace TomLonghurst.RedisClient.Client
         public async Task StringSetAsync(string key, string value, int timeToLiveInSeconds, AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-            CollateMultipleRequestsForFireAndForget(new Tuple<string, string, int>(key, value, timeToLiveInSeconds), _stringSetWithTtlQueue);
+            await CollateMultipleRequestsForFireAndForget(new Tuple<string, string, int>(key, value, timeToLiveInSeconds), _stringSetWithTtlQueue);
             var tuples = _stringSetWithTtlQueue.DequeueAll();
             
             if (!tuples.Any())
@@ -137,7 +137,7 @@ namespace TomLonghurst.RedisClient.Client
         public async Task StringSetAsync(string key, string value, AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-            CollateMultipleRequestsForFireAndForget(new Tuple<string, string>(key, value), _stringSetQueue);
+            await CollateMultipleRequestsForFireAndForget(new Tuple<string, string>(key, value), _stringSetQueue);
             var tuples = _stringSetQueue.DequeueAll();
 
             if (!tuples.Any())
