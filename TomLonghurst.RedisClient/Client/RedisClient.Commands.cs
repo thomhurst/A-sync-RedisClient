@@ -105,9 +105,19 @@ namespace TomLonghurst.RedisClient.Client
         public async Task StringSetAsync(string key, string value, int timeToLiveInSeconds, AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
+            await CollateMultipleRequestsForFireAndForget(new Tuple<string, string, int>(key, value, timeToLiveInSeconds), _stringSetWithTtlQueue);
+            var tuples = _stringSetWithTtlQueue.DequeueAll();
+            
+            if (!tuples.Any())
+            {
+                return;
+            }
+            
             await RunWithTimeout(async token =>
             {
-                var command = $"{Commands.SetEx} {key} {timeToLiveInSeconds} {value}".ToRedisProtocol();
+                var command = string.Join("\r\n", tuples.Select(tuple => $"{Commands.SetEx} {tuple.Item1} {tuple.Item3} {tuple.Item2}"))
+                    .ToFireAndForgetCommand();
+                
                 var task = SendAndReceiveAsync(command, ExpectSuccess, token);
                 
                 if (awaitOptions == AwaitOptions.AwaitCompletion)
@@ -122,12 +132,23 @@ namespace TomLonghurst.RedisClient.Client
             await StringSetAsync(key, value, awaitOptions, CancellationToken.None).ConfigureAwait(false);
         }
 
+        
         public async Task StringSetAsync(string key, string value, AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
+            await CollateMultipleRequestsForFireAndForget(new Tuple<string, string>(key, value), _stringSetQueue);
+            var tuples = _stringSetQueue.DequeueAll();
+
+            if (!tuples.Any())
+            {
+                return;
+            }
+            
             await RunWithTimeout(async token =>
             {
-                var command = $"{Commands.Set} {key} {value}".ToRedisProtocol();
+                var command = string.Join("\r\n", tuples.Select(tuple => $"{Commands.Set} {tuple.Item1} {tuple.Item2}"))
+                    .ToFireAndForgetCommand();
+                
                 var task = SendAndReceiveAsync(command, ExpectSuccess, token);
                 
                 if (awaitOptions == AwaitOptions.AwaitCompletion)
