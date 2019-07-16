@@ -181,23 +181,15 @@ namespace TomLonghurst.RedisClient.Client
                 var setCommand = $"{Commands.MSet} {keysAndPairs}".ToRedisProtocol();
 
                 var expireCommand = string.Join("\r\n",
-                    keys.Select(key => $"{Commands.Expire} {key} {timeToLiveInSeconds}\r\n"));
+                    keys.Select(key => $"{Commands.Expire} {key} {timeToLiveInSeconds}"));
 
                 await SendAndReceiveAsync(setCommand, ExpectSuccess, token);
 
+                var expireTask = SendAndReceiveAsync(expireCommand.ToFireAndForgetCommand(), ExpectSuccess, token);
+                
                 if (awaitOptions == AwaitOptions.AwaitCompletion)
                 {
-                    await SendAndReceiveAsync(expireCommand, ExpectNumber, token);
-
-                    for (var i = 1; i < keys.Count; i++)
-                    {
-                        ExpectNumber();
-                    }
-                }
-                else
-                {
-                    var expireCommandFireAndForget = $"CLIENT REPLY OFF\r\n{expireCommand}CLIENT REPLY ON\r\n";
-                    await SendAndReceiveAsync(expireCommandFireAndForget, ExpectSuccess, token);
+                    await expireTask;
                 }
             }, cancellationToken).ConfigureAwait(false);
         }

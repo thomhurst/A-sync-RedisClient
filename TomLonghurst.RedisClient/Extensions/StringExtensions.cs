@@ -31,5 +31,10 @@ namespace TomLonghurst.RedisClient.Extensions
         {
             return value.Split(new[] {delimiter}, StringSplitOptions.None);
         }
+
+        internal static string ToFireAndForgetCommand(this string command)
+        {
+            return $"CLIENT REPLY OFF\r\n{command}\r\nCLIENT REPLY ON\r\n";
+        }
     }
 }
