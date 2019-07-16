@@ -11,7 +11,7 @@ namespace TomLonghurst.RedisClient.Extensions
             {
                 var list = new List<T>();
 
-                while (queue.TryDequeue(out var result) && list.Count < 100)
+                while (queue.TryDequeue(out var result) && list.Count < 500)
                 {
                     list.Add(result);
                 }
