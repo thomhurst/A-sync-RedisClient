@@ -107,16 +107,17 @@ namespace TomLonghurst.RedisClient.Client
         public async Task StringSetAsync(string key, string value, int timeToLiveInSeconds, AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-            await CollateMultipleRequestsForFireAndForget(new Tuple<string, string, int>(key, value, timeToLiveInSeconds), _stringSetWithTtlQueue);
-            var tuples = _stringSetWithTtlQueue.DequeueAll();
-            
-            if (!tuples.Any())
-            {
-                return;
-            }
-            
+            CollateMultipleRequestsForPipelining(new Tuple<string, string, int>(key, value, timeToLiveInSeconds), _stringSetWithTtlQueue);
+
             await RunWithTimeout(async token =>
             {
+                var tuples = await _stringSetWithTtlQueue.DequeueAll(_sendSemaphoreSlim, token);
+            
+                if (!tuples.Any())
+                {
+                    return;
+                }
+                
                 var command = tuples.Select(tuple => $"{Commands.SetEx} {tuple.Item1} {tuple.Item3} {tuple.Item2}").ToFireAndForgetCommand();
 
                 var task = SendAndReceiveAsync(command, ExpectSuccess, token);
@@ -137,16 +138,17 @@ namespace TomLonghurst.RedisClient.Client
         public async Task StringSetAsync(string key, string value, AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-            await CollateMultipleRequestsForFireAndForget(new Tuple<string, string>(key, value), _stringSetQueue);
-            var tuples = _stringSetQueue.DequeueAll();
+            CollateMultipleRequestsForPipelining(new Tuple<string, string>(key, value), _stringSetQueue);
 
-            if (!tuples.Any())
-            {
-                return;
-            }
-            
             await RunWithTimeout(async token =>
             {
+                var tuples = await _stringSetQueue.DequeueAll(_sendSemaphoreSlim, token);
+
+                if (!tuples.Any())
+                {
+                    return;
+                }
+                
                 var command = tuples.Select(tuple => $"{Commands.Set} {tuple.Item1} {tuple.Item2}").ToFireAndForgetCommand();
                 var task = SendAndReceiveAsync(command, ExpectSuccess, token);
                 
