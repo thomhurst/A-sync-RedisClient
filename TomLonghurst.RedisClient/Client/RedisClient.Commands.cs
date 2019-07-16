@@ -159,6 +159,48 @@ namespace TomLonghurst.RedisClient.Client
                 }
             }, cancellationToken).ConfigureAwait(false);
         }
+        
+        public async Task StringSetAsync(IEnumerable<KeyValuePair<string, string>> keyValuePairs, 
+            int timeToLiveInSeconds, 
+            AwaitOptions awaitOptions)
+        {
+            await StringSetAsync(keyValuePairs, timeToLiveInSeconds, awaitOptions, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        public async Task StringSetAsync(IEnumerable<KeyValuePair<string, string>> keyValuePairs,
+            int timeToLiveInSeconds, 
+            AwaitOptions awaitOptions,
+            CancellationToken cancellationToken)
+        {
+            await RunWithTimeout(async token =>
+            {
+                keyValuePairs = keyValuePairs.ToList();
+                var keys = keyValuePairs.Select(k => k.Key).ToList();
+
+                var keysAndPairs = string.Join(" ", keyValuePairs.Select(pair => $"{pair.Key} {pair.Value}"));
+                var setCommand = $"{Commands.MSet} {keysAndPairs}".ToRedisProtocol();
+
+                var expireCommand = string.Join("\r\n",
+                    keys.Select(key => $"{Commands.Expire} {key} {timeToLiveInSeconds}\r\n"));
+
+                await SendAndReceiveAsync(setCommand, ExpectSuccess, token);
+
+                if (awaitOptions == AwaitOptions.AwaitCompletion)
+                {
+                    await SendAndReceiveAsync(expireCommand, ExpectNumber, token);
+
+                    for (var i = 1; i < keys.Count; i++)
+                    {
+                        ExpectNumber();
+                    }
+                }
+                else
+                {
+                    var expireCommandFireAndForget = $"CLIENT REPLY OFF\r\n{expireCommand}CLIENT REPLY ON\r\n";
+                    await SendAndReceiveAsync(expireCommandFireAndForget, ExpectSuccess, token);
+                }
+            }, cancellationToken).ConfigureAwait(false);
+        }
 
         public async Task DeleteKeyAsync(string key,
             AwaitOptions awaitOptions)

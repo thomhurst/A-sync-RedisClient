@@ -181,6 +181,25 @@ namespace RedisClientTest
             Assert.That(redisValues[1].Value, Is.EqualTo("2"));
             Assert.That(redisValues[2].Value, Is.EqualTo("3"));
         }
+        
+        [TestCase(AwaitOptions.AwaitCompletion)]
+        [TestCase(AwaitOptions.FireAndForget)]
+        public async Task SetGetMultipleKeyWithTtl(AwaitOptions awaitOptions)
+        {
+            var keyValues = new List<KeyValuePair<string, string>>
+            {
+                new KeyValuePair<string, string>("MultiKeyWithTtl1", "1"),
+                new KeyValuePair<string, string>("MultiKeyWithTtl2", "2"),
+                new KeyValuePair<string, string>("MultiKeyWithTtl3", "3")
+            };
+            
+            await _tomLonghurstRedisClient.StringSetAsync(keyValues, 120, awaitOptions);
+            var redisValues = (await _tomLonghurstRedisClient.StringGetAsync(new [] { "MultiKeyWithTtl1", "MultiKeyWithTtl2", "MultiKeyWithTtl3" })).ToList();
+            Assert.That(redisValues.Count, Is.EqualTo(3));
+            Assert.That(redisValues[0].Value, Is.EqualTo("1"));
+            Assert.That(redisValues[1].Value, Is.EqualTo("2"));
+            Assert.That(redisValues[2].Value, Is.EqualTo("3"));
+        }
 
         [Test]
         public async Task KeyExists()

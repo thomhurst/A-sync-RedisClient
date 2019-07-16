@@ -121,5 +121,6 @@ namespace TomLonghurst.RedisClient.Constants
         internal const string Publish = "PUBLISH";
 
         internal const string ClusterInfo = "CLUSTER INFO";
+        internal const string Eval = "EVAL";
     }
 }
