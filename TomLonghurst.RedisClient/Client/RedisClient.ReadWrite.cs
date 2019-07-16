@@ -33,6 +33,7 @@ namespace TomLonghurst.RedisClient.Client
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
         {
+            lastCommand = command;
             Log.Debug($"Executing Command: {command}");
 
             return SendAndReceiveAsync(command.ToUtf8Bytes(), responseReader, cancellationToken, isReconnectionAttempt);

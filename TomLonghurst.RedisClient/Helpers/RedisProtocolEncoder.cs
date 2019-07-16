@@ -10,6 +10,12 @@ namespace TomLonghurst.RedisClient.Helpers
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static string Encode(string command)
         {
+            if (command.StartsWith("*"))
+            {
+                // Already Encoded!
+                return command;
+            }
+            
             var commands = command.Split(' ');
 
             var sb = new StringBuilder($"*{commands.Length}\r\n");

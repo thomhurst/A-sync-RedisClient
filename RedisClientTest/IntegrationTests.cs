@@ -238,7 +238,7 @@ namespace RedisClientTest
         public async Task Disconnected()
         {
             var client = await _redisManager.GetRedisClientAsync();
-            await client.StringSetAsync("DisconnectTest", "123", 120, AwaitOptions.FireAndForget);
+            await client.StringSetAsync("DisconnectTest", "123", 120, AwaitOptions.AwaitCompletion);
             var redisValue = await client.StringGetAsync("DisconnectTest");
             Assert.AreEqual("123", redisValue.Value);
             

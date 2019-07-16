@@ -13,6 +13,8 @@ namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient : IDisposable
     {
+        private string lastCommand;
+
         private async ValueTask Authorize(CancellationToken cancellationToken)
         {
             await RunWithTimeout(async token =>
@@ -105,7 +107,7 @@ namespace TomLonghurst.RedisClient.Client
         public async Task StringSetAsync(string key, string value, int timeToLiveInSeconds, AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-            await CollateMultipleRequestsForFireAndForget(new Tuple<string, string, int>(key, value, timeToLiveInSeconds), _stringSetWithTtlQueue);
+            CollateMultipleRequestsForFireAndForget(new Tuple<string, string, int>(key, value, timeToLiveInSeconds), _stringSetWithTtlQueue);
             var tuples = _stringSetWithTtlQueue.DequeueAll();
             
             if (!tuples.Any())
@@ -115,9 +117,8 @@ namespace TomLonghurst.RedisClient.Client
             
             await RunWithTimeout(async token =>
             {
-                var command = string.Join("\r\n", tuples.Select(tuple => $"{Commands.SetEx} {tuple.Item1} {tuple.Item3} {tuple.Item2}"))
-                    .ToFireAndForgetCommand();
-                
+                var command = tuples.Select(tuple => $"{Commands.SetEx} {tuple.Item1} {tuple.Item3} {tuple.Item2}").ToFireAndForgetCommand();
+
                 var task = SendAndReceiveAsync(command, ExpectSuccess, token);
                 
                 if (awaitOptions == AwaitOptions.AwaitCompletion)
@@ -136,7 +137,7 @@ namespace TomLonghurst.RedisClient.Client
         public async Task StringSetAsync(string key, string value, AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-            await CollateMultipleRequestsForFireAndForget(new Tuple<string, string>(key, value), _stringSetQueue);
+            CollateMultipleRequestsForFireAndForget(new Tuple<string, string>(key, value), _stringSetQueue);
             var tuples = _stringSetQueue.DequeueAll();
 
             if (!tuples.Any())
@@ -146,9 +147,7 @@ namespace TomLonghurst.RedisClient.Client
             
             await RunWithTimeout(async token =>
             {
-                var command = string.Join("\r\n", tuples.Select(tuple => $"{Commands.Set} {tuple.Item1} {tuple.Item2}"))
-                    .ToFireAndForgetCommand();
-                
+                var command = tuples.Select(tuple => $"{Commands.Set} {tuple.Item1} {tuple.Item2}").ToFireAndForgetCommand();
                 var task = SendAndReceiveAsync(command, ExpectSuccess, token);
                 
                 if (awaitOptions == AwaitOptions.AwaitCompletion)
@@ -199,14 +198,12 @@ namespace TomLonghurst.RedisClient.Client
                 var keys = keyValuePairs.Select(k => k.Key).ToList();
 
                 var keysAndPairs = string.Join(" ", keyValuePairs.Select(pair => $"{pair.Key} {pair.Value}"));
+                
                 var setCommand = $"{Commands.MSet} {keysAndPairs}".ToRedisProtocol();
-
-                var expireCommand = string.Join("\r\n",
-                    keys.Select(key => $"{Commands.Expire} {key} {timeToLiveInSeconds}"));
-
                 await SendAndReceiveAsync(setCommand, ExpectSuccess, token);
 
-                var expireTask = SendAndReceiveAsync(expireCommand.ToFireAndForgetCommand(), ExpectSuccess, token);
+                var expireCommand = keys.Select(key => $"{Commands.Expire} {key} {timeToLiveInSeconds}").ToFireAndForgetCommand();
+                var expireTask = SendAndReceiveAsync(expireCommand, ExpectSuccess, token);
                 
                 if (awaitOptions == AwaitOptions.AwaitCompletion)
                 {

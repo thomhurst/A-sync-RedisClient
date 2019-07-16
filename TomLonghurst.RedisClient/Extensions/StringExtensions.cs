@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using TomLonghurst.RedisClient.Helpers;
@@ -32,9 +33,17 @@ namespace TomLonghurst.RedisClient.Extensions
             return value.Split(new[] {delimiter}, StringSplitOptions.None);
         }
 
-        internal static string ToFireAndForgetCommand(this string command)
+        internal static string ToFireAndForgetCommand(this IEnumerable<string> commands)
         {
-            return $"CLIENT REPLY OFF\r\n{command}\r\nCLIENT REPLY ON\r\n";
+            var enumerable = commands.ToList();
+            if (enumerable.Count > 1)
+            {
+                return $"CLIENT REPLY OFF\r\n{string.Join("\r\n", enumerable)}\r\nCLIENT REPLY ON\r\n".ToRedisProtocol();
+            }
+            else
+            {
+                return enumerable.First().ToRedisProtocol();
+            }
         }
     }
 }
