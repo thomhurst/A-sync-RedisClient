@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -9,7 +8,6 @@ using System.Threading.Tasks;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Helpers;
-using TomLonghurst.RedisClient.Models;
 
 namespace TomLonghurst.RedisClient.Client
 {
@@ -28,22 +26,10 @@ namespace TomLonghurst.RedisClient.Client
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ValueTask<T> SendAndReceiveAsync<T>(string command,
+        private async ValueTask<T> SendAndReceiveAsync<T>(string command,
             Func<T> responseReader,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
-        {
-            lastCommand = command;
-            Log.Debug($"Executing Command: {command}");
-
-            return SendAndReceiveAsync(command.ToUtf8Bytes(), responseReader, cancellationToken, isReconnectionAttempt);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask<T> SendAndReceiveAsync<T>(byte[] bytes,
-            Func<T> responseReader,
-            CancellationToken cancellationToken,
-            bool isReconnectionAttempt)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -54,6 +40,10 @@ namespace TomLonghurst.RedisClient.Client
             {
                 await _sendSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
             }
+            
+            Log.Debug($"Executing Command: {command}");
+            var encodedCommand = command.ToRedisProtocol();
+            var bytes = encodedCommand.ToUtf8Bytes();
 
             Interlocked.Increment(ref _operationsPerformed);
 
@@ -97,74 +87,6 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private object ExpectSuccess()
-        {
-            var response = ReadLine();
-            if (response.StartsWith("-"))
-            {
-                throw new RedisFailedCommandException(response);
-            }
-
-            return new object();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string ExpectData()
-        {
-            return ReadData().FromUtf8();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string ExpectWord()
-        {
-            var word = ReadLine();
-
-            if (!word.StartsWith("+"))
-            {
-                throw new UnexpectedRedisResponseException(word);
-            }
-
-            return word.Substring(1);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int ExpectNumber()
-        {
-            var line = ReadLine();
-
-            if (!line.StartsWith(":") || !int.TryParse(line.Substring(1), out var number))
-            {
-                throw new UnexpectedRedisResponseException(line);
-            }
-
-            return number;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private IEnumerable<RedisValue<string>> ExpectArray()
-        {
-            var arrayWithCountLine = ReadLine();
-
-            if (!arrayWithCountLine.StartsWith("*"))
-            {
-                throw new UnexpectedRedisResponseException(arrayWithCountLine);
-            }
-
-            if (!int.TryParse(arrayWithCountLine.Substring(1), out var count))
-            {
-                throw new UnexpectedRedisResponseException("Error getting message count");
-            }
-
-            var results = new byte [count][];
-            for (var i = 0; i < count; i++)
-            {
-                results[i] = ReadData();
-            }
-
-            return results.ToRedisValues();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte[] ReadData()
         {
             var line = ReadLine();
@@ -178,7 +100,7 @@ namespace TomLonghurst.RedisClient.Client
 
             if (firstChar == '-')
             {
-                throw new RedisFailedCommandException(line);
+                throw new RedisFailedCommandException(line, lastCommand);
             }
 
             if (firstChar == '$')

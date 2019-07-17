@@ -2,9 +2,9 @@ namespace TomLonghurst.RedisClient.Exceptions
 {
     public class RedisFailedCommandException : RedisException
     {
-        public RedisFailedCommandException(string message)
+        public RedisFailedCommandException(string message, string lastCommand)
         {
-            Message = message;
+            Message = $"{message}\nLast Command: {lastCommand}";
         }
 
         public override string Message { get; }

@@ -30,19 +30,19 @@ namespace TomLonghurst.RedisClient.Extensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static IEnumerable<string> Split(this string value, string delimiter)
         {
-            return value.Split(new[] {delimiter}, StringSplitOptions.None);
+            return value.Split(new[] {delimiter}, StringSplitOptions.RemoveEmptyEntries);
         }
 
         internal static string ToFireAndForgetCommand(this IEnumerable<string> commands)
         {
             var enumerable = commands.ToList();
             if (enumerable.Count > 1)
-            {
-                return $"CLIENT REPLY OFF\r\n{string.Join("\r\n", enumerable)}\r\nCLIENT REPLY ON\r\n".ToRedisProtocol();
+            { 
+                return $"CLIENT REPLY OFF\r\n{string.Join("\r\n", enumerable)}\r\nCLIENT REPLY ON\r\n";
             }
             else
             {
-                return enumerable.First().ToRedisProtocol();
+                return enumerable.First();
             }
         }
     }

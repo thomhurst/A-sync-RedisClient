@@ -212,6 +212,15 @@ namespace RedisClientTest
             Assert.That(redisValues[0].Value, Is.EqualTo("1"));
             Assert.That(redisValues[1].Value, Is.EqualTo("2"));
             Assert.That(redisValues[2].Value, Is.EqualTo("3"));
+            
+            var ttl = await _tomLonghurstRedisClient.TimeToLiveAsync("MultiKeyWithTtl1");
+            Assert.That(ttl, Is.LessThanOrEqualTo(120).And.Positive);
+            
+            ttl = await _tomLonghurstRedisClient.TimeToLiveAsync("MultiKeyWithTtl2");
+            Assert.That(ttl, Is.LessThanOrEqualTo(120).And.Positive);
+            
+            ttl = await _tomLonghurstRedisClient.TimeToLiveAsync("MultiKeyWithTtl3");
+            Assert.That(ttl, Is.LessThanOrEqualTo(120).And.Positive);
         }
 
         [Test]
@@ -228,7 +237,7 @@ namespace RedisClientTest
         [Test, Ignore("No Cluster Support on Redis Server")]
         public async Task ClusterInfo()
         {
-            var response = await _tomLonghurstRedisClient.ClusterInfo();
+            var response = await _tomLonghurstRedisClient.ClusterInfoAsync();
             var firstLine = response.Split("\n").First();
             Assert.That(firstLine, Is.EqualTo("cluster_state:ok"));
         }
@@ -257,6 +266,50 @@ namespace RedisClientTest
 
             var redisValueAfterReconnect = await client.StringGetAsync("DisconnectTest");
             Assert.AreEqual("123", redisValueAfterReconnect.Value);
+        }
+
+        [Test]
+        public async Task Incr()
+        {
+            var one = await _tomLonghurstRedisClient.IncrementAsync("IncrKey");
+            Assert.That(one, Is.EqualTo(1));
+            
+            var three = await _tomLonghurstRedisClient.IncrementByAsync("IncrKey", 2);
+            Assert.That(three, Is.EqualTo(3));
+            
+            var threeAndAHalf = await _tomLonghurstRedisClient.IncrementByAsync("IncrKey", 0.5f);
+            Assert.That(threeAndAHalf, Is.EqualTo(3.5f));
+            
+            await _tomLonghurstRedisClient.ExpireAsync("IncrKey", 30);
+        }
+
+        [Test]
+        public async Task Expire()
+        {
+            await _tomLonghurstRedisClient.StringSetAsync("ExpireKey", "123", AwaitOptions.AwaitCompletion);
+            var ttl = await _tomLonghurstRedisClient.TimeToLiveAsync("ExpireKey");
+            Assert.That(ttl, Is.EqualTo(-1));
+            
+            await _tomLonghurstRedisClient.ExpireAsync("ExpireKey", 30);
+            ttl = await _tomLonghurstRedisClient.TimeToLiveAsync("ExpireKey");
+            Assert.That(ttl, Is.LessThanOrEqualTo(30));
+            
+            await _tomLonghurstRedisClient.PersistAsync("ExpireKey");
+            ttl = await _tomLonghurstRedisClient.TimeToLiveAsync("ExpireKey");
+            Assert.That(ttl, Is.EqualTo(-1));
+            
+            await _tomLonghurstRedisClient.ExpireAsync("ExpireKey", 30);
+            ttl = await _tomLonghurstRedisClient.TimeToLiveAsync("ExpireKey");
+            Assert.That(ttl, Is.LessThanOrEqualTo(30));
+        }
+        
+        [Test]
+        public async Task ExpireAt()
+        {
+            await _tomLonghurstRedisClient.StringSetAsync("ExpireKeyDateTime", "123", AwaitOptions.AwaitCompletion);
+            await _tomLonghurstRedisClient.ExpireAtAsync("ExpireKeyDateTime", DateTimeOffset.Now.AddSeconds(30));
+            var ttl = await _tomLonghurstRedisClient.TimeToLiveAsync("ExpireKeyDateTime");
+            Assert.That(ttl, Is.LessThanOrEqualTo(30));
         }
     }
 }

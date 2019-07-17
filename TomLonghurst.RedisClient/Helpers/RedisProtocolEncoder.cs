@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -15,7 +16,17 @@ namespace TomLonghurst.RedisClient.Helpers
                 // Already Encoded!
                 return command;
             }
-            
+
+            if (command.Contains("\r\n"))
+            {
+                var multipleCommands = command.Split("\r\n").ToList();
+
+                if (multipleCommands.Any())
+                {
+                    return EncodeMultiple(multipleCommands);
+                }
+            }
+
             var commands = command.Split(' ');
 
             var sb = new StringBuilder($"*{commands.Length}\r\n");
@@ -27,6 +38,18 @@ namespace TomLonghurst.RedisClient.Helpers
             }
 
             return sb.ToString();
+        }
+
+        private static string EncodeMultiple(IEnumerable<string> multipleCommands)
+        {
+            var encodingBuilder = new StringBuilder();
+
+            foreach (var multipleCommand in multipleCommands)
+            {
+                encodingBuilder.Append(Encode(multipleCommand));
+            }
+
+            return encodingBuilder.ToString();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

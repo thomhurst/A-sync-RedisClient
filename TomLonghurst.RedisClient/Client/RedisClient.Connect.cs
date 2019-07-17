@@ -206,7 +206,7 @@ namespace TomLonghurst.RedisClient.Client
 
                 if (_redisClientConfig.ClientName != null)
                 {
-                    await SetClientName(cancellationToken);
+                    await SetClientNameAsync(cancellationToken);
                 }
             }
             finally
