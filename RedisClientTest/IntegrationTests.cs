@@ -7,6 +7,7 @@ using NUnit.Framework;
 using StackExchange.Redis;
 using TomLonghurst.RedisClient.Client;
 using TomLonghurst.RedisClient.Enums;
+using TomLonghurst.RedisClient.Models;
 
 namespace RedisClientTest
 {
@@ -41,6 +42,28 @@ namespace RedisClientTest
             var redisValue = await _tomLonghurstRedisClient.StringGetAsync("key");
             
             Assert.That(redisValue.Value, Is.EqualTo("value with a space"));
+        }
+        
+        [Test]
+        public async Task Multiple_Values_With_Space()
+        {
+            var data = new List<RedisKeyValue>
+            {
+                new RedisKeyValue("key1", "value with a space1"),
+                new RedisKeyValue("key2", "value with a space2"),
+                new RedisKeyValue("key3", "value with a space3")
+            };
+            
+            await _tomLonghurstRedisClient.StringSetAsync(data, AwaitOptions.AwaitCompletion);
+            
+            var redisValue1 = await _tomLonghurstRedisClient.StringGetAsync("key1");
+            Assert.That(redisValue1.Value, Is.EqualTo("value with a space1"));
+            
+            var redisValue2 = await _tomLonghurstRedisClient.StringGetAsync("key2");
+            Assert.That(redisValue2.Value, Is.EqualTo("value with a space2"));
+            
+            var redisValue3 = await _tomLonghurstRedisClient.StringGetAsync("key3");
+            Assert.That(redisValue3.Value, Is.EqualTo("value with a space3"));
         }
 
         //[Ignore("")]
@@ -175,11 +198,11 @@ namespace RedisClientTest
         [Test]
         public async Task SetGetMultipleKey()
         {
-            var keyValues = new List<KeyValuePair<string, string>>
+            var keyValues = new List<RedisKeyValue>
             {
-                new KeyValuePair<string, string>("MultiKey1", "1"),
-                new KeyValuePair<string, string>("MultiKey2", "2"),
-                new KeyValuePair<string, string>("MultiKey3", "3")
+                new RedisKeyValue("MultiKey1", "1"),
+                new RedisKeyValue("MultiKey2", "2"),
+                new RedisKeyValue("MultiKey3", "3")
             };
             
             await _tomLonghurstRedisClient.StringSetAsync(keyValues, AwaitOptions.AwaitCompletion);
@@ -207,11 +230,11 @@ namespace RedisClientTest
         [TestCase(AwaitOptions.FireAndForget)]
         public async Task SetGetMultipleKeyWithTtl(AwaitOptions awaitOptions)
         {
-            var keyValues = new List<KeyValuePair<string, string>>
+            var keyValues = new List<RedisKeyValue>
             {
-                new KeyValuePair<string, string>("MultiKeyWithTtl1", "1"),
-                new KeyValuePair<string, string>("MultiKeyWithTtl2", "2"),
-                new KeyValuePair<string, string>("MultiKeyWithTtl3", "3")
+                new RedisKeyValue("MultiKeyWithTtl1", "1"),
+                new RedisKeyValue("MultiKeyWithTtl2", "2"),
+                new RedisKeyValue("MultiKeyWithTtl3", "3")
             };
             
             await _tomLonghurstRedisClient.StringSetAsync(keyValues, 120, awaitOptions);

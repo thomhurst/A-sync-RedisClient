@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using TomLonghurst.RedisClient.Constants;
 using TomLonghurst.RedisClient.Extensions;
 
 namespace TomLonghurst.RedisClient.Helpers
@@ -29,19 +30,38 @@ namespace TomLonghurst.RedisClient.Helpers
             }
 
             string[] commands;
-            if (command.Contains('"'))
+            if (command.Contains(CharacterConstants.QUOTE_IDENTIFIER))
             {
-                var firstQuoteIndex = command.IndexOf('"');
-                var lastQuoteIndex = command.LastIndexOf('"');
-                
-                var quotedText = command.Substring(firstQuoteIndex, lastQuoteIndex - firstQuoteIndex + 1);
+                var commandsSeparated = command.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries).ToList();
 
-                var commandWithoutQuotedText = command.Replace(quotedText, string.Empty);
+                var commandsList = new List<string>();
 
-                quotedText = quotedText.Substring(1, quotedText.Length - 2);
+                for (var index = 0; index < commandsSeparated.Count; index++)
+                {
+                    var cmd = commandsSeparated[index];
+                    if (cmd != CharacterConstants.QUOTE_IDENTIFIER)
+                    {
+                        commandsList.Add(cmd);
+                    }
+                    else
+                    {
+                        cmd = commandsSeparated[++index];
+                        
+                        var quotedTextStringBuilder = new StringBuilder();
+                        quotedTextStringBuilder.Append(cmd);
+                        
+                        cmd = commandsSeparated[++index];
+                        while (cmd != CharacterConstants.QUOTE_IDENTIFIER)
+                        {
+                            quotedTextStringBuilder.Append(" ");
+                            quotedTextStringBuilder.Append(cmd);
+                            cmd = commandsSeparated[++index];    
+                        }
+
+                        commandsList.Add(quotedTextStringBuilder.ToString());
+                    }
+                }
                 
-                var commandsList = commandWithoutQuotedText.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries).ToList();
-                commandsList.Add(quotedText);
                 commands = commandsList.ToArray();
             }
             else
@@ -53,8 +73,6 @@ namespace TomLonghurst.RedisClient.Helpers
 
             foreach (var c in commands)
             {
-                
-                
                 sb.Append($"${c.ToUtf8Bytes().Length}\r\n");
                 sb.Append($"{c}\r\n");
             }

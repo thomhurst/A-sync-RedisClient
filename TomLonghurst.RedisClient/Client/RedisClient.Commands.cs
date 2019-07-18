@@ -99,19 +99,32 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task StringSetAsync(string key, string value, int timeToLiveInSeconds, AwaitOptions awaitOptions)
+        public async Task StringSetAsync(string key, string value, int timeToLiveInSeconds,
+            AwaitOptions awaitOptions)
         {
-            await StringSetAsync(key, value, timeToLiveInSeconds, awaitOptions, CancellationToken.None).ConfigureAwait(false);
+            await StringSetAsync(new RedisKeyValue(key, value), awaitOptions);
         }
 
-        public async Task StringSetAsync(string key, string value, int timeToLiveInSeconds, AwaitOptions awaitOptions,
+        private async Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds, AwaitOptions awaitOptions)
+        {
+            await StringSetAsync(redisKeyValue, timeToLiveInSeconds, awaitOptions, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        public async Task StringSetAsync(string key, string value, int timeToLiveInSeconds,
+            AwaitOptions awaitOptions,
+            CancellationToken cancellationToken)
+        {
+            await StringSetAsync(new RedisKeyValue(key, value), awaitOptions, cancellationToken);
+        }
+        
+        private async Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds, AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
            //CollateMultipleRequestsForPipelining(new Tuple<string, string, int>(key, value, timeToLiveInSeconds), _stringSetWithTtlQueue);
 
             await RunWithTimeout(async token =>
             {
-                var command = $"{Commands.SetEx} {key} {timeToLiveInSeconds} {value}";
+                var command = $"{Commands.SetEx} {redisKeyValue.Key} {timeToLiveInSeconds} {redisKeyValue.Value}";
 
                 var task = SendAndReceiveAsync(command, ExpectSuccess, token);
                 
@@ -124,18 +137,27 @@ namespace TomLonghurst.RedisClient.Client
 
         public async Task StringSetAsync(string key, string value, AwaitOptions awaitOptions)
         {
-            await StringSetAsync(key, value, awaitOptions, CancellationToken.None).ConfigureAwait(false);
+            await StringSetAsync(new RedisKeyValue(key, value), awaitOptions);
+        }
+        
+        private async Task StringSetAsync(RedisKeyValue redisKeyValue, AwaitOptions awaitOptions)
+        {
+            await StringSetAsync(redisKeyValue, awaitOptions, CancellationToken.None).ConfigureAwait(false);
         }
 
+        public async Task StringSetAsync(string key, string value, AwaitOptions awaitOptions, CancellationToken cancellationToken)
+        {
+            await StringSetAsync(new RedisKeyValue(key, value), awaitOptions, cancellationToken);
+        }
         
-        public async Task StringSetAsync(string key, string value, AwaitOptions awaitOptions,
+        private async Task StringSetAsync(RedisKeyValue redisKeyValue, AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
             //CollateMultipleRequestsForPipelining(new Tuple<string, string>(key, value), _stringSetQueue);
 
             await RunWithTimeout(async token =>
             {
-                var command = $"{Commands.Set} {key} \"{value}\"";
+                var command = $"{Commands.Set} {redisKeyValue.Key} {redisKeyValue.Value}";
                 var task = SendAndReceiveAsync(command, ExpectSuccess, token);
                 
                 if (awaitOptions == AwaitOptions.AwaitCompletion)
@@ -145,19 +167,20 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task StringSetAsync(IEnumerable<KeyValuePair<string, string>> keyValuePairs,
+        public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
             AwaitOptions awaitOptions)
         {
             await StringSetAsync(keyValuePairs, awaitOptions, CancellationToken.None).ConfigureAwait(false);
         }
 
-        public async Task StringSetAsync(IEnumerable<KeyValuePair<string, string>> keyValuePairs,
+        public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
             AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
             await RunWithTimeout(async token =>
             {
                 var keysAndPairs = string.Join(" ", keyValuePairs.Select(pair => $"{pair.Key} {pair.Value}"));
+                //var command = RedisProtocolEncoder.Encode(Commands.MSet, keyValuePairs);
                 var command = $"{Commands.MSet} {keysAndPairs}";
                 var task = SendAndReceiveAsync(command, ExpectSuccess, token);
                 
@@ -168,14 +191,14 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken).ConfigureAwait(false);
         }
         
-        public async Task StringSetAsync(IEnumerable<KeyValuePair<string, string>> keyValuePairs, 
+        public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs, 
             int timeToLiveInSeconds, 
             AwaitOptions awaitOptions)
         {
             await StringSetAsync(keyValuePairs, timeToLiveInSeconds, awaitOptions, CancellationToken.None).ConfigureAwait(false);
         }
 
-        public async Task StringSetAsync(IEnumerable<KeyValuePair<string, string>> keyValuePairs,
+        public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
             int timeToLiveInSeconds, 
             AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
@@ -184,7 +207,7 @@ namespace TomLonghurst.RedisClient.Client
             {
                 keyValuePairs = keyValuePairs.ToList();
                 var keys = keyValuePairs.Select(k => k.Key).ToList();
-
+                
                 var keysAndPairs = string.Join(" ", keyValuePairs.Select(pair => $"{pair.Key} {pair.Value}"));
                 
                 var setCommand = $"{Commands.MSet} {keysAndPairs}";
