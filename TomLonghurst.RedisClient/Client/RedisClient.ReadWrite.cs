@@ -42,6 +42,7 @@ namespace TomLonghurst.RedisClient.Client
             }
             
             Log.Debug($"Executing Command: {command}");
+            lastCommand = command;
             var encodedCommand = command.ToRedisProtocol();
             var bytes = encodedCommand.ToUtf8Bytes();
 

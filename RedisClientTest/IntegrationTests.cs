@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net.Sockets;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using StackExchange.Redis;
@@ -33,6 +32,15 @@ namespace RedisClientTest
         public async Task Setup()
         {
             _tomLonghurstRedisClient = await _redisManager.GetRedisClientAsync();
+        }
+
+        [Test]
+        public async Task Value_With_Space()
+        {
+            await _tomLonghurstRedisClient.StringSetAsync("key", "value with a space", AwaitOptions.AwaitCompletion);
+            var redisValue = await _tomLonghurstRedisClient.StringGetAsync("key");
+            
+            Assert.That(redisValue.Value, Is.EqualTo("value with a space"));
         }
 
         //[Ignore("")]
@@ -252,20 +260,10 @@ namespace RedisClientTest
             Assert.AreEqual("123", redisValue.Value);
             
             client.Socket.Close();
-
-            try
-            {
-                var result = await client.StringGetAsync("DisconnectTest");
-                Assert.Fail();
-            }
-            catch (SocketException e)
-            {
-            }
-
-            await Task.Delay(35000);
-
-            var redisValueAfterReconnect = await client.StringGetAsync("DisconnectTest");
-            Assert.AreEqual("123", redisValueAfterReconnect.Value);
+            
+            var result = await client.StringGetAsync("DisconnectTest");
+            
+            Assert.AreEqual("123", result.Value);
         }
 
         [TestCase("IncrKey")]

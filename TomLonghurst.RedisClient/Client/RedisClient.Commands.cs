@@ -135,7 +135,7 @@ namespace TomLonghurst.RedisClient.Client
 
             await RunWithTimeout(async token =>
             {
-                var command = $"{Commands.Set} {key} {value}";
+                var command = $"{Commands.Set} {key} \"{value}\"";
                 var task = SendAndReceiveAsync(command, ExpectSuccess, token);
                 
                 if (awaitOptions == AwaitOptions.AwaitCompletion)

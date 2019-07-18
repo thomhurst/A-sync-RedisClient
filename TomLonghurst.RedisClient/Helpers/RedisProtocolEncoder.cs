@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -27,12 +28,33 @@ namespace TomLonghurst.RedisClient.Helpers
                 }
             }
 
-            var commands = command.Split(' ');
+            string[] commands;
+            if (command.Contains('"'))
+            {
+                var firstQuoteIndex = command.IndexOf('"');
+                var lastQuoteIndex = command.LastIndexOf('"');
+                
+                var quotedText = command.Substring(firstQuoteIndex, lastQuoteIndex - firstQuoteIndex + 1);
+
+                var commandWithoutQuotedText = command.Replace(quotedText, string.Empty);
+
+                quotedText = quotedText.Substring(1, quotedText.Length - 2);
+                
+                var commandsList = commandWithoutQuotedText.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                commandsList.Add(quotedText);
+                commands = commandsList.ToArray();
+            }
+            else
+            {
+                commands = command.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+            }
 
             var sb = new StringBuilder($"*{commands.Length}\r\n");
 
             foreach (var c in commands)
             {
+                
+                
                 sb.Append($"${c.ToUtf8Bytes().Length}\r\n");
                 sb.Append($"{c}\r\n");
             }
