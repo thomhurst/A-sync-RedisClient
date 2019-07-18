@@ -15,6 +15,32 @@ namespace TomLonghurst.RedisClient.Client
     {
         private string lastCommand;
 
+        public async ValueTask<string> Info()
+        {
+            return await Info(CancellationToken.None);
+        }
+        
+        public async ValueTask<string> Info(CancellationToken cancellationToken)
+        {
+            return await RunWithTimeout(async token =>
+            {
+                return await SendAndReceiveAsync(Commands.Info, ExpectData, CancellationToken.None, true);
+            }, cancellationToken);
+        }
+
+        public async Task<int> DBSize()
+        {
+            return await DBSize(CancellationToken.None);
+        }
+
+        public async Task<int> DBSize(CancellationToken cancellationToken)
+        {
+            return await RunWithTimeout(async token =>
+            {
+                return await SendAndReceiveAsync(Commands.DbSize, ExpectInteger, CancellationToken.None, true);
+            }, cancellationToken);
+        }
+        
         private async ValueTask Authorize(CancellationToken cancellationToken)
         {
             await RunWithTimeout(async token =>
@@ -180,7 +206,7 @@ namespace TomLonghurst.RedisClient.Client
             await RunWithTimeout(async token =>
             {
                 var keysAndPairs = string.Join(" ", keyValuePairs.Select(pair => $"{pair.Key} {pair.Value}"));
-                //var command = RedisProtocolEncoder.Encode(Commands.MSet, keyValuePairs);
+                
                 var command = $"{Commands.MSet} {keysAndPairs}";
                 var task = SendAndReceiveAsync(command, ExpectSuccess, token);
                 

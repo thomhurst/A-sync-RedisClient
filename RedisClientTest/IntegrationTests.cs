@@ -312,6 +312,18 @@ namespace RedisClientTest
             await _tomLonghurstRedisClient.ExpireAsync(key, 120);
         }
 
+        [Test]
+        public async Task Info()
+        {
+            var info = await _tomLonghurstRedisClient.Info();
+        }
+        
+        [Test]
+        public async Task DBSize()
+        {
+            var dbSize = await _tomLonghurstRedisClient.DBSize();
+        }
+
         [TestCase("DecrKey")]
         public async Task Decr(string key)
         {
