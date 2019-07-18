@@ -287,6 +287,34 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken).ConfigureAwait(false);
         }
 
+        public ValueTask<int> DecrementAsync(string key)
+        {
+            return DecrementAsync(key, CancellationToken.None);
+        }
+
+        public async ValueTask<int> DecrementAsync(string key, CancellationToken cancellationToken)
+        {
+            return await RunWithTimeout(async token =>
+            {
+                var command = $"{Commands.Decr} {key}";
+                return await SendAndReceiveAsync(command, ExpectInteger, token);
+            }, cancellationToken).ConfigureAwait(false);
+        }
+
+        public ValueTask<int> DecrementByAsync(string key, int amount)
+        {
+            return DecrementByAsync(key, amount, CancellationToken.None);
+        }
+
+        public async ValueTask<int> DecrementByAsync(string key, int amount, CancellationToken cancellationToken)
+        {
+            return await RunWithTimeout(async token =>
+            {
+                var command = $"{Commands.DecrBy} {key} {amount}";
+                return await SendAndReceiveAsync(command, ExpectInteger, token);
+            }, cancellationToken).ConfigureAwait(false);
+        }
+
         public ValueTask ExpireAsync(string key, int seconds)
         {
             return ExpireAsync(key, seconds, CancellationToken.None);

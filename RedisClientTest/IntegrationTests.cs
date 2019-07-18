@@ -268,19 +268,42 @@ namespace RedisClientTest
             Assert.AreEqual("123", redisValueAfterReconnect.Value);
         }
 
-        [Test]
-        public async Task Incr()
+        [TestCase("IncrKey")]
+        public async Task Incr(string key)
         {
-            var one = await _tomLonghurstRedisClient.IncrementAsync("IncrKey");
+            await _tomLonghurstRedisClient.DeleteKeyAsync(key, AwaitOptions.AwaitCompletion);
+            
+            var one = await _tomLonghurstRedisClient.IncrementAsync(key);
             Assert.That(one, Is.EqualTo(1));
             
-            var three = await _tomLonghurstRedisClient.IncrementByAsync("IncrKey", 2);
+            var three = await _tomLonghurstRedisClient.IncrementByAsync(key, 2);
             Assert.That(three, Is.EqualTo(3));
             
-            var threeAndAHalf = await _tomLonghurstRedisClient.IncrementByAsync("IncrKey", 0.5f);
+            var threeAndAHalf = await _tomLonghurstRedisClient.IncrementByAsync(key, 0.5f);
             Assert.That(threeAndAHalf, Is.EqualTo(3.5f));
             
-            await _tomLonghurstRedisClient.ExpireAsync("IncrKey", 30);
+            var four = await _tomLonghurstRedisClient.IncrementByAsync(key, 0.5f);
+            Assert.That(four, Is.EqualTo(4f));
+            
+            var five = await _tomLonghurstRedisClient.IncrementAsync(key);
+            Assert.That(five, Is.EqualTo(5));
+            
+            await _tomLonghurstRedisClient.ExpireAsync(key, 120);
+        }
+
+        [TestCase("DecrKey")]
+        public async Task Decr(string key)
+        {
+            await Incr(key);
+         
+            var four = await _tomLonghurstRedisClient.DecrementAsync(key);
+            Assert.That(four, Is.EqualTo(4));
+            
+            var two = await _tomLonghurstRedisClient.DecrementByAsync(key, 2);
+            Assert.That(two, Is.EqualTo(2));
+            
+            var one = await _tomLonghurstRedisClient.DecrementAsync(key);
+            Assert.That(one, Is.EqualTo(1));
         }
 
         [Test]
