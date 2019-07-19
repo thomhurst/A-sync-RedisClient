@@ -16,37 +16,12 @@ namespace TomLonghurst.RedisClient.Client
     {
         private RedisClient()
         {
-            _clusterCommands = new ClusterCommands(this);            
+            _clusterCommands = new ClusterCommands(this);
+            _serverCommands = new ServerCommands(this);
         }
         
         private string _lastCommand;
 
-        public async ValueTask<string> Info()
-        {
-            return await Info(CancellationToken.None);
-        }
-        
-        public async ValueTask<string> Info(CancellationToken cancellationToken)
-        {
-            return await RunWithTimeout(async token =>
-            {
-                return await SendAndReceiveAsync(Commands.Info, ExpectData, CancellationToken.None, true);
-            }, cancellationToken);
-        }
-
-        public async Task<int> DBSize()
-        {
-            return await DBSize(CancellationToken.None);
-        }
-
-        public async Task<int> DBSize(CancellationToken cancellationToken)
-        {
-            return await RunWithTimeout(async token =>
-            {
-                return await SendAndReceiveAsync(Commands.DbSize, ExpectInteger, CancellationToken.None, true);
-            }, cancellationToken);
-        }
-        
         private async ValueTask Authorize(CancellationToken cancellationToken)
         {
             await RunWithTimeout(async token =>

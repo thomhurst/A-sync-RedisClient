@@ -315,13 +315,13 @@ namespace RedisClientTest
         [Test]
         public async Task Info()
         {
-            var info = await _tomLonghurstRedisClient.Info();
+            var info = await _tomLonghurstRedisClient.Server.Info();
         }
         
         [Test]
         public async Task DBSize()
         {
-            var dbSize = await _tomLonghurstRedisClient.DBSize();
+            var dbSize = await _tomLonghurstRedisClient.Server.DBSize();
         }
 
         [TestCase("DecrKey")]
