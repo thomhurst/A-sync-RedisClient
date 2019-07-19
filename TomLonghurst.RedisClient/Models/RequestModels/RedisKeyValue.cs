@@ -1,6 +1,6 @@
 using TomLonghurst.RedisClient.Constants;
 
-namespace TomLonghurst.RedisClient.Models
+namespace TomLonghurst.RedisClient.Models.RequestModels
 {
     public class RedisKeyValue
     {
@@ -10,7 +10,7 @@ namespace TomLonghurst.RedisClient.Models
         public RedisKeyValue(string key, string value)
         {
             Key = key;
-            Value = $"{CharacterConstants.QUOTE_IDENTIFIER} {value} {CharacterConstants.QUOTE_IDENTIFIER}";
+            Value = $"{CharacterConstants.VALUE_DELIMITER} {value} {CharacterConstants.VALUE_DELIMITER}";
         }
     }
 }

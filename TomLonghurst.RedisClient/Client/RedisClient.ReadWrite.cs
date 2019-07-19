@@ -42,7 +42,7 @@ namespace TomLonghurst.RedisClient.Client
             }
             
             Log.Debug($"Executing Command: {command}");
-            lastCommand = command;
+            _lastCommand = command;
             var encodedCommand = command.ToRedisProtocol();
             var bytes = encodedCommand.ToUtf8Bytes();
 
@@ -101,7 +101,7 @@ namespace TomLonghurst.RedisClient.Client
 
             if (firstChar == '-')
             {
-                throw new RedisFailedCommandException(line, lastCommand);
+                throw new RedisFailedCommandException(line, _lastCommand);
             }
 
             if (firstChar == '$')
@@ -168,7 +168,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask<T> RunWithTimeout<T>(Func<CancellationToken, ValueTask<T>> action,
+        internal async ValueTask<T> RunWithTimeout<T>(Func<CancellationToken, ValueTask<T>> action,
             CancellationToken originalCancellationToken)
         {
             originalCancellationToken.ThrowIfCancellationRequested();

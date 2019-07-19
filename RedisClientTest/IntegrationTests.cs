@@ -7,7 +7,7 @@ using NUnit.Framework;
 using StackExchange.Redis;
 using TomLonghurst.RedisClient.Client;
 using TomLonghurst.RedisClient.Enums;
-using TomLonghurst.RedisClient.Models;
+using TomLonghurst.RedisClient.Models.RequestModels;
 
 namespace RedisClientTest
 {
@@ -264,11 +264,11 @@ namespace RedisClientTest
             Assert.That(exists, Is.EqualTo(true));
             Assert.That(doesntExist, Is.EqualTo(false));
         }
-
+        
         [Test, Ignore("No Cluster Support on Redis Server")]
         public async Task ClusterInfo()
         {
-            var response = await _tomLonghurstRedisClient.ClusterInfoAsync();
+            var response = await _tomLonghurstRedisClient.Cluster.ClusterInfoAsync();
             var firstLine = response.Split("\n").First();
             Assert.That(firstLine, Is.EqualTo("cluster_state:ok"));
         }

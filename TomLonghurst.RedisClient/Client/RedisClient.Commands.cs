@@ -8,12 +8,18 @@ using TomLonghurst.RedisClient.Constants;
 using TomLonghurst.RedisClient.Enums;
 using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Models;
+using TomLonghurst.RedisClient.Models.RequestModels;
 
 namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient : IDisposable
     {
-        private string lastCommand;
+        private RedisClient()
+        {
+            _clusterCommands = new ClusterCommands(this);            
+        }
+        
+        private string _lastCommand;
 
         public async ValueTask<string> Info()
         {
@@ -417,20 +423,6 @@ namespace TomLonghurst.RedisClient.Client
             {
                 var command = $"{Commands.Ttl} {key}";
                 return await SendAndReceiveAsync(command, ExpectInteger, token);
-            }, cancellationToken).ConfigureAwait(false);
-        }
-
-        public async Task<string> ClusterInfoAsync()
-        {
-            return await ClusterInfoAsync(CancellationToken.None).ConfigureAwait(false);
-        }
-        
-        public async Task<string> ClusterInfoAsync(CancellationToken cancellationToken)
-        {
-            return await RunWithTimeout(async token =>
-            {
-                var command = Commands.ClusterInfo;
-                return await SendAndReceiveAsync(command, ExpectData, token);
             }, cancellationToken).ConfigureAwait(false);
         }
     }

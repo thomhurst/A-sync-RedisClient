@@ -51,7 +51,7 @@ namespace TomLonghurst.RedisClient.Client
             private set => _isConnected = value;
         }
 
-        private RedisClient(RedisClientConfig redisClientConfig)
+        private RedisClient(RedisClientConfig redisClientConfig) : this()
         {
             _redisClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
 

@@ -15,7 +15,7 @@ namespace TomLonghurst.RedisClient.Client
             var response = ReadLine();
             if (response.StartsWith("-"))
             {
-                throw new RedisFailedCommandException(response, lastCommand);
+                throw new RedisFailedCommandException(response, _lastCommand);
             }
 
             return new object();
