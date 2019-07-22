@@ -3,7 +3,7 @@ using System.Buffers;
 using System.IO;
 using TomLonghurst.RedisClient.Extensions;
 
-namespace TomLonghurst.RedisClient
+namespace TomLonghurst.RedisClient.Helpers
 {
     internal enum ConsumeResult
     {

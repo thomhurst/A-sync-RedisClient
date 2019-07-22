@@ -19,7 +19,7 @@ namespace TomLonghurst.RedisClient.Models
 
         internal StringRedisValue(string value) : base(value)
         {
-            Value = value?.Replace(CharacterConstants.ENCODED_NEW_LINE, CharacterConstants.NEW_LINE);
+            Value = value?.Replace(StringConstants.ENCODED_NEW_LINE, StringConstants.NEW_LINE);
         }
     }
 }

@@ -1,6 +1,6 @@
 namespace TomLonghurst.RedisClient.Constants
 {
-    public static class CharacterConstants
+    public static class StringConstants
     {
         public const string VALUE_DELIMITER = "|_RedisClientDelimiter_|";
         
