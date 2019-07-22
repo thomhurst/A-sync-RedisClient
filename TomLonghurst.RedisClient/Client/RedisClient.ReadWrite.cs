@@ -114,7 +114,7 @@ namespace TomLonghurst.RedisClient.Client
             
             var firstChar = (char) peekByte;
             
-            var endOfLineAfterByteCount = BufferReader.FindNextCrLf(bufferReader);
+            var endOfLineAfterByteCount = BufferReader.FindNextLineTerminator(bufferReader);
             var line = bufferReader.ConsumeAsBuffer(endOfLineAfterByteCount).AsString();
 
             if (firstChar == '-')
@@ -132,9 +132,10 @@ namespace TomLonghurst.RedisClient.Client
                 if (long.TryParse(line.Substring(1), out var byteSizeOfData))
                 {
                     var bytes = new List<ReadOnlySequence<byte>>();
-                    var bytesReceived = buffer.Length;
-
-                    bytes.Add(buffer.Slice(endOfLineAfterByteCount, buffer.Length - endOfLineAfterByteCount));
+                    var dataBuffer = buffer.Slice(endOfLineAfterByteCount + 2, buffer.Length - endOfLineAfterByteCount - 4);
+                    var bytesReceived = dataBuffer.Length;
+                    
+                    bytes.Add(dataBuffer);
                     
                     while (bytesReceived < byteSizeOfData)
                     {
@@ -145,13 +146,7 @@ namespace TomLonghurst.RedisClient.Client
                         bytes.Add(buffer);
                     }
 
-                    _pipe.Input.AdvanceTo(buffer.End);
-
-                    var dataEndOfLine = BufferReader.FindNextCrLf(bufferReader);
-                    
-                    bufferReader.Consume(dataEndOfLine);
-                    
-                    bufferReader.Consume(2);
+                    _pipe.Input.AdvanceToLineTerminator(buffer);
 
                     return bytes.SelectMany(x => x.ToArray()).ToArray();
                 }
@@ -168,13 +163,11 @@ namespace TomLonghurst.RedisClient.Client
             var buffer = _readResult.Buffer;
             var bufferReader = new BufferReader(buffer);
 
-            var endOfLine = BufferReader.FindNextCrLf(bufferReader);
+            var lineTerminator = BufferReader.FindNextLineTerminator(bufferReader);
 
-            var payload = bufferReader.ConsumeAsBuffer(endOfLine).AsString();
-            bufferReader.Consume(2);
+            var payload = bufferReader.ConsumeAsBuffer(lineTerminator).AsString();
 
-            buffer = bufferReader.SliceFromCurrent();
-            _pipe.Input.AdvanceTo(buffer.Start, buffer.End);
+            _pipe.Input.AdvanceToLineTerminator(buffer);
 
             return payload;
         }

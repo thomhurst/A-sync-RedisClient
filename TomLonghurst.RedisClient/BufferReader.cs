@@ -163,7 +163,7 @@ namespace TomLonghurst.RedisClient
             } while (reader.FetchNextSegment());
             return -1;
         }
-        internal static int FindNextCrLf(BufferReader reader) // very deliberately not ref; want snapshot
+        internal static int FindNextLineTerminator(BufferReader reader) // very deliberately not ref; want snapshot
         {
             // is it in the current span? (we need to handle the offsets differently if so)
 

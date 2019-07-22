@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace TomLonghurst.RedisClient.Helpers
@@ -16,7 +15,9 @@ namespace TomLonghurst.RedisClient.Helpers
         internal static CancellationTokenSource CancellationTokenWithTimeout(TimeSpan timeout, CancellationToken tokenToCombine)
         {
             var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(tokenToCombine);
+#if !DEBUG
             cancellationTokenSource.CancelAfter(timeout);
+#endif
             return cancellationTokenSource;
         }
     }

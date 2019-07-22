@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.IO.Pipelines;
 using System.Text;
 
 namespace TomLonghurst.RedisClient.Extensions
@@ -11,6 +12,20 @@ namespace TomLonghurst.RedisClient.Extensions
             // TODO Refactor
             var byteArray = buffer.ToArray();
             return Encoding.UTF8.GetString(byteArray);
+        }
+
+        internal static void AdvanceToLineTerminator(this PipeReader pipeReader, ReadOnlySequence<byte> buffer)
+        {
+            var endOfLineSequencePosition = buffer.GetEndOfLinePosition();
+
+            if (endOfLineSequencePosition == null)
+            {
+                throw new Exception("Can't find EOL");
+            }
+
+            buffer = buffer.Slice(endOfLineSequencePosition.Value);
+
+            pipeReader.AdvanceTo(buffer.Start, buffer.End);
         }
         
         internal static SequencePosition? GetEndOfLinePosition(this ReadOnlySequence<byte> buffer)

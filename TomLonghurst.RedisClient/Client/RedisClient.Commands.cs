@@ -257,7 +257,7 @@ namespace TomLonghurst.RedisClient.Client
             {
                 var keysAsString = string.Join(" ", keys);
                 var command = $"{Commands.Del} {keysAsString}";
-                var task = SendAndReceiveAsync(command, ExpectSuccess, token);
+                var task = SendAndReceiveAsync(command, ExpectInteger, token);
 
                 if (awaitOptions == AwaitOptions.AwaitCompletion)
                 {

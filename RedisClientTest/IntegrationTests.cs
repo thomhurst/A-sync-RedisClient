@@ -144,6 +144,7 @@ namespace RedisClientTest
         }
         
         [Test]
+        [Repeat(2)]
         public async Task Ping()
         {
             var pong = await _tomLonghurstRedisClient.Ping();
@@ -176,6 +177,7 @@ namespace RedisClientTest
         }
         
         [Test]
+        [Repeat(2)]
         public async Task SetGetDeleteSingleKey()
         {
             await _tomLonghurstRedisClient.StringSetAsync("SingleKey", "123", AwaitOptions.AwaitCompletion);

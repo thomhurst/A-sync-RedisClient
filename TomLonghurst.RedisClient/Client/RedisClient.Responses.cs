@@ -35,7 +35,7 @@ namespace TomLonghurst.RedisClient.Client
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<string> ExpectData()
         {
-            return (ReadData()).FromUtf8();
+            return ReadData().FromUtf8();
         }
         
         private async Task<IList<string>> ExpectData(int count)
@@ -99,7 +99,7 @@ namespace TomLonghurst.RedisClient.Client
         
         private async Task<float> ExpectFloat()
         {
-            var floatString = (ReadData()).FromUtf8();
+            var floatString = ReadData().FromUtf8();
 
             if (!float.TryParse(floatString, out var number))
             {
