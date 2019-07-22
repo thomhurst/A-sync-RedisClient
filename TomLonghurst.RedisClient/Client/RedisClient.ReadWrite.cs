@@ -94,7 +94,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private byte[] ReadData(bool readToEnd = false)
+        private Span<byte> ReadData(bool readToEnd = false)
         {
             var buffer = _readResult.Buffer;
             var bufferReader = new BufferReader(buffer);
@@ -145,7 +145,7 @@ namespace TomLonghurst.RedisClient.Client
                         _pipe.Input.AdvanceTo(buffer.End);
                         _pipe.Input.TryRead(out _readResult);
                         buffer = _readResult.Buffer;
-                        dataBuffer.CopyTo(bytes.Slice((int) bytesReceived, (int) buffer.Length));
+                        buffer.CopyTo(bytes.Slice((int) bytesReceived, (int) buffer.Length));
                         bytesReceived += buffer.Length;
                     }
 
@@ -158,7 +158,7 @@ namespace TomLonghurst.RedisClient.Client
                         _pipe.Input.AdvanceToLineTerminator(buffer);
                     }
 
-                    return bytes.ToArray();
+                    return bytes;
                 }
 
                 throw new UnexpectedRedisResponseException("Invalid length");

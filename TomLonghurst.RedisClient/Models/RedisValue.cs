@@ -5,8 +5,7 @@ namespace TomLonghurst.RedisClient.Models
     public class RedisValue<T>
     {
         public T Value { get; protected set; }
-        public bool IsNull => Equals(Value,default(T));
-        public bool HasValue => !IsNull;
+        public virtual bool HasValue => !Equals(Value,default(T));
 
         internal RedisValue(T value)
         {
@@ -16,6 +15,8 @@ namespace TomLonghurst.RedisClient.Models
 
     public class StringRedisValue : RedisValue<string>
     {
+        public override bool HasValue => !string.IsNullOrEmpty(Value);
+
         internal StringRedisValue(string value) : base(value)
         {
             Value = value?.Replace(CharacterConstants.ENCODED_NEW_LINE, CharacterConstants.NEW_LINE);

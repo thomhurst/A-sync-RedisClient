@@ -195,7 +195,7 @@ namespace RedisClientTest
             
             await _tomLonghurstRedisClient.DeleteKeyAsync("SingleKey", AwaitOptions.AwaitCompletion);
             redisValue = await _tomLonghurstRedisClient.StringGetAsync("SingleKey");
-            Assert.That(redisValue.IsNull, Is.EqualTo(true));
+            Assert.That(redisValue.HasValue, Is.EqualTo(false));
         }
 
         [Test]

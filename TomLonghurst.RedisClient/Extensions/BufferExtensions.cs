@@ -21,6 +21,12 @@ namespace TomLonghurst.RedisClient.Extensions
             ArrayPool<byte>.Shared.Return(arr);
             return s;
         }
+
+        internal static string AsString(this Span<byte> span)
+        {
+            return ((ReadOnlySpan<byte>) span).AsString();
+        }
+
         internal static unsafe string AsString(this ReadOnlySpan<byte> span)
         {
             if (span.IsEmpty) return "";

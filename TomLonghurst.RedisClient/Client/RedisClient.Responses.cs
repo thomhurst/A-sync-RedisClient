@@ -35,13 +35,13 @@ namespace TomLonghurst.RedisClient.Client
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<string> ExpectData()
         {
-            return ReadData().FromUtf8();
+            return ReadData().AsString();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<string> ExpectData(bool readToEnd = false)
         {
-            return ReadData(readToEnd).FromUtf8();
+            return ReadData(readToEnd).AsString();
         }
         
         private async Task<IList<string>> ExpectData(int count)
@@ -105,7 +105,7 @@ namespace TomLonghurst.RedisClient.Client
         
         private async Task<float> ExpectFloat()
         {
-            var floatString = ReadData().FromUtf8();
+            var floatString = ReadData().AsString();
 
             if (!float.TryParse(floatString, out var number))
             {
@@ -140,12 +140,12 @@ namespace TomLonghurst.RedisClient.Client
             {
                 throw new UnexpectedRedisResponseException($"Error getting message count: {arrayWithCountLine}");
             }
-
+            
             var results = new byte [count][];
             for (var i = 0; i < count; i++)
             {
                 _pipe.Input.TryRead(out _readResult);
-                results[i] = ReadData();
+                results[i] = ReadData().ToArray();
             }
 
             return results.ToRedisValues();
