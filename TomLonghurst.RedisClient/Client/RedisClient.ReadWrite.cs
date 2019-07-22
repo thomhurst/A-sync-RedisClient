@@ -131,19 +131,21 @@ namespace TomLonghurst.RedisClient.Client
 
                 if (long.TryParse(line.Substring(1), out var byteSizeOfData))
                 {
-                    var bytes = new List<byte[]>();
+                    var bytes = new List<ReadOnlySequence<byte>>();
                     var bytesReceived = buffer.Length;
-                    var offset = 0;
 
+                    bytes.Add(buffer.Slice(endOfLineAfterByteCount, buffer.Length - endOfLineAfterByteCount));
+                    
                     while (bytesReceived < byteSizeOfData)
                     {
-                        _pipe.Input.AdvanceTo(buffer.Start, buffer.End);
+                        _pipe.Input.AdvanceTo(buffer.End);
                         _pipe.Input.TryRead(out _readResult);
                         buffer = _readResult.Buffer;
-                        bytesReceived = buffer.Length;
+                        bytesReceived += buffer.Length;
+                        bytes.Add(buffer);
                     }
 
-                    bytes.Add(buffer.Slice(endOfLineAfterByteCount + 2, buffer.Length - endOfLineAfterByteCount - 2).ToArray());
+                    _pipe.Input.AdvanceTo(buffer.End);
 
                     var dataEndOfLine = BufferReader.FindNextCrLf(bufferReader);
                     
@@ -151,10 +153,7 @@ namespace TomLonghurst.RedisClient.Client
                     
                     bufferReader.Consume(2);
 
-                    buffer = bufferReader.SliceFromCurrent();
-                    _pipe.Input.AdvanceTo(buffer.Start, buffer.End);
-
-                    return bytes.SelectMany(x => x).ToArray();
+                    return bytes.SelectMany(x => x.ToArray()).ToArray();
                 }
 
                 throw new UnexpectedRedisResponseException("Invalid length");
