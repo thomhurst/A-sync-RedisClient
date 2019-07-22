@@ -13,6 +13,18 @@ namespace TomLonghurst.RedisClient.Extensions
             return Encoding.UTF8.GetString(byteArray);
         }
         
+        internal static SequencePosition? GetEndOfLinePosition(this ReadOnlySequence<byte> buffer)
+        {
+            var endOfLine = buffer.PositionOf((byte) '\n');
+
+            if (endOfLine == null)
+            {
+                return null;
+            }
+            
+            return buffer.GetPosition(1, endOfLine.Value);
+        }
+        
         internal static int VectorSafeIndexOf(this ReadOnlySpan<byte> span, byte value)
         {
             // yes, this has zero optimization; I'm OK with this as the fallback strategy

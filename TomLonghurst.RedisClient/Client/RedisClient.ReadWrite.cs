@@ -73,11 +73,12 @@ namespace TomLonghurst.RedisClient.Client
                 {
                     _pipeReader = _sslStream.UsePipeReader();
                     _readResult = await _pipeReader.ReadAsync();
+
                     invokedResponse = responseReader.Invoke();
                 }
                 finally
                 {
-                    _pipeReader.Complete();   
+                    _pipeReader.Complete();
                 }
 
                 return invokedResponse;
@@ -114,7 +115,13 @@ namespace TomLonghurst.RedisClient.Client
                 throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
             }
 
-            var firstChar = (char) bufferReader.PeekByte();
+            var peekByte = bufferReader.PeekByte();
+            if (peekByte == -1)
+            {
+                
+            }
+            
+            var firstChar = (char) peekByte;
 
             if (firstChar == '-')
             {
@@ -158,6 +165,10 @@ namespace TomLonghurst.RedisClient.Client
             var endOfLine = BufferReader.FindNextCrLf(bufferReader);
 
             var payload = bufferReader.ConsumeAsBuffer(endOfLine).AsString();
+            bufferReader.Consume(2);
+
+            buffer = bufferReader.SliceFromCurrent();
+            _pipeReader.AdvanceTo(buffer.Start, buffer.End);
 
             return payload;
         }
