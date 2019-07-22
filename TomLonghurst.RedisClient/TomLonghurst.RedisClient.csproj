@@ -14,6 +14,7 @@
   <ItemGroup>
     <PackageReference Include="Nerdbank.Streams" Version="2.2.42" />
     <PackageReference Include="Nito.AsyncEx" Version="5.0.0" />
+    <PackageReference Include="Pipelines.Sockets.Unofficial" Version="2.0.22" />
     <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.3" />
   </ItemGroup>

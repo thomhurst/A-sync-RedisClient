@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.IO.Pipelines;
+using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Nerdbank.Streams;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Helpers;
@@ -24,7 +25,7 @@ namespace TomLonghurst.RedisClient.Client
 
         private long _operationsPerformed;
 
-        private PipeReader _pipeReader;
+        private IDuplexPipe _pipe;
         private ReadResult _readResult;
 
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
@@ -67,29 +68,19 @@ namespace TomLonghurst.RedisClient.Client
                 {
                     _socket.Send(bytes);
                 }
+                
+                _readResult = await _pipe.Input.ReadAsync();
 
-                T invokedResponse;
-                try
-                {
-                    _pipeReader = _sslStream.UsePipeReader();
-                    _readResult = await _pipeReader.ReadAsync();
-
-                    invokedResponse = responseReader.Invoke();
-                }
-                finally
-                {
-                    _pipeReader.Complete();
-                }
-
-                return invokedResponse;
+                return responseReader.Invoke();
             }
             catch (Exception innerException)
             {
-                if (innerException.IsSameOrSubclassOf(typeof(RedisException)) || innerException.IsSameOrSubclassOf(typeof(OperationCanceledException)))
+                if (innerException.IsSameOrSubclassOf(typeof(RedisException)) ||
+                    innerException.IsSameOrSubclassOf(typeof(OperationCanceledException)))
                 {
                     throw;
                 }
-                
+
                 DisposeNetwork();
                 IsConnected = false;
                 throw new RedisConnectionException(innerException);
@@ -118,19 +109,18 @@ namespace TomLonghurst.RedisClient.Client
             var peekByte = bufferReader.PeekByte();
             if (peekByte == -1)
             {
-                
+                throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
             }
             
             var firstChar = (char) peekByte;
+            
+            var endOfLineAfterByteCount = BufferReader.FindNextCrLf(bufferReader);
+            var line = bufferReader.ConsumeAsBuffer(endOfLineAfterByteCount).AsString();
 
             if (firstChar == '-')
             {
-                throw new RedisFailedCommandException("TODO", _lastCommand);
+                throw new RedisFailedCommandException(line, _lastCommand);
             }
-            
-            var crlfOffsetFromCurrent = BufferReader.FindNextCrLf(bufferReader);
-
-            var line = bufferReader.ConsumeAsBuffer(crlfOffsetFromCurrent).AsString();
 
             if (firstChar == '$')
             {
@@ -139,15 +129,28 @@ namespace TomLonghurst.RedisClient.Client
                     return null;
                 }
 
-                if (int.TryParse(line.Substring(1), out var byteSizeOfData))
+                if (long.TryParse(line.Substring(1), out var byteSizeOfData))
                 {
-                    var data = bufferReader.ConsumeAsBuffer(byteSizeOfData).ToArray();
+                    var bytes = new List<byte[]>();
+                    var bytesReceived = buffer.Length;
+
+                    while (bytesReceived < byteSizeOfData)
+                    {
+                        _pipe.Input.AdvanceTo(buffer.Start, buffer.End);
+                        _pipe.Input.TryRead(out _readResult);
+                        buffer = _readResult.Buffer;
+                        bytesReceived = buffer.Length;
+                    }
+
+                    bytes.Add(buffer.Slice(endOfLineAfterByteCount + 2, buffer.Length - endOfLineAfterByteCount - 2).ToArray());
+                    
+                    _pipe.Input.AdvanceTo(buffer.Start, buffer.End);
 
                     var dataEndOfLine = BufferReader.FindNextCrLf(bufferReader);
                     
                     bufferReader.Consume(dataEndOfLine);
 
-                    return data;
+                    return bytes.SelectMany(x => x).ToArray();
                 }
 
                 throw new UnexpectedRedisResponseException("Invalid length");
@@ -168,7 +171,7 @@ namespace TomLonghurst.RedisClient.Client
             bufferReader.Consume(2);
 
             buffer = bufferReader.SliceFromCurrent();
-            _pipeReader.AdvanceTo(buffer.Start, buffer.End);
+            _pipe.Input.AdvanceTo(buffer.Start, buffer.End);
 
             return payload;
         }
