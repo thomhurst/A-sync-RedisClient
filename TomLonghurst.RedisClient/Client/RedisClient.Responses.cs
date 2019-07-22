@@ -138,6 +138,7 @@ namespace TomLonghurst.RedisClient.Client
             var results = new byte [count][];
             for (var i = 0; i < count; i++)
             {
+                _pipe.Input.TryRead(out _readResult);
                 results[i] = ReadData();
             }
 

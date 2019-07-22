@@ -136,7 +136,7 @@ namespace TomLonghurst.RedisClient.Client
                 if (long.TryParse(line.Substring(1), out var byteSizeOfData))
                 {
                     var bytes = new List<ReadOnlySequence<byte>>();
-                    var dataBuffer = buffer.Slice(0, buffer.Length - 2);
+                    var dataBuffer = buffer.Slice(0, byteSizeOfData);
                     var bytesReceived = dataBuffer.Length;
                     
                     bytes.Add(dataBuffer);
@@ -170,11 +170,11 @@ namespace TomLonghurst.RedisClient.Client
 
             var lineTerminator = BufferReader.FindNextLineTerminator(bufferReader);
 
-            var payload = bufferReader.ConsumeAsBuffer(lineTerminator).AsString();
+            var line = bufferReader.ConsumeAsBuffer(lineTerminator).AsString();
 
             _pipe.Input.AdvanceToLineTerminator(buffer);
 
-            return payload;
+            return line;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
