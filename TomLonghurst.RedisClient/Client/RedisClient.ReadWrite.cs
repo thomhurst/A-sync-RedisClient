@@ -118,9 +118,7 @@ namespace TomLonghurst.RedisClient.Client
             var line = bufferReader.ConsumeAsBuffer(endOfLineAfterByteCount).AsString();
             
             _pipe.Input.AdvanceToLineTerminator(buffer);
-            _pipe.Input.TryRead(out _readResult);
-            buffer = _readResult.Buffer;
-
+            
             if (firstChar == '-')
             {
                 throw new RedisFailedCommandException(line, _lastCommand);
@@ -132,6 +130,9 @@ namespace TomLonghurst.RedisClient.Client
                 {
                     return null;
                 }
+                
+                _pipe.Input.TryRead(out _readResult);
+                buffer = _readResult.Buffer;
 
                 if (long.TryParse(line.Substring(1), out var byteSizeOfData))
                 {
@@ -151,7 +152,7 @@ namespace TomLonghurst.RedisClient.Client
                         bytes.Add(bytesReceived >= byteSizeOfData ? buffer.Slice(0, buffer.Length - 2) : buffer);
                     }
                     
-                    _pipe.Input.AdvanceToLineTerminator(buffer);
+                    _pipe.Input.AdvanceTo(buffer.End);
 
                     return bytes.SelectMany(x => x.ToArray()).ToArray();
                 }

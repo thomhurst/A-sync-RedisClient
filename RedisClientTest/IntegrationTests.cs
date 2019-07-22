@@ -315,6 +315,7 @@ namespace RedisClientTest
         }
 
         [Test]
+        [Repeat(2)]
         public async Task Info()
         {
             var info = await _tomLonghurstRedisClient.Server.Info();
