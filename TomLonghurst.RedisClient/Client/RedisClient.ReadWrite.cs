@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Buffers;
-using System.Collections.Generic;
 using System.IO.Pipelines;
-using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -136,20 +134,19 @@ namespace TomLonghurst.RedisClient.Client
 
                 if (long.TryParse(line.Substring(1), out var byteSizeOfData))
                 {
-                    var bytes = new List<ReadOnlySequence<byte>>();
+                    var bytes = new byte[byteSizeOfData].AsSpan();
                     var dataBuffer = buffer.Slice(0, byteSizeOfData);
                     var bytesReceived = dataBuffer.Length;
                     
-                    bytes.Add(dataBuffer);
-                    
+                    dataBuffer.CopyTo(bytes.Slice(0, (int) bytesReceived));
+
                     while (bytesReceived < byteSizeOfData)
                     {
                         _pipe.Input.AdvanceTo(buffer.End);
                         _pipe.Input.TryRead(out _readResult);
                         buffer = _readResult.Buffer;
+                        dataBuffer.CopyTo(bytes.Slice((int) bytesReceived, (int) buffer.Length));
                         bytesReceived += buffer.Length;
-
-                        bytes.Add(bytesReceived >= byteSizeOfData ? buffer.Slice(0, buffer.Length - 2) : buffer);
                     }
 
                     if (readToEnd)
@@ -161,7 +158,7 @@ namespace TomLonghurst.RedisClient.Client
                         _pipe.Input.AdvanceToLineTerminator(buffer);
                     }
 
-                    return bytes.SelectMany(x => x.ToArray()).ToArray();
+                    return bytes.ToArray();
                 }
 
                 throw new UnexpectedRedisResponseException("Invalid length");

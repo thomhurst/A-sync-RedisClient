@@ -71,7 +71,7 @@ namespace RedisClientTest
             Assert.That(redisValue3.Value, Is.EqualTo("value with a space3"));
         }
 
-        //[Ignore("")]
+        [Ignore("")]
         [Test]
         public async Task PerformanceTest()
         {

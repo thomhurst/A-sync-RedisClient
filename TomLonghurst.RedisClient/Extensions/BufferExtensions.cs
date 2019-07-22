@@ -9,9 +9,25 @@ namespace TomLonghurst.RedisClient.Extensions
     {
         internal static string AsString(this ReadOnlySequence<byte> buffer)
         {
-            // TODO Refactor
-            var byteArray = buffer.ToArray();
-            return Encoding.UTF8.GetString(byteArray);
+            if (buffer.IsSingleSegment)
+            {
+                return AsString(buffer.First.Span);
+            }
+
+            var arr = ArrayPool<byte>.Shared.Rent(checked((int)buffer.Length));
+            var span = new Span<byte>(arr, 0, (int)buffer.Length);
+            buffer.CopyTo(span);
+            var s = AsString(span);
+            ArrayPool<byte>.Shared.Return(arr);
+            return s;
+        }
+        internal static unsafe string AsString(this ReadOnlySpan<byte> span)
+        {
+            if (span.IsEmpty) return "";
+            fixed (byte* ptr = span)
+            {
+                return Encoding.UTF8.GetString(ptr, span.Length);
+            }
         }
 
         internal static void TryAdvanceToLineTerminator(this PipeReader pipeReader, ReadOnlySequence<byte> buffer)
