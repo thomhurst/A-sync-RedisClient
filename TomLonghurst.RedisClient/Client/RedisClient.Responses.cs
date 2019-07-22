@@ -38,6 +38,12 @@ namespace TomLonghurst.RedisClient.Client
             return ReadData().FromUtf8();
         }
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private async Task<string> ExpectData(bool readToEnd = false)
+        {
+            return ReadData(readToEnd).FromUtf8();
+        }
+        
         private async Task<IList<string>> ExpectData(int count)
         {
             var responses = new List<string>();

@@ -27,7 +27,7 @@ namespace TomLonghurst.RedisClient.Client
             {
                 return await await  _redisClient.RunWithTimeout(async token =>
                 {
-                    return await _redisClient.SendAndReceiveAsync(Commands.Info, _redisClient.ExpectData, CancellationToken.None, true);
+                    return await _redisClient.SendAndReceiveAsync(Commands.Info, () => _redisClient.ExpectData(true), CancellationToken.None, true);
                 }, cancellationToken);
             }
 

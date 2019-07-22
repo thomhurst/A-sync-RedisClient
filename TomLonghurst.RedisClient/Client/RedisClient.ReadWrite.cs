@@ -96,7 +96,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private byte[] ReadData()
+        private byte[] ReadData(bool readToEnd = false)
         {
             var buffer = _readResult.Buffer;
             var bufferReader = new BufferReader(buffer);
@@ -151,8 +151,15 @@ namespace TomLonghurst.RedisClient.Client
 
                         bytes.Add(bytesReceived >= byteSizeOfData ? buffer.Slice(0, buffer.Length - 2) : buffer);
                     }
-                    
-                    _pipe.Input.AdvanceTo(buffer.End);
+
+                    if (readToEnd)
+                    {
+                        _pipe.Input.AdvanceTo(buffer.End);
+                    }
+                    else
+                    {
+                        _pipe.Input.AdvanceToLineTerminator(buffer);
+                    }
 
                     return bytes.SelectMany(x => x.ToArray()).ToArray();
                 }
