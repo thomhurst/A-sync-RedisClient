@@ -15,9 +15,9 @@ namespace TomLonghurst.RedisClient.Extensions
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static IEnumerable<RedisValue<string>> ToRedisValues(this IEnumerable<byte[]> bytesArray)
+        internal static IEnumerable<StringRedisValue> ToRedisValues(this IEnumerable<byte[]> bytesArray)
         {
-            return bytesArray.Select(bytes => new RedisValue<string>(bytes.FromUtf8()));
+            return bytesArray.Select(bytes => new StringRedisValue(bytes.FromUtf8()));
         }
     }
 }
