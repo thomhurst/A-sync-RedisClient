@@ -133,6 +133,7 @@ namespace TomLonghurst.RedisClient.Client
                 {
                     var bytes = new List<byte[]>();
                     var bytesReceived = buffer.Length;
+                    var offset = 0;
 
                     while (bytesReceived < byteSizeOfData)
                     {
@@ -143,12 +144,15 @@ namespace TomLonghurst.RedisClient.Client
                     }
 
                     bytes.Add(buffer.Slice(endOfLineAfterByteCount + 2, buffer.Length - endOfLineAfterByteCount - 2).ToArray());
-                    
-                    _pipe.Input.AdvanceTo(buffer.Start, buffer.End);
 
                     var dataEndOfLine = BufferReader.FindNextCrLf(bufferReader);
                     
                     bufferReader.Consume(dataEndOfLine);
+                    
+                    bufferReader.Consume(2);
+
+                    buffer = bufferReader.SliceFromCurrent();
+                    _pipe.Input.AdvanceTo(buffer.Start, buffer.End);
 
                     return bytes.SelectMany(x => x).ToArray();
                 }
