@@ -1,10 +1,11 @@
 ﻿using System;
-using System.Linq;
+using System.Buffers;
+using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Nerdbank.Streams;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Helpers;
@@ -22,6 +23,9 @@ namespace TomLonghurst.RedisClient.Client
         public long OutstandingOperations => Interlocked.Read(ref _outStandingOperations);
 
         private long _operationsPerformed;
+
+        private PipeReader _pipeReader;
+        private ReadResult _readResult;
 
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
@@ -64,7 +68,19 @@ namespace TomLonghurst.RedisClient.Client
                     _socket.Send(bytes);
                 }
 
-                return responseReader.Invoke();
+                T invokedResponse;
+                try
+                {
+                    _pipeReader = _sslStream.UsePipeReader();
+                    _readResult = await _pipeReader.ReadAsync();
+                    invokedResponse = responseReader.Invoke();
+                }
+                finally
+                {
+                    _pipeReader.Complete();   
+                }
+
+                return invokedResponse;
             }
             catch (Exception innerException)
             {
@@ -90,19 +106,24 @@ namespace TomLonghurst.RedisClient.Client
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte[] ReadData()
         {
-            var line = ReadLine();
+            var buffer = _readResult.Buffer;
+            var bufferReader = new BufferReader(buffer);
 
-            if (string.IsNullOrWhiteSpace(line))
+            if (buffer.IsEmpty && _readResult.IsCompleted)
             {
                 throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
             }
 
-            var firstChar = line.First();
+            var firstChar = (char) bufferReader.PeekByte();
 
             if (firstChar == '-')
             {
-                throw new RedisFailedCommandException(line, _lastCommand);
+                throw new RedisFailedCommandException("TODO", _lastCommand);
             }
+            
+            var crlfOffsetFromCurrent = BufferReader.FindNextCrLf(bufferReader);
+
+            var line = bufferReader.ConsumeAsBuffer(crlfOffsetFromCurrent).AsString();
 
             if (firstChar == '$')
             {
@@ -113,28 +134,13 @@ namespace TomLonghurst.RedisClient.Client
 
                 if (int.TryParse(line.Substring(1), out var byteSizeOfData))
                 {
-                    var byteBuffer = new byte [byteSizeOfData];
+                    var data = bufferReader.ConsumeAsBuffer(byteSizeOfData).ToArray();
 
-                    var bytesRead = 0;
-                    do
-                    {
-                        var read = _bufferedStream.Read(byteBuffer, bytesRead, byteSizeOfData - bytesRead);
+                    var dataEndOfLine = BufferReader.FindNextCrLf(bufferReader);
+                    
+                    bufferReader.Consume(dataEndOfLine);
 
-                        if (read < 1)
-                        {
-                            throw new UnexpectedRedisResponseException(
-                                $"Invalid termination mid stream: {byteBuffer.FromUtf8()}");
-                        }
-
-                        bytesRead += read;
-                    } while (bytesRead < byteSizeOfData);
-
-                    if (_bufferedStream.ReadByte() != '\r' || _bufferedStream.ReadByte() != '\n')
-                    {
-                        throw new UnexpectedRedisResponseException($"Invalid termination: {byteBuffer.FromUtf8()}");
-                    }
-
-                    return byteBuffer;
+                    return data;
                 }
 
                 throw new UnexpectedRedisResponseException("Invalid length");
@@ -146,25 +152,14 @@ namespace TomLonghurst.RedisClient.Client
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string ReadLine()
         {
-            var stringBuilder = new StringBuilder();
-            int c;
+            var buffer = _readResult.Buffer;
+            var bufferReader = new BufferReader(buffer);
 
-            while ((c = _bufferedStream.ReadByte()) != -1)
-            {
-                if (c == '\r')
-                {
-                    continue;
-                }
+            var endOfLine = BufferReader.FindNextCrLf(bufferReader);
 
-                if (c == '\n')
-                {
-                    break;
-                }
+            var payload = bufferReader.ConsumeAsBuffer(endOfLine).AsString();
 
-                stringBuilder.Append((char) c);
-            }
-
-            return stringBuilder.ToString();
+            return payload;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

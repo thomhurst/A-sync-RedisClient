@@ -25,7 +25,7 @@ namespace TomLonghurst.RedisClient.Client
         
             public async ValueTask<string> Info(CancellationToken cancellationToken)
             {
-                return await _redisClient.RunWithTimeout(async token =>
+                return await await  _redisClient.RunWithTimeout(async token =>
                 {
                     return await _redisClient.SendAndReceiveAsync(Commands.Info, _redisClient.ExpectData, CancellationToken.None, true);
                 }, cancellationToken);
@@ -38,7 +38,7 @@ namespace TomLonghurst.RedisClient.Client
 
             public async Task<int> DBSize(CancellationToken cancellationToken)
             {
-                return await _redisClient.RunWithTimeout(async token =>
+                return await await _redisClient.RunWithTimeout(async token =>
                 {
                     return await _redisClient.SendAndReceiveAsync(Commands.DbSize, _redisClient.ExpectInteger, CancellationToken.None, true);
                 }, cancellationToken);

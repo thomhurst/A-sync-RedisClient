@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Models;
@@ -10,7 +11,7 @@ namespace TomLonghurst.RedisClient.Client
     public partial class RedisClient : IDisposable
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private object ExpectSuccess()
+        private async Task<object> ExpectSuccess()
         {
             var response = ReadLine();
             if (response.StartsWith("-"))
@@ -21,35 +22,35 @@ namespace TomLonghurst.RedisClient.Client
             return new object();
         }
 
-        private object ExpectSuccess(int count)
+        private async Task<object> ExpectSuccess(int count)
         {
             for (var i = 0; i < count; i++)
             {
-                ExpectSuccess();
+                await ExpectSuccess();
             }
             
             return new object();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string ExpectData()
+        private async Task<string> ExpectData()
         {
-            return ReadData().FromUtf8();
+            return (ReadData()).FromUtf8();
         }
         
-        private IList<string> ExpectData(int count)
+        private async Task<IList<string>> ExpectData(int count)
         {
             var responses = new List<string>();
             for (var i = 0; i < count; i++)
             {
-                responses.Add(ExpectData());
+                responses.Add(await ExpectData());
             }
             
             return responses;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string ExpectWord()
+        private async Task<string> ExpectWord()
         {
             var word = ReadLine();
 
@@ -61,19 +62,19 @@ namespace TomLonghurst.RedisClient.Client
             return word.Substring(1);
         }
         
-        private IList<string> ExpectWord(int count)
+        private async Task<IList<string>> ExpectWord(int count)
         {
             var responses = new List<string>();
             for (var i = 0; i < count; i++)
             {
-                responses.Add(ExpectWord());
+                responses.Add(await ExpectWord());
             }
             
             return responses;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int ExpectInteger()
+        private async Task<int> ExpectInteger()
         {
             var line = ReadLine();
 
@@ -85,20 +86,20 @@ namespace TomLonghurst.RedisClient.Client
             return number;
         }
         
-        private IList<int> ExpectInteger(int count)
+        private async Task<IList<int>> ExpectInteger(int count)
         {
             var responses = new List<int>();
             for (var i = 0; i < count; i++)
             {
-                responses.Add(ExpectInteger());
+                responses.Add(await ExpectInteger());
             }
             
             return responses;
         }
         
-        private float ExpectFloat()
+        private async Task<float> ExpectFloat()
         {
-            var floatString = ReadData().FromUtf8();
+            var floatString = (ReadData()).FromUtf8();
 
             if (!float.TryParse(floatString, out var number))
             {
@@ -108,19 +109,19 @@ namespace TomLonghurst.RedisClient.Client
             return number;
         }
         
-        private IList<float> ExpectFloat(float count)
+        private async Task<IList<float>> ExpectFloat(float count)
         {
             var responses = new List<float>();
             for (var i = 0; i < count; i++)
             {
-                responses.Add(ExpectFloat());
+                responses.Add(await ExpectFloat());
             }
             
             return responses;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private IEnumerable<RedisValue<string>> ExpectArray()
+        private async Task<IEnumerable<RedisValue<string>>> ExpectArray()
         {
             var arrayWithCountLine = ReadLine();
 
@@ -143,12 +144,12 @@ namespace TomLonghurst.RedisClient.Client
             return results.ToRedisValues();
         }
         
-        private IList<IEnumerable<RedisValue<string>>> ExpectArray(int count)
+        private async Task<IList<IEnumerable<RedisValue<string>>>> ExpectArray(int count)
         {
             var responses = new List<IEnumerable<RedisValue<string>>>();
             for (var i = 0; i < count; i++)
             {
-                responses.Add(ExpectArray());
+                responses.Add(await ExpectArray());
             }
             
             return responses;

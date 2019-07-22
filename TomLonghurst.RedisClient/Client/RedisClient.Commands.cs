@@ -52,7 +52,7 @@ namespace TomLonghurst.RedisClient.Client
                 var pingCommand = Commands.Ping;
 
                 var sw = Stopwatch.StartNew();
-                var pingResponse = await SendAndReceiveAsync(pingCommand, ExpectWord, CancellationToken.None);
+                var pingResponse = await await SendAndReceiveAsync(pingCommand, ExpectWord, CancellationToken.None);
                 sw.Stop();
 
                 return new Pong(sw.Elapsed, pingResponse);
@@ -67,7 +67,7 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<bool> KeyExistsAsync(string key,
             CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
+            return await await RunWithTimeout(async token =>
             {
                 var command = $"{Commands.Exists} {key}";
                 return await SendAndReceiveAsync(command, ExpectInteger, token);
@@ -82,7 +82,7 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<RedisValue<string>> StringGetAsync(string key,
             CancellationToken cancellationToken)
         {
-            return new RedisValue<string>(await RunWithTimeout(async token =>
+            return new RedisValue<string>(await await RunWithTimeout(async token =>
                 {
                     var command = $"{Commands.Get} {key}";
                     return await SendAndReceiveAsync(command, ExpectData, token);
@@ -97,7 +97,7 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<IEnumerable<RedisValue<string>>> StringGetAsync(IEnumerable<string> keys,
             CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
+            return await await RunWithTimeout(async token =>
             {
                 var keysAsString = string.Join(" ", keys);
                 var command = $"{Commands.MGet} {keysAsString}";
@@ -282,7 +282,7 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask<int> IncrementAsync(string key, CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
+            return await await RunWithTimeout(async token =>
             {
                 var command = $"{Commands.Incr} {key}";
                 return await SendAndReceiveAsync(command, ExpectInteger, token);
@@ -296,7 +296,7 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask<int> IncrementByAsync(string key, int amount, CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
+            return await await RunWithTimeout(async token =>
             {
                 var command = $"{Commands.IncrBy} {key} {amount}";
                 return await SendAndReceiveAsync(command, ExpectInteger, token);
@@ -310,7 +310,7 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask<float> IncrementByAsync(string key, float amount, CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
+            return await await RunWithTimeout(async token =>
             {
                 var command = $"{Commands.IncrByFloat} {key} {amount}";
                 return await SendAndReceiveAsync(command, ExpectFloat, token);
@@ -324,7 +324,7 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask<int> DecrementAsync(string key, CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
+            return await await RunWithTimeout(async token =>
             {
                 var command = $"{Commands.Decr} {key}";
                 return await SendAndReceiveAsync(command, ExpectInteger, token);
@@ -338,7 +338,7 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask<int> DecrementByAsync(string key, int amount, CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
+            return await await RunWithTimeout(async token =>
             {
                 var command = $"{Commands.DecrBy} {key} {amount}";
                 return await SendAndReceiveAsync(command, ExpectInteger, token);
@@ -394,7 +394,7 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask<int> TimeToLiveAsync(string key, CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
+            return await await RunWithTimeout(async token =>
             {
                 var command = $"{Commands.Ttl} {key}";
                 return await SendAndReceiveAsync(command, ExpectInteger, token);
