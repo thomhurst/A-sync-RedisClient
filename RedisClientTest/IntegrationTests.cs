@@ -36,6 +36,7 @@ namespace RedisClientTest
         }
 
         [Test]
+        [Repeat(2)]
         public async Task Value_With_Space()
         {
             await _tomLonghurstRedisClient.StringSetAsync("key", "value with a space", AwaitOptions.AwaitCompletion);
@@ -45,6 +46,7 @@ namespace RedisClientTest
         }
         
         [Test]
+        [Repeat(2)]
         public async Task Multiple_Values_With_Space()
         {
             var data = new List<RedisKeyValue>
@@ -111,6 +113,7 @@ namespace RedisClientTest
         }
 
         [Test]
+        [Repeat(2)]
         public async Task Test1Async()
         {
             var sw = Stopwatch.StartNew();
@@ -153,6 +156,7 @@ namespace RedisClientTest
         }
         
         [Test]
+        [Repeat(2)]
         public async Task GetNonExistingKey()
         {
             var nonExistingKey = await _tomLonghurstRedisClient.StringGetAsync("Blah1");
@@ -160,6 +164,7 @@ namespace RedisClientTest
         }
         
         [Test]
+        [Repeat(2)]
         public async Task GetNonExistingKeys()
         {
             var nonExistingKeys = (await _tomLonghurstRedisClient.StringGetAsync(new [] { "Blah1", "Blah2" })).ToList();
@@ -168,6 +173,7 @@ namespace RedisClientTest
         }
         
         [Test]
+        [Repeat(2)]
         public async Task GetExistingKeyAmongstNonExistingKeys()
         {
             await _tomLonghurstRedisClient.StringSetAsync("Exists", "123", 30, AwaitOptions.AwaitCompletion);
@@ -190,6 +196,7 @@ namespace RedisClientTest
         }
 
         [Test]
+        [Repeat(2)]
         public async Task SetGetSingleKeyWithTtl()
         {
             await _tomLonghurstRedisClient.StringSetAsync("SingleKeyWithTtl", "123", 30, AwaitOptions.AwaitCompletion);
@@ -198,6 +205,7 @@ namespace RedisClientTest
         }
 
         [Test]
+        [Repeat(2)]
         public async Task SetGetMultipleKey()
         {
             var keyValues = new List<RedisKeyValue>
@@ -216,6 +224,7 @@ namespace RedisClientTest
         }
 
         [Test]
+        [Repeat(2)]
         public async Task Pipelining_Multiple_Sets()
         {
             var keys = new[]
@@ -230,6 +239,7 @@ namespace RedisClientTest
         
         [TestCase(AwaitOptions.AwaitCompletion)]
         [TestCase(AwaitOptions.FireAndForget)]
+        [Repeat(2)]
         public async Task SetGetMultipleKeyWithTtl(AwaitOptions awaitOptions)
         {
             var keyValues = new List<RedisKeyValue>
@@ -257,6 +267,7 @@ namespace RedisClientTest
         }
 
         [Test]
+        [Repeat(2)]
         public async Task KeyExists()
         {
             await _tomLonghurstRedisClient.StringSetAsync("KeyExistsCheck", "123", 30, AwaitOptions.AwaitCompletion);
@@ -277,6 +288,7 @@ namespace RedisClientTest
 
         // Needs Access to Socket (which is private) to Close it
         [Test]
+        [Repeat(2)]
         public async Task Disconnected()
         {
             var client = await _redisManager.GetRedisClientAsync();
@@ -292,6 +304,7 @@ namespace RedisClientTest
         }
 
         [TestCase("IncrKey")]
+        [Repeat(2)]
         public async Task Incr(string key)
         {
             await _tomLonghurstRedisClient.DeleteKeyAsync(key, AwaitOptions.AwaitCompletion);
@@ -322,12 +335,14 @@ namespace RedisClientTest
         }
         
         [Test]
+        [Repeat(2)]
         public async Task DBSize()
         {
             var dbSize = await _tomLonghurstRedisClient.Server.DBSize();
         }
 
         [TestCase("DecrKey")]
+        [Repeat(2)]
         public async Task Decr(string key)
         {
             await Incr(key);
@@ -343,6 +358,7 @@ namespace RedisClientTest
         }
 
         [Test]
+        [Repeat(2)]
         public async Task Expire()
         {
             await _tomLonghurstRedisClient.StringSetAsync("ExpireKey", "123", AwaitOptions.AwaitCompletion);
@@ -363,6 +379,7 @@ namespace RedisClientTest
         }
         
         [Test]
+        [Repeat(2)]
         public async Task ExpireAt()
         {
             await _tomLonghurstRedisClient.StringSetAsync("ExpireKeyDateTime", "123", AwaitOptions.AwaitCompletion);
