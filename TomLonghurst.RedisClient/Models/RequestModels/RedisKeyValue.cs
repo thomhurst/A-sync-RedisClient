@@ -10,7 +10,7 @@ namespace TomLonghurst.RedisClient.Models.RequestModels
         public RedisKeyValue(string key, string value)
         {
             Key = key;
-            Value = $"{CharacterConstants.VALUE_DELIMITER} {value} {CharacterConstants.VALUE_DELIMITER}";
+            Value = $"{CharacterConstants.VALUE_DELIMITER} {value.Replace(CharacterConstants.NEW_LINE, CharacterConstants.ENCODED_NEW_LINE)} {CharacterConstants.VALUE_DELIMITER}";
         }
     }
 }

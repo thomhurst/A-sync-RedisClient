@@ -34,15 +34,18 @@ namespace RedisClientTest
         {
             _tomLonghurstRedisClient = await _redisManager.GetRedisClientAsync();
         }
-
-        [Test]
+        
+        [TestCase("value with a space")]
+        [TestCase("value")]
+        [TestCase("value with a\nnew line")]
+        [TestCase("value with a\r\nnew line")]
         [Repeat(2)]
-        public async Task Value_With_Space()
+        public async Task Values(string value)
         {
-            await _tomLonghurstRedisClient.StringSetAsync("key", "value with a space", AwaitOptions.AwaitCompletion);
+            await _tomLonghurstRedisClient.StringSetAsync("key", value, AwaitOptions.AwaitCompletion);
             var redisValue = await _tomLonghurstRedisClient.StringGetAsync("key");
             
-            Assert.That(redisValue.Value, Is.EqualTo("value with a space"));
+            Assert.That(redisValue.Value, Is.EqualTo(value));
         }
         
         [Test]
