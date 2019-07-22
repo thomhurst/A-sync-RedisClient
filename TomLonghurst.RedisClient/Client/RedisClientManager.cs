@@ -2,13 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Nito.AsyncEx;
 
 namespace TomLonghurst.RedisClient.Client
 {
     public class RedisClientManager
     {
-        private readonly List<AsyncLazy<RedisClient>> _lazyRedisClients = new List<AsyncLazy<RedisClient>>();
+        private readonly List<Lazy<Task<RedisClient>>> _lazyRedisClients = new List<Lazy<Task<RedisClient>>>();
 
         public RedisClientManager(RedisClientConfig clientConfig, int redisClientPoolSize)
         {
@@ -19,7 +18,7 @@ namespace TomLonghurst.RedisClient.Client
 
             for (var i = 0; i < redisClientPoolSize; i++)
             {
-                _lazyRedisClients.Add(new AsyncLazy<RedisClient>(() => RedisClient.ConnectAsync(clientConfig)));
+                _lazyRedisClients.Add(new Lazy<Task<RedisClient>>(() => RedisClient.ConnectAsync(clientConfig)));
             }
         }
 
@@ -27,17 +26,17 @@ namespace TomLonghurst.RedisClient.Client
         {
             if (_lazyRedisClients.Count == 1)
             {
-                return await _lazyRedisClients.First().Task;
+                return await _lazyRedisClients.First().Value;
             }
             
-            var lazyClientNotYetLoaded = _lazyRedisClients.FirstOrDefault(lazy => !lazy.IsStarted);
+            var lazyClientNotYetLoaded = _lazyRedisClients.FirstOrDefault(lazy => !lazy.IsValueCreated);
 
             if(lazyClientNotYetLoaded != null)
             {
-                return await lazyClientNotYetLoaded.Task;
+                return await lazyClientNotYetLoaded.Value;
             }
 
-            var clientTasks = _lazyRedisClients.Select(lazyClient => lazyClient.Task).ToList();
+            var clientTasks = _lazyRedisClients.Select(lazyClient => lazyClient.Value).ToList();
 
             if (clientTasks.Any(task => !task.IsCompleted))
             {
@@ -58,7 +57,7 @@ namespace TomLonghurst.RedisClient.Client
 
         public async Task<IEnumerable<RedisClient>> GetAllRedisClientsAsync()
         {
-            return await Task.WhenAll(_lazyRedisClients.Select(lazyRedisClient => lazyRedisClient.Task));
+            return await Task.WhenAll(_lazyRedisClients.Select(lazyRedisClient => lazyRedisClient.Value));
         }
     }
 }
