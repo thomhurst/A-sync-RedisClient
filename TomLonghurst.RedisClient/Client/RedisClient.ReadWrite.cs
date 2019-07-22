@@ -116,6 +116,10 @@ namespace TomLonghurst.RedisClient.Client
             
             var endOfLineAfterByteCount = BufferReader.FindNextLineTerminator(bufferReader);
             var line = bufferReader.ConsumeAsBuffer(endOfLineAfterByteCount).AsString();
+            
+            _pipe.Input.AdvanceToLineTerminator(buffer);
+            _pipe.Input.TryRead(out _readResult);
+            buffer = _readResult.Buffer;
 
             if (firstChar == '-')
             {
@@ -132,7 +136,7 @@ namespace TomLonghurst.RedisClient.Client
                 if (long.TryParse(line.Substring(1), out var byteSizeOfData))
                 {
                     var bytes = new List<ReadOnlySequence<byte>>();
-                    var dataBuffer = buffer.Slice(endOfLineAfterByteCount + 2, buffer.Length - endOfLineAfterByteCount - 4);
+                    var dataBuffer = buffer.Slice(0, buffer.Length - 2);
                     var bytesReceived = dataBuffer.Length;
                     
                     bytes.Add(dataBuffer);
@@ -143,9 +147,10 @@ namespace TomLonghurst.RedisClient.Client
                         _pipe.Input.TryRead(out _readResult);
                         buffer = _readResult.Buffer;
                         bytesReceived += buffer.Length;
-                        bytes.Add(buffer);
-                    }
 
+                        bytes.Add(bytesReceived >= byteSizeOfData ? buffer.Slice(0, buffer.Length - 2) : buffer);
+                    }
+                    
                     _pipe.Input.AdvanceToLineTerminator(buffer);
 
                     return bytes.SelectMany(x => x.ToArray()).ToArray();

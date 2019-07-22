@@ -14,6 +14,18 @@ namespace TomLonghurst.RedisClient.Extensions
             return Encoding.UTF8.GetString(byteArray);
         }
 
+        internal static void TryAdvanceToLineTerminator(this PipeReader pipeReader, ReadOnlySequence<byte> buffer)
+        {
+            try
+            {
+                pipeReader.AdvanceToLineTerminator(buffer);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        }
+
         internal static void AdvanceToLineTerminator(this PipeReader pipeReader, ReadOnlySequence<byte> buffer)
         {
             var endOfLineSequencePosition = buffer.GetEndOfLinePosition();
@@ -22,7 +34,7 @@ namespace TomLonghurst.RedisClient.Extensions
             {
                 throw new Exception("Can't find EOL");
             }
-
+            
             buffer = buffer.Slice(endOfLineSequencePosition.Value);
 
             pipeReader.AdvanceTo(buffer.Start, buffer.End);
