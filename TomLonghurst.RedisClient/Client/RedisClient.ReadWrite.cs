@@ -107,10 +107,8 @@ namespace TomLonghurst.RedisClient.Client
 
             var firstChar = (char) peekByte;
             
-            var line = GetLine(buffer);
+            var line = await GetLine(buffer);
 
-            _pipe.Input.AdvanceToLineTerminator(_readResult);
-            
             if (firstChar == '-')
             {
                 throw new RedisFailedCommandException(line, _lastCommand);
@@ -158,7 +156,7 @@ namespace TomLonghurst.RedisClient.Client
                     }
                     else
                     {
-                        _pipe.Input.AdvanceToLineTerminator(_readResult);
+                        await _pipe.Input.AdvanceToLineTerminator(_readResult);
                     }
 
                     return bytes;
@@ -170,11 +168,14 @@ namespace TomLonghurst.RedisClient.Client
             throw new UnexpectedRedisResponseException($"Unexpected reply: {line}");
         }
 
-        private static string GetLine(ReadOnlySequence<byte> buffer)
+        private async Task<string> GetLine(ReadOnlySequence<byte> buffer)
         {
-            var bufferReader = new BufferReader(buffer);
-            var endOfLineAfterByteCount = BufferReader.FindNextLineTerminator(bufferReader);
-            var line = bufferReader.ConsumeAsBuffer(endOfLineAfterByteCount).AsString();
+            var endOfLineAfterByteCount = await _pipe.Input.ReadUntilEndOfLineFound(_readResult);
+            
+            var line = buffer.Slice(0, endOfLineAfterByteCount.SequencePositionBeforeLineTerminator).AsString();
+            
+            _pipe.Input.AdvanceTo(endOfLineAfterByteCount.SequencePositionOfLineTerminator);
+            
             return line;
         }
 
@@ -191,18 +192,10 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string ReadLine()
+        private async Task<string> ReadLine()
         {
             var buffer = _readResult.Buffer;
-            var bufferReader = new BufferReader(buffer);
-
-            var lineTerminator = BufferReader.FindNextLineTerminator(bufferReader);
-
-            var line = bufferReader.ConsumeAsBuffer(lineTerminator).AsString();
-
-            _pipe.Input.AdvanceToLineTerminator(_readResult);
-
-            return line;
+            return await GetLine(buffer);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -53,26 +53,34 @@ namespace TomLonghurst.RedisClient.Extensions
 
         internal static async Task AdvanceToLineTerminator(this PipeReader pipeReader, ReadResult readResult)
         {
-            SequencePosition? endOfLineSequencePosition;
             var buffer = readResult.Buffer;
 
-            while ((endOfLineSequencePosition = buffer.GetEndOfLinePosition()) == null)
+            var endOfLineSequencePosition = await pipeReader.ReadUntilEndOfLineFound(readResult);
+            
+            buffer = buffer.Slice(endOfLineSequencePosition.SequencePositionOfLineTerminator);
+
+            pipeReader.AdvanceTo(buffer.Start, buffer.GetPosition(2, buffer.End));
+        }
+
+        internal static async Task<EndOfLineSequencePosition> ReadUntilEndOfLineFound(this PipeReader pipeReader, ReadResult readResult)
+        {
+            var buffer = readResult.Buffer;
+            
+            while ((buffer.GetEndOfLinePosition()) == null)
             {
-                pipeReader.AdvanceTo(buffer.End);
-                
+                pipeReader.AdvanceTo(buffer.Start);
+
                 if (!pipeReader.TryRead(out readResult))
                 {
                     readResult = await pipeReader.ReadAsync();
                 }
-                
+
                 buffer = readResult.Buffer;
             }
-            
-            buffer = buffer.Slice(endOfLineSequencePosition.Value);
 
-            pipeReader.AdvanceTo(buffer.Start, buffer.End);
+            return new EndOfLineSequencePosition(buffer);
         }
-        
+
         internal static SequencePosition? GetEndOfLinePosition(this ReadOnlySequence<byte> buffer)
         {
             var endOfLine = buffer.PositionOf((byte) '\n');

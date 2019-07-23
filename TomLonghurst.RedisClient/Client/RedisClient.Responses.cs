@@ -11,9 +11,9 @@ namespace TomLonghurst.RedisClient.Client
     public partial class RedisClient : IDisposable
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private object ExpectSuccess()
+        private async Task<object> ExpectSuccess()
         {
-            var response = ReadLine();
+            var response = await ReadLine();
             if (response.StartsWith("-"))
             {
                 throw new RedisFailedCommandException(response, _lastCommand);
@@ -22,11 +22,11 @@ namespace TomLonghurst.RedisClient.Client
             return new object();
         }
 
-        private object ExpectSuccess(int count)
+        private async Task<object> ExpectSuccess(int count)
         {
             for (var i = 0; i < count; i++)
             {
-                ExpectSuccess();
+                await ExpectSuccess();
             }
             
             return new object();
@@ -56,9 +56,9 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string ExpectWord()
+        private async Task<string> ExpectWord()
         {
-            var word = ReadLine();
+            var word = await ReadLine();
 
             if (!word.StartsWith("+"))
             {
@@ -68,21 +68,21 @@ namespace TomLonghurst.RedisClient.Client
             return word.Substring(1);
         }
         
-        private IList<string> ExpectWord(int count)
+        private async Task<IList<string>> ExpectWord(int count)
         {
             var responses = new List<string>();
             for (var i = 0; i < count; i++)
             {
-                responses.Add(ExpectWord());
+                responses.Add(await ExpectWord());
             }
             
             return responses;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int ExpectInteger()
+        private async Task<int> ExpectInteger()
         {
-            var line = ReadLine();
+            var line = await ReadLine();
 
             if (!line.StartsWith(":") || !int.TryParse(line.Substring(1), out var number))
             {
@@ -92,12 +92,12 @@ namespace TomLonghurst.RedisClient.Client
             return number;
         }
         
-        private IList<int> ExpectInteger(int count)
+        private async Task<IList<int>> ExpectInteger(int count)
         {
             var responses = new List<int>();
             for (var i = 0; i < count; i++)
             {
-                responses.Add(ExpectInteger());
+                responses.Add(await ExpectInteger());
             }
             
             return responses;
@@ -129,7 +129,7 @@ namespace TomLonghurst.RedisClient.Client
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<IEnumerable<StringRedisValue>> ExpectArray()
         {
-            var arrayWithCountLine = ReadLine();
+            var arrayWithCountLine = await ReadLine();
 
             if (!arrayWithCountLine.StartsWith("*"))
             {
