@@ -82,7 +82,7 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<StringRedisValue> StringGetAsync(string key,
             CancellationToken cancellationToken)
         {
-            return new StringRedisValue(await RunWithTimeout(async token =>
+            return new StringRedisValue(await await RunWithTimeout(async token =>
                 {
                     var command = $"{Commands.Get} {key}";
                     return await SendAndReceiveAsync(command, ExpectData, token);
@@ -97,7 +97,7 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<IEnumerable<StringRedisValue>> StringGetAsync(IEnumerable<string> keys,
             CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
+            return await await RunWithTimeout(async token =>
             {
                 var keysAsString = string.Join(" ", keys);
                 var command = $"{Commands.MGet} {keysAsString}";
@@ -310,7 +310,7 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask<float> IncrementByAsync(string key, float amount, CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
+            return await await RunWithTimeout(async token =>
             {
                 var command = $"{Commands.IncrByFloat} {key} {amount}";
                 return await SendAndReceiveAsync(command, ExpectFloat, token);

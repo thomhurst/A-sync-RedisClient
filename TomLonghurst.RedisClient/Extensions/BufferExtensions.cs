@@ -7,6 +7,11 @@ namespace TomLonghurst.RedisClient.Extensions
 {
     public static class BufferExtensions
     {
+        internal static string AsString(this Memory<byte> buffer)
+        {
+            return buffer.Span.AsString();
+        }
+        
         internal static string AsString(this ReadOnlySequence<byte> buffer)
         {
             if (buffer.IsEmpty)

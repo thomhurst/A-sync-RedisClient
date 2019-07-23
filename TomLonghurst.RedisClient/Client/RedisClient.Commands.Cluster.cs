@@ -25,7 +25,7 @@ namespace TomLonghurst.RedisClient.Client
         
             public async Task<string> ClusterInfoAsync(CancellationToken cancellationToken)
             {
-                return await _redisClient.RunWithTimeout(async token =>
+                return await await _redisClient.RunWithTimeout(async token =>
                 {
                     return await _redisClient.SendAndReceiveAsync(Commands.ClusterInfo, _redisClient.ExpectData, token);
                 }, cancellationToken).ConfigureAwait(false);

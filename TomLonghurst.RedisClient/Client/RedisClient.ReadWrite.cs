@@ -94,27 +94,21 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Span<byte> ReadData(bool readToEnd = false)
+        private async Task<Memory<byte>> ReadData(bool readToEnd = false)
         {
             var buffer = _readResult.Buffer;
-            var bufferReader = new BufferReader(buffer);
 
             if (buffer.IsEmpty && _readResult.IsCompleted)
             {
                 throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
             }
 
-            var peekByte = bufferReader.PeekByte();
-            if (peekByte == -1)
-            {
-                throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
-            }
-            
+            var peekByte = PeekByte(buffer);
+
             var firstChar = (char) peekByte;
             
-            var endOfLineAfterByteCount = BufferReader.FindNextLineTerminator(bufferReader);
-            var line = bufferReader.ConsumeAsBuffer(endOfLineAfterByteCount).AsString();
-            
+            var line = GetLine(buffer);
+
             _pipe.Input.AdvanceToLineTerminator(buffer);
             
             if (firstChar == '-')
@@ -129,23 +123,32 @@ namespace TomLonghurst.RedisClient.Client
                     return null;
                 }
                 
-                _pipe.Input.TryRead(out _readResult);
+                if (!_pipe.Input.TryRead(out _readResult))
+                {
+                    _readResult = await _pipe.Input.ReadAsync();
+                }
+                
                 buffer = _readResult.Buffer;
 
                 if (long.TryParse(line.Substring(1), out var byteSizeOfData))
                 {
-                    var bytes = new byte[byteSizeOfData].AsSpan();
+                    var bytes = new byte[byteSizeOfData].AsMemory();
                     var dataBuffer = buffer.Slice(0, Math.Min(byteSizeOfData, buffer.Length));
                     var bytesReceived = dataBuffer.Length;
                     
-                    dataBuffer.CopyTo(bytes.Slice(0, (int) bytesReceived));
+                    dataBuffer.CopyTo(bytes.Slice(0, (int) bytesReceived).Span);
 
                     while (bytesReceived < byteSizeOfData)
                     {
                         _pipe.Input.AdvanceTo(buffer.End);
-                        _pipe.Input.TryRead(out _readResult);
+                        
+                        if (!_pipe.Input.TryRead(out _readResult))
+                        {
+                            _readResult = await _pipe.Input.ReadAsync();
+                        }
+                        
                         buffer = _readResult.Buffer;
-                        buffer.CopyTo(bytes.Slice((int) bytesReceived, (int) buffer.Length));
+                        buffer.CopyTo(bytes.Slice((int) bytesReceived, (int) buffer.Length).Span);
                         bytesReceived += buffer.Length;
                     }
 
@@ -165,6 +168,25 @@ namespace TomLonghurst.RedisClient.Client
             }
 
             throw new UnexpectedRedisResponseException($"Unexpected reply: {line}");
+        }
+
+        private static string GetLine(ReadOnlySequence<byte> buffer)
+        {
+            var bufferReader = new BufferReader(buffer);
+            var endOfLineAfterByteCount = BufferReader.FindNextLineTerminator(bufferReader);
+            var line = bufferReader.ConsumeAsBuffer(endOfLineAfterByteCount).AsString();
+            return line;
+        }
+
+        private static int PeekByte(ReadOnlySequence<byte> buffer)
+        {
+            var peekByte = new BufferReader(buffer).PeekByte();
+            if (peekByte == -1)
+            {
+                throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
+            }
+
+            return peekByte;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

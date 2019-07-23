@@ -311,7 +311,7 @@ namespace RedisClientTest
         {
             var result =
                 await _tomLonghurstRedisClient.StringGetAsync(
-                    "SummaryProduct_V3_758812354_819692956_COM_GBP_UK_en-GB_ckp5egq-11");
+                    "SummaryProduct_V3_1022864315_1724593328_COM_GBP_UK_en-GB_");
             
             Console.Write(result);
         }
