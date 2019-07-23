@@ -86,7 +86,7 @@ namespace TomLonghurst.RedisClient.Extensions
         internal static int VectorSafeIndexOf(this ReadOnlySpan<byte> span, byte value)
         {
             // yes, this has zero optimization; I'm OK with this as the fallback strategy
-            for (int i = 0; i < span.Length; i++)
+            for (var i = 0; i < span.Length; i++)
             {
                 if (span[i] == value) return i;
             }
@@ -95,7 +95,7 @@ namespace TomLonghurst.RedisClient.Extensions
         internal static int VectorSafeIndexOfCRLF(this ReadOnlySpan<byte> span)
         {
             // yes, this has zero optimization; I'm OK with this as the fallback strategy
-            for (int i = 1; i < span.Length; i++)
+            for (var i = 1; i < span.Length; i++)
             {
                 if (span[i] == '\n' && span[i-1] == '\r') return i - 1;
             }

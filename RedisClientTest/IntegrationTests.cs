@@ -306,6 +306,16 @@ namespace RedisClientTest
             Assert.AreEqual("123", result.Value);
         }
 
+        [Test]
+        public async Task GetKey()
+        {
+            var result =
+                await _tomLonghurstRedisClient.StringGetAsync(
+                    "SummaryProduct_V3_758812354_819692956_COM_GBP_UK_en-GB_ckp5egq-11");
+            
+            Console.Write(result);
+        }
+
         [TestCase("IncrKey")]
         [Repeat(2)]
         public async Task Incr(string key)

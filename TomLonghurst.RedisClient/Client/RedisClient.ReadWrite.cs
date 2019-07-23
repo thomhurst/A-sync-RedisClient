@@ -135,7 +135,7 @@ namespace TomLonghurst.RedisClient.Client
                 if (long.TryParse(line.Substring(1), out var byteSizeOfData))
                 {
                     var bytes = new byte[byteSizeOfData].AsSpan();
-                    var dataBuffer = buffer.Slice(0, byteSizeOfData);
+                    var dataBuffer = buffer.Slice(0, Math.Min(byteSizeOfData, buffer.Length));
                     var bytesReceived = dataBuffer.Length;
                     
                     dataBuffer.CopyTo(bytes.Slice(0, (int) bytesReceived));
