@@ -1,15 +1,11 @@
-﻿using System.Net.Security;
+﻿using System;
+using System.Net.Security;
 
 namespace TomLonghurst.RedisClient.Client
 {
     public class RedisClientConfig
     {
-        public RedisClientConfig(string host, int port) : this(host, port, null)
-        {
-            
-        }
-
-        public RedisClientConfig(string host, int port, string password)
+        public RedisClientConfig(string host, int port, string password = null)
         {
             Host = host;
             Port = port;
@@ -20,10 +16,10 @@ namespace TomLonghurst.RedisClient.Client
         public int Port { get; }
         public bool Ssl { get; set; }
         public int Db { get; set; }
-        public int SendTimeout { get; set; } = 5000;
-        public int ReceiveTimeout { get; set; } = 5000;
-        public int Timeout { get; set; } = 5000;
-        public string Password { get; private set; }
+        public int SendTimeoutMillis { get; set; } = 5000;
+        public int ReceiveTimeoutMillis { get; set; } = 5000;
+        public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(5);
+        public string Password { get; }
         public string ClientName { get; set; }
         public RemoteCertificateValidationCallback CertificateValidationCallback { get; set; }
         public LocalCertificateSelectionCallback CertificateSelectionCallback { get; set; }

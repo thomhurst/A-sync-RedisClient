@@ -7,6 +7,7 @@ namespace TomLonghurst.RedisClient.Client
 {
     public class RedisClientManager
     {
+        public RedisClientConfig ClientConfig { get; }
         private readonly List<Lazy<Task<RedisClient>>> _lazyRedisClients = new List<Lazy<Task<RedisClient>>>();
 
         public RedisClientManager(RedisClientConfig clientConfig, int redisClientPoolSize)
@@ -15,6 +16,8 @@ namespace TomLonghurst.RedisClient.Client
             {
                 throw new ArgumentOutOfRangeException(nameof(redisClientPoolSize), "Pool size must be 1 or more");
             }
+
+            ClientConfig = clientConfig;
 
             for (var i = 0; i < redisClientPoolSize; i++)
             {
@@ -26,14 +29,24 @@ namespace TomLonghurst.RedisClient.Client
         {
             if (_lazyRedisClients.Count == 1)
             {
-                return await _lazyRedisClients.First().Value;
+                var client = await _lazyRedisClients.First().Value;
+                
+                client.OnConnectionFailed = OnConnectionFailed;
+                client.OnConnectionEstablished = OnConnectionEstablished;
+                
+                return client;
             }
             
             var lazyClientNotYetLoaded = _lazyRedisClients.FirstOrDefault(lazy => !lazy.IsValueCreated);
 
             if(lazyClientNotYetLoaded != null)
             {
-                return await lazyClientNotYetLoaded.Value;
+                var redisClient = await lazyClientNotYetLoaded.Value;
+                
+                redisClient.OnConnectionFailed = OnConnectionFailed;
+                redisClient.OnConnectionEstablished = OnConnectionEstablished;
+                
+                return redisClient;
             }
 
             var clientTasks = _lazyRedisClients.Select(lazyClient => lazyClient.Value).ToList();
@@ -59,5 +72,9 @@ namespace TomLonghurst.RedisClient.Client
         {
             return await Task.WhenAll(_lazyRedisClients.Select(lazyRedisClient => lazyRedisClient.Value));
         }
+
+        public Action<RedisClient> OnConnectionEstablished { get; set; }
+
+        public Action<RedisClient> OnConnectionFailed { get; set; }
     }
 }

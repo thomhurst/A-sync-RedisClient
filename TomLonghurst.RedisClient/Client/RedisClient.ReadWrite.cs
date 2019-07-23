@@ -188,7 +188,7 @@ namespace TomLonghurst.RedisClient.Client
         {
             originalCancellationToken.ThrowIfCancellationRequested();
             var cancellationTokenWithTimeout =
-                CancellationTokenHelper.CancellationTokenWithTimeout(_redisClientConfig.Timeout,
+                CancellationTokenHelper.CancellationTokenWithTimeout(ClientConfig.Timeout,
                     originalCancellationToken);
 
             try
@@ -212,7 +212,7 @@ namespace TomLonghurst.RedisClient.Client
             originalCancellationToken.ThrowIfCancellationRequested();
 
             var cancellationTokenWithTimeout =
-                CancellationTokenHelper.CancellationTokenWithTimeout(_redisClientConfig.Timeout,
+                CancellationTokenHelper.CancellationTokenWithTimeout(ClientConfig.Timeout,
                     originalCancellationToken);
 
             try

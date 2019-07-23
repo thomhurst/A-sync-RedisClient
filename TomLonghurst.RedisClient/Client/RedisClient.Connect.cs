@@ -23,8 +23,8 @@ namespace TomLonghurst.RedisClient.Client
 
         private readonly SemaphoreSlim _connectSemaphoreSlim = new SemaphoreSlim(1, 1);
 
-        private readonly RedisClientConfig _redisClientConfig;
-        
+        public RedisClientConfig ClientConfig { get; }
+
         private readonly Timer _connectionChecker;
         
         private RedisSocket _socket;
@@ -34,6 +34,9 @@ namespace TomLonghurst.RedisClient.Client
         private SslStream _sslStream;
 
         private bool _isConnected;
+        
+        internal Action<RedisClient> OnConnectionEstablished { get; set; }
+        internal Action<RedisClient> OnConnectionFailed { get; set; }
 
         public bool IsConnected
         {
@@ -46,12 +49,24 @@ namespace TomLonghurst.RedisClient.Client
                 
                 return _isConnected;
             }
-            private set => _isConnected = value;
+            private set
+            {
+                _isConnected = value;
+                
+                if (!value)
+                {
+                    Task.Run(() => OnConnectionFailed.Invoke(this));
+                }
+                else
+                {
+                    Task.Run(() => OnConnectionEstablished.Invoke(this));
+                }
+            }
         }
 
         private RedisClient(RedisClientConfig redisClientConfig) : this()
         {
-            _redisClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
+            ClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
 
             _connectionChecker = new Timer(CheckConnection, null, 30000, 30000);
         }
@@ -78,9 +93,7 @@ namespace TomLonghurst.RedisClient.Client
             
             if (!IsConnected)
             {
-#pragma warning disable 4014
-                TryConnectAsync(CancellationToken.None);
-#pragma warning restore 4014
+                Task.Run(() => TryConnectAsync(CancellationToken.None));
             }
         }
 
@@ -138,19 +151,19 @@ namespace TomLonghurst.RedisClient.Client
 
                 _socket = new RedisSocket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
                 {
-                    SendTimeout = _redisClientConfig.SendTimeout,
-                    ReceiveTimeout = _redisClientConfig.ReceiveTimeout
+                    SendTimeout = ClientConfig.SendTimeoutMillis,
+                    ReceiveTimeout = ClientConfig.ReceiveTimeoutMillis
                 };
-                if (IPAddress.TryParse(_redisClientConfig.Host, out var ip))
+                if (IPAddress.TryParse(ClientConfig.Host, out var ip))
                 {
-                    await _socket.ConnectAsync(ip, _redisClientConfig.Port).ConfigureAwait(false);
+                    await _socket.ConnectAsync(ip, ClientConfig.Port).ConfigureAwait(false);
                 }
                 else
                 {
-                    var addresses = await Dns.GetHostAddressesAsync(_redisClientConfig.Host);
+                    var addresses = await Dns.GetHostAddressesAsync(ClientConfig.Host);
                     await _socket.ConnectAsync(
                         addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork),
-                        _redisClientConfig.Port).ConfigureAwait(false);
+                        ClientConfig.Port).ConfigureAwait(false);
                 }
 
 
@@ -169,20 +182,20 @@ namespace TomLonghurst.RedisClient.Client
 
                 Stream networkStream = new NetworkStream(_socket);
 
-                if (_redisClientConfig.Ssl)
+                if (ClientConfig.Ssl)
                 {
                     _sslStream = new SslStream(networkStream,
                         false,
-                        _redisClientConfig.CertificateValidationCallback,
-                        _redisClientConfig.CertificateSelectionCallback,
+                        ClientConfig.CertificateValidationCallback,
+                        ClientConfig.CertificateSelectionCallback,
                         EncryptionPolicy.RequireEncryption);
 
-                    await _sslStream.AuthenticateAsClientAsync(_redisClientConfig.Host).ConfigureAwait(false);
+                    await _sslStream.AuthenticateAsClientAsync(ClientConfig.Host).ConfigureAwait(false);
 
                     if (!_sslStream.IsEncrypted)
                     {
                         Dispose();
-                        throw new SecurityException($"Could not establish an encrypted connection to Redis - {_redisClientConfig.Host}");
+                        throw new SecurityException($"Could not establish an encrypted connection to Redis - {ClientConfig.Host}");
                     }
 
                     _pipe = StreamConnection.GetDuplex(_sslStream);
@@ -194,17 +207,17 @@ namespace TomLonghurst.RedisClient.Client
 
                 IsConnected = true;
                 
-                if (!string.IsNullOrEmpty(_redisClientConfig.Password))
+                if (!string.IsNullOrEmpty(ClientConfig.Password))
                 {
                     await Authorize(cancellationToken);
                 }
 
-                if (_redisClientConfig.Db != 0)
+                if (ClientConfig.Db != 0)
                 {
                     await SelectDb(cancellationToken);
                 }
 
-                if (_redisClientConfig.ClientName != null)
+                if (ClientConfig.ClientName != null)
                 {
                     await SetClientNameAsync(cancellationToken);
                 }
