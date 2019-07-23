@@ -46,8 +46,6 @@ namespace TomLonghurst.RedisClient.Client
             
             Log.Debug($"Executing Command: {command}");
             _lastCommand = command;
-            var encodedCommand = command.ToRedisProtocol();
-            var bytes = encodedCommand.ToUtf8Bytes();
 
             Interlocked.Increment(ref _operationsPerformed);
 
@@ -58,15 +56,8 @@ namespace TomLonghurst.RedisClient.Client
                     await TryConnectAsync(cancellationToken).ConfigureAwait(false);
                 }
 
-                if (_redisClientConfig.Ssl)
-                {
-                    _sslStream.Write(bytes, 0, bytes.Length);
-                }
-                else
-                {
-                    _socket.Send(bytes);
-                }
-                
+                await Write(command);
+
                 _readResult = await _pipe.Input.ReadAsync();
 
                 return responseReader.Invoke();
@@ -90,6 +81,15 @@ namespace TomLonghurst.RedisClient.Client
                 {
                     _sendSemaphoreSlim.Release();
                 }
+            }
+        }
+
+        private async Task Write(string command)
+        {
+            var flushResult =  await _pipe.Output.WriteAsync(command.ToRedisProtocol().ToUtf8Bytes().AsMemory());
+            if (!flushResult.IsCompleted)
+            {
+                await _pipe.Output.FlushAsync();
             }
         }
 

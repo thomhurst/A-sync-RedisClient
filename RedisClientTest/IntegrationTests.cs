@@ -71,7 +71,7 @@ namespace RedisClientTest
             Assert.That(redisValue3.Value, Is.EqualTo("value with a space3"));
         }
 
-        [Ignore("")]
+        //[Ignore("")]
         [Test]
         public async Task PerformanceTest()
         {
@@ -89,7 +89,7 @@ namespace RedisClientTest
             
             var stackExchangeRedisClientStopwatch = Stopwatch.StartNew();
 
-            for (var i = 0; i < 100; i++)
+            for (var i = 0; i < 250; i++)
             {
                 var redisValue = await stackExchange.StringGetAsync("SingleKey");
             }
@@ -105,7 +105,7 @@ namespace RedisClientTest
             
             var tomLonghurstRedisClientStopwatch = Stopwatch.StartNew();
 
-            for (var i = 0; i < 100; i++)
+            for (var i = 0; i < 250; i++)
             {
                 var redisValue = await _tomLonghurstRedisClient.StringGetAsync("SingleKey");
             }

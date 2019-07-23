@@ -30,11 +30,8 @@ namespace TomLonghurst.RedisClient.Client
         private RedisSocket _socket;
 
         public Socket Socket => _socket;
-
-        private BufferedStream _bufferedStream;
-        private SslStream _sslStream;
         
-        private const int BufferSize = 16 * 1024;
+        private SslStream _sslStream;
 
         private bool _isConnected;
 
@@ -188,15 +185,12 @@ namespace TomLonghurst.RedisClient.Client
                         throw new SecurityException($"Could not establish an encrypted connection to Redis - {_redisClientConfig.Host}");
                     }
 
-                    networkStream = _sslStream;
                     _pipe = StreamConnection.GetDuplex(_sslStream);
                 }
                 else
                 {
                     _pipe = SocketConnection.Create(_socket);
                 }
-
-                _bufferedStream = new BufferedStream(networkStream, BufferSize);
 
                 IsConnected = true;
                 
@@ -233,7 +227,6 @@ namespace TomLonghurst.RedisClient.Client
         {
             _socket?.Close();
             _socket?.Dispose();
-            _bufferedStream?.Dispose();
             _sslStream?.Dispose();
         }
     }
