@@ -144,7 +144,7 @@ namespace TomLonghurst.RedisClient.Client
             var results = new byte [count][];
             for (var i = 0; i < count; i++)
             {
-                if (!_pipe.Input.TryRead(out _readResult))
+                if (!_pipe.Input.TryRead(out _readResult) || _readResult.Buffer.IsEmpty)
                 {
                     _readResult = await _pipe.Input.ReadAsync();
                 }
@@ -158,6 +158,7 @@ namespace TomLonghurst.RedisClient.Client
         private async Task<IList<IEnumerable<StringRedisValue>>> ExpectArray(int count)
         {
             var responses = new List<IEnumerable<StringRedisValue>>();
+            
             for (var i = 0; i < count; i++)
             {
                 responses.Add(await ExpectArray());

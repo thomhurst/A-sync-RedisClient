@@ -109,7 +109,7 @@ namespace TomLonghurst.RedisClient.Client
             
             var line = GetLine(buffer);
 
-            _pipe.Input.AdvanceToLineTerminator(buffer);
+            _pipe.Input.AdvanceToLineTerminator(_readResult);
             
             if (firstChar == '-')
             {
@@ -123,7 +123,7 @@ namespace TomLonghurst.RedisClient.Client
                     return null;
                 }
                 
-                if (!_pipe.Input.TryRead(out _readResult))
+                if (!_pipe.Input.TryRead(out _readResult) || _readResult.Buffer.IsEmpty)
                 {
                     _readResult = await _pipe.Input.ReadAsync();
                 }
@@ -142,7 +142,7 @@ namespace TomLonghurst.RedisClient.Client
                     {
                         _pipe.Input.AdvanceTo(buffer.End);
                         
-                        if (!_pipe.Input.TryRead(out _readResult))
+                        if (!_pipe.Input.TryRead(out _readResult) || _readResult.Buffer.IsEmpty)
                         {
                             _readResult = await _pipe.Input.ReadAsync();
                         }
@@ -158,7 +158,7 @@ namespace TomLonghurst.RedisClient.Client
                     }
                     else
                     {
-                        _pipe.Input.AdvanceToLineTerminator(buffer);
+                        _pipe.Input.AdvanceToLineTerminator(_readResult);
                     }
 
                     return bytes;
@@ -181,6 +181,7 @@ namespace TomLonghurst.RedisClient.Client
         private static int PeekByte(ReadOnlySequence<byte> buffer)
         {
             var peekByte = new BufferReader(buffer).PeekByte();
+            
             if (peekByte == -1)
             {
                 throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
@@ -199,7 +200,7 @@ namespace TomLonghurst.RedisClient.Client
 
             var line = bufferReader.ConsumeAsBuffer(lineTerminator).AsString();
 
-            _pipe.Input.AdvanceToLineTerminator(buffer);
+            _pipe.Input.AdvanceToLineTerminator(_readResult);
 
             return line;
         }

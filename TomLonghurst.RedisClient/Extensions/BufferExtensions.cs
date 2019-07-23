@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace TomLonghurst.RedisClient.Extensions
 {
@@ -50,25 +51,21 @@ namespace TomLonghurst.RedisClient.Extensions
             }
         }
 
-        internal static void TryAdvanceToLineTerminator(this PipeReader pipeReader, ReadOnlySequence<byte> buffer)
+        internal static async Task AdvanceToLineTerminator(this PipeReader pipeReader, ReadResult readResult)
         {
-            try
-            {
-                pipeReader.AdvanceToLineTerminator(buffer);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-        }
+            SequencePosition? endOfLineSequencePosition;
+            var buffer = readResult.Buffer;
 
-        internal static void AdvanceToLineTerminator(this PipeReader pipeReader, ReadOnlySequence<byte> buffer)
-        {
-            var endOfLineSequencePosition = buffer.GetEndOfLinePosition();
-
-            if (endOfLineSequencePosition == null)
+            while ((endOfLineSequencePosition = buffer.GetEndOfLinePosition()) == null)
             {
-                throw new Exception("Can't find EOL");
+                pipeReader.AdvanceTo(buffer.End);
+                
+                if (!pipeReader.TryRead(out readResult))
+                {
+                    readResult = await pipeReader.ReadAsync();
+                }
+                
+                buffer = readResult.Buffer;
             }
             
             buffer = buffer.Slice(endOfLineSequencePosition.Value);
