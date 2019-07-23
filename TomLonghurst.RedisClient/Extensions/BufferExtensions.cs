@@ -9,6 +9,11 @@ namespace TomLonghurst.RedisClient.Extensions
     {
         internal static string AsString(this ReadOnlySequence<byte> buffer)
         {
+            if (buffer.IsEmpty)
+            {
+                return null;
+            }
+            
             if (buffer.IsSingleSegment)
             {
                 return AsString(buffer.First.Span);
@@ -29,7 +34,11 @@ namespace TomLonghurst.RedisClient.Extensions
 
         internal static unsafe string AsString(this ReadOnlySpan<byte> span)
         {
-            if (span.IsEmpty) return "";
+            if (span.IsEmpty)
+            {
+                return null;
+            }
+            
             fixed (byte* ptr = span)
             {
                 return Encoding.UTF8.GetString(ptr, span.Length);
