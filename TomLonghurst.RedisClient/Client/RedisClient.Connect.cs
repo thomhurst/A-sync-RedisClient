@@ -143,14 +143,14 @@ namespace TomLonghurst.RedisClient.Client
                 };
                 if (IPAddress.TryParse(_redisClientConfig.Host, out var ip))
                 {
-                    await _socket.ConnectAsync(ip, _redisClientConfig.Port);
+                    await _socket.ConnectAsync(ip, _redisClientConfig.Port).ConfigureAwait(false);
                 }
                 else
                 {
                     var addresses = await Dns.GetHostAddressesAsync(_redisClientConfig.Host);
                     await _socket.ConnectAsync(
                         addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork),
-                        _redisClientConfig.Port);
+                        _redisClientConfig.Port).ConfigureAwait(false);
                 }
 
 
@@ -177,7 +177,7 @@ namespace TomLonghurst.RedisClient.Client
                         _redisClientConfig.CertificateSelectionCallback,
                         EncryptionPolicy.RequireEncryption);
 
-                    await _sslStream.AuthenticateAsClientAsync(_redisClientConfig.Host);
+                    await _sslStream.AuthenticateAsClientAsync(_redisClientConfig.Host).ConfigureAwait(false);
 
                     if (!_sslStream.IsEncrypted)
                     {

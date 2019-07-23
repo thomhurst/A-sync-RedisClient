@@ -58,7 +58,7 @@ namespace TomLonghurst.RedisClient.Client
 
                 await Write(command);
 
-                _readResult = await _pipe.Input.ReadAsync();
+                _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
 
                 return responseReader.Invoke();
             }
@@ -86,10 +86,10 @@ namespace TomLonghurst.RedisClient.Client
 
         private async Task Write(string command)
         {
-            var flushResult =  await _pipe.Output.WriteAsync(command.ToRedisProtocol().ToUtf8Bytes().AsMemory());
+            var flushResult =  await _pipe.Output.WriteAsync(command.ToRedisProtocol().ToUtf8Bytes().AsMemory()).ConfigureAwait(false);;
             if (!flushResult.IsCompleted)
             {
-                await _pipe.Output.FlushAsync();
+                await _pipe.Output.FlushAsync().ConfigureAwait(false);
             }
         }
 
