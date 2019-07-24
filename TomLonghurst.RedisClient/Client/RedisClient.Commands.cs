@@ -74,27 +74,27 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken).ConfigureAwait(false) == 1;
         }
 
-        public async Task<RedisValue<string>> StringGetAsync(string key)
+        public async Task<StringRedisValue> StringGetAsync(string key)
         {
             return await StringGetAsync(key, CancellationToken.None).ConfigureAwait(false);
         }
 
-        public async Task<RedisValue<string>> StringGetAsync(string key,
+        public async Task<StringRedisValue> StringGetAsync(string key,
             CancellationToken cancellationToken)
         {
-            return new RedisValue<string>(await RunWithTimeout(async token =>
+            return new StringRedisValue(await RunWithTimeout(async token =>
                 {
                     var command = $"{Commands.Get} {key}";
                     return await SendAndReceiveAsync(command, ExpectData, token);
                 }, cancellationToken).ConfigureAwait(false));
         }
 
-        public async Task<IEnumerable<RedisValue<string>>> StringGetAsync(IEnumerable<string> keys)
+        public async Task<IEnumerable<StringRedisValue>> StringGetAsync(IEnumerable<string> keys)
         {
             return await StringGetAsync(keys, CancellationToken.None).ConfigureAwait(false);
         }
 
-        public async Task<IEnumerable<RedisValue<string>>> StringGetAsync(IEnumerable<string> keys,
+        public async Task<IEnumerable<StringRedisValue>> StringGetAsync(IEnumerable<string> keys,
             CancellationToken cancellationToken)
         {
             return await RunWithTimeout(async token =>

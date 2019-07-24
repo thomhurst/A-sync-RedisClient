@@ -30,7 +30,7 @@ namespace TomLonghurst.RedisClient.Helpers
             }
 
             string[] commands;
-            if (command.Contains(CharacterConstants.VALUE_DELIMITER))
+            if (command.Contains(StringConstants.VALUE_DELIMITER))
             {
                 var commandsSeparated = command.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries).ToList();
 
@@ -39,7 +39,7 @@ namespace TomLonghurst.RedisClient.Helpers
                 for (var index = 0; index < commandsSeparated.Count; index++)
                 {
                     var cmd = commandsSeparated[index];
-                    if (cmd != CharacterConstants.VALUE_DELIMITER)
+                    if (cmd != StringConstants.VALUE_DELIMITER)
                     {
                         commandsList.Add(cmd);
                     }
@@ -51,7 +51,7 @@ namespace TomLonghurst.RedisClient.Helpers
                         quotedTextStringBuilder.Append(cmd);
                         
                         cmd = commandsSeparated[++index];
-                        while (cmd != CharacterConstants.VALUE_DELIMITER)
+                        while (cmd != StringConstants.VALUE_DELIMITER)
                         {
                             quotedTextStringBuilder.Append(" ");
                             quotedTextStringBuilder.Append(cmd);

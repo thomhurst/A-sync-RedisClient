@@ -12,7 +12,7 @@ namespace TomLonghurst.RedisClient.Models.RequestModels
         {
             Key = key;
             Field = field;
-            Value = $"{CharacterConstants.VALUE_DELIMITER} {value} {CharacterConstants.VALUE_DELIMITER}";
+            Value = $"{StringConstants.VALUE_DELIMITER} {value.Replace(StringConstants.NEW_LINE, StringConstants.ENCODED_NEW_LINE)}";
         }
     }
 }

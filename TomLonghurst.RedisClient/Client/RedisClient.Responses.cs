@@ -120,7 +120,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private IEnumerable<RedisValue<string>> ExpectArray()
+        private IEnumerable<StringRedisValue> ExpectArray()
         {
             var arrayWithCountLine = ReadLine();
 
@@ -143,9 +143,9 @@ namespace TomLonghurst.RedisClient.Client
             return results.ToRedisValues();
         }
         
-        private IList<IEnumerable<RedisValue<string>>> ExpectArray(int count)
+        private IList<IEnumerable<StringRedisValue>> ExpectArray(int count)
         {
-            var responses = new List<IEnumerable<RedisValue<string>>>();
+            var responses = new List<IEnumerable<StringRedisValue>>();
             for (var i = 0; i < count; i++)
             {
                 responses.Add(ExpectArray());

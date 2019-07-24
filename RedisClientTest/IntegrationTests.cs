@@ -184,7 +184,7 @@ namespace RedisClientTest
             
             await _tomLonghurstRedisClient.DeleteKeyAsync("SingleKey", AwaitOptions.AwaitCompletion);
             redisValue = await _tomLonghurstRedisClient.StringGetAsync("SingleKey");
-            Assert.That(redisValue.IsNull, Is.EqualTo(true));
+            Assert.That(redisValue.HasValue, Is.EqualTo(false));
         }
 
         [Test]
@@ -322,6 +322,20 @@ namespace RedisClientTest
         public async Task DBSize()
         {
             var dbSize = await _tomLonghurstRedisClient.Server.DBSize();
+        }
+        
+                
+        [TestCase("value with a space")]
+        [TestCase("value")]
+        [TestCase("value with a\nnew line")]
+        [TestCase("value with a\r\nnew line")]
+        [Repeat(2)]
+        public async Task Values(string value)
+        {
+            await _tomLonghurstRedisClient.StringSetAsync("key", value, AwaitOptions.AwaitCompletion);
+            var redisValue = await _tomLonghurstRedisClient.StringGetAsync("key");
+            
+            Assert.That(redisValue.Value, Is.EqualTo(value));
         }
 
         [TestCase("DecrKey")]
