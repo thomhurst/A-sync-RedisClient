@@ -66,7 +66,7 @@ namespace TomLonghurst.RedisClient.Extensions
             
             buffer = buffer.Slice(sequencePositionOfLineTerminator.Value);
 
-            pipeReader.AdvanceTo(buffer.Start, buffer.End);
+            pipeReader.AdvanceTo(buffer.Start);
         }
 
         internal static async Task<EndOfLineSequencePosition> ReadUntilEndOfLineFound(this PipeReader pipeReader, ReadResult readResult)

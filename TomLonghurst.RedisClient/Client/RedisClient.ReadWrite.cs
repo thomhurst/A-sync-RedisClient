@@ -109,6 +109,11 @@ namespace TomLonghurst.RedisClient.Client
             
             var line = await GetLine(buffer);
 
+            if (string.IsNullOrEmpty(line))
+            {
+                throw new Exception("No data to process");
+            }
+
             if (firstChar == '-')
             {
                 throw new RedisFailedCommandException(line, _lastCommand);
@@ -146,7 +151,7 @@ namespace TomLonghurst.RedisClient.Client
                         }
                         
                         buffer = _readResult.Buffer;
-                        buffer.CopyTo(bytes.Slice((int) bytesReceived, (int) buffer.Length).Span);
+                        buffer.Slice(0, Math.Min(buffer.Length, byteSizeOfData - bytesReceived)).CopyTo(bytes.Slice((int) bytesReceived, (int) Math.Min(buffer.Length, byteSizeOfData - bytesReceived)).Span);
                         bytesReceived += buffer.Length;
                     }
 
