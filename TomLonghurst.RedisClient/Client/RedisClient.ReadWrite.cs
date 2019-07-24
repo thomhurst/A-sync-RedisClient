@@ -172,9 +172,16 @@ namespace TomLonghurst.RedisClient.Client
         {
             var endOfLineAfterByteCount = await _pipe.Input.ReadUntilEndOfLineFound(_readResult);
             
-            var line = buffer.Slice(0, endOfLineAfterByteCount.SequencePositionBeforeLineTerminator).AsString();
+            var line = buffer.Slice(0, endOfLineAfterByteCount.PositionBeforeLineTerminator).AsString();
             
-            _pipe.Input.AdvanceTo(endOfLineAfterByteCount.SequencePositionOfLineTerminator);
+            var sequencePositionOfLineTerminator = endOfLineAfterByteCount.SequencePositionOfLineTerminator;
+            
+            if (sequencePositionOfLineTerminator == null)
+            {
+                throw new Exception("Can't find EOL");
+            }
+            
+            _pipe.Input.AdvanceTo(sequencePositionOfLineTerminator.Value);
             
             return line;
         }

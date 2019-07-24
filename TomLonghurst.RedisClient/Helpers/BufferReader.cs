@@ -156,7 +156,10 @@ namespace TomLonghurst.RedisClient.Helpers
                 var span = reader.SlicedSpan;
                 if (haveTrailingCR)
                 {
-                    if (span[0] == '\n') return totalSkipped - 1;
+                    if (span[0] == '\n')
+                    {
+                        return totalSkipped - 1;
+                    }
                 }
 
                 var found = span.VectorSafeIndexOfCRLF();

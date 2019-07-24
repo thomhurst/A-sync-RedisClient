@@ -1,18 +1,21 @@
 using System;
 using System.Buffers;
 using TomLonghurst.RedisClient.Extensions;
+using TomLonghurst.RedisClient.Helpers;
 
 namespace TomLonghurst.RedisClient
 {
     public class EndOfLineSequencePosition
     {
-        public SequencePosition SequencePositionBeforeLineTerminator { get; }
-        public SequencePosition SequencePositionOfLineTerminator { get; }
+        public int PositionBeforeLineTerminator { get; }
+        public SequencePosition? SequencePositionOfLineTerminator { get; }
 
         public EndOfLineSequencePosition(ReadOnlySequence<byte> buffer)
         {
-            SequencePositionOfLineTerminator = buffer.GetEndOfLinePosition().Value;
-            SequencePositionBeforeLineTerminator = buffer.GetPosition(SequencePositionOfLineTerminator.GetInteger() - 2);
+            var bufferReader = new BufferReader(buffer);
+            
+            SequencePositionOfLineTerminator = buffer.GetEndOfLinePosition();
+            PositionBeforeLineTerminator = BufferReader.FindNextLineTerminator(bufferReader);
         }
     }
 }
