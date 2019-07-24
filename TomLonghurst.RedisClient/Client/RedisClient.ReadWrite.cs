@@ -16,6 +16,7 @@ namespace TomLonghurst.RedisClient.Client
         private static readonly Logger Log = new Logger();
 
         private readonly SemaphoreSlim _sendSemaphoreSlim = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _reconnectSemaphoreSlim = new SemaphoreSlim(1, 1);
 
         private long _outStandingOperations;
 
@@ -30,7 +31,7 @@ namespace TomLonghurst.RedisClient.Client
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async ValueTask<T> SendAndReceiveAsync<T>(string command,
-            Func<T> responseReader,
+            Func<Task<T>> responseReader,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
         {
@@ -39,11 +40,15 @@ namespace TomLonghurst.RedisClient.Client
             Interlocked.Increment(ref _outStandingOperations);
 
 
-            if (!isReconnectionAttempt)
+            if (isReconnectionAttempt)
+            {
+                await _reconnectSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            else
             {
                 await _sendSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
             }
-            
+
             Log.Debug($"Executing Command: {command}");
             _lastCommand = command;
 
@@ -60,7 +65,7 @@ namespace TomLonghurst.RedisClient.Client
 
                 _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
 
-                return responseReader.Invoke();
+                return await responseReader.Invoke();
             }
             catch (Exception innerException)
             {
@@ -77,7 +82,11 @@ namespace TomLonghurst.RedisClient.Client
             finally
             {
                 Interlocked.Decrement(ref _outStandingOperations);
-                if (!isReconnectionAttempt)
+                if (isReconnectionAttempt)
+                {
+                    _reconnectSemaphoreSlim.Release();
+                }
+                else
                 {
                     _sendSemaphoreSlim.Release();
                 }

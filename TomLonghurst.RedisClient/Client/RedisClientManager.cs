@@ -30,10 +30,17 @@ namespace TomLonghurst.RedisClient.Client
             if (_lazyRedisClients.Count == 1)
             {
                 var client = await _lazyRedisClients.First().Value;
-                
-                client.OnConnectionFailed = OnConnectionFailed;
-                client.OnConnectionEstablished = OnConnectionEstablished;
-                
+
+                if (client.OnConnectionFailed == null)
+                {
+                    client.OnConnectionFailed = OnConnectionFailed;
+                }
+
+                if (client.OnConnectionEstablished == null)
+                {
+                    client.OnConnectionEstablished = OnConnectionEstablished;
+                }
+
                 return client;
             }
             

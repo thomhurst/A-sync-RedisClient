@@ -319,177 +319,54 @@ namespace RedisClientTest
         [Test]
         public async Task GetKeys()
         {
-            var result =
-                await _tomLonghurstRedisClient.StringGetAsync(new [] {
-                        "SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11",
-"SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11",
-                        "SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
-                                                "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
-                                                "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                "SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                        "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                        "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                        "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                        "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                        "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                        "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                        "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                        "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                        "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                        "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                        "SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                "SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                        "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                        "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                        "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                        "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                        "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                        "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                        "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                        "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                        "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                        "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                        "SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                                "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11",
-                                                                                                                                            }
-                );
+            var keys = GenerateMassKeys();
+
+            var client1 = await _redisManager.GetRedisClientAsync();
+            var client2 = await _redisManager.GetRedisClientAsync();
+            var client3 = await _redisManager.GetRedisClientAsync();
             
-            Console.Write(result);
+            var resultTask =
+                client1.StringGetAsync(keys);
+            
+            var result2Task =
+                client2.StringGetAsync(keys);
+            
+            var result3Task =
+                client3.StringGetAsync(keys);
+
+            var result = await Task.WhenAll(resultTask, result2Task, result3Task);
+
+            var result1 = result[0].ToList();
+            var result2 = result[1].ToList();
+            var result3 = result[2].ToList();
+            
+            Console.Write(result1);
+        }
+
+        private List<string> GenerateMassKeys()
+        {
+            var list = new List<string>();
+            for (var i = 0; i < 50; i++)
+            {
+                list.AddRange(
+                    new[]
+                    {
+                        "SummaryProduct_V3_1099538108_1873678337_COM_GBP_UK_en-GB_ckp5egq-11",
+                        "SummaryProduct_V3_1216417282_216646695_COM_GBP_UK_en-GB_ckp5egq-11",
+                        "SummaryProduct_V3_1471008232__COM_GBP_UK_en-GB_ckp5egq-11",
+                        "SummaryProduct_V3_1431558723__COM_GBP_UK_en-GB_ckp5egq-11",
+                        "SummaryProduct_V3_1526680692_724222009_COM_GBP_UK_en-GB_ckp5egq-11",
+                        "SummaryProduct_V3_1650151356_234415250_COM_GBP_UK_en-GB_ckp5egq-11",
+                        "SummaryProduct_V3_1650151356_778891134_COM_GBP_UK_en-GB_ckp5egq-11",
+                        "SummaryProduct_V3_1798679041_1695172977_COM_GBP_UK_en-GB_ckp5egq-11",
+                        "SummaryProduct_V3_1809834294_1582795796_COM_GBP_UK_en-GB_ckp5egq-11",
+                        "SummaryProduct_V3_183736170_969769947_COM_GBP_UK_en-GB_ckp5egq-11",
+                        "SummaryProduct_V3_1733691802_1464284012_COM_GBP_UK_en-GB_ckp5egq-11"
+                    }
+                );
+            }
+
+            return list;
         }
 
         [TestCase("IncrKey")]

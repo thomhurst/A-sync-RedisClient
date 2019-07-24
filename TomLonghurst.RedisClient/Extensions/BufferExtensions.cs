@@ -114,7 +114,10 @@ namespace TomLonghurst.RedisClient.Extensions
             // yes, this has zero optimization; I'm OK with this as the fallback strategy
             for (var i = 1; i < span.Length; i++)
             {
-                if (span[i] == '\n' && span[i-1] == '\r') return i - 1;
+                if (span[i] == '\n' && span[i - 1] == '\r')
+                {
+                    return i - 1;
+                }
             }
             return -1;
         }
