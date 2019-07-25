@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.IO.Pipelines;
+using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -112,11 +113,9 @@ namespace TomLonghurst.RedisClient.Client
                 throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
             }
 
-            var peekByte = PeekByte(buffer);
-
-            var firstChar = (char) peekByte;
-            
             var line = await GetLine(buffer);
+            
+            var firstChar = line.First();
 
             if (string.IsNullOrEmpty(line))
             {
@@ -198,18 +197,6 @@ namespace TomLonghurst.RedisClient.Client
             _pipe.Input.AdvanceTo(endOfLineAfterByteCount.Value);
             
             return line;
-        }
-
-        private static int PeekByte(ReadOnlySequence<byte> buffer)
-        {
-            var peekByte = new BufferReader(buffer).PeekByte();
-            
-            if (peekByte == -1)
-            {
-                throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
-            }
-
-            return peekByte;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
