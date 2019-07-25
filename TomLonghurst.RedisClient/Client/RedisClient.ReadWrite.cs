@@ -232,6 +232,7 @@ namespace TomLonghurst.RedisClient.Client
             CancellationToken originalCancellationToken)
         {
             originalCancellationToken.ThrowIfCancellationRequested();
+            
             var cancellationTokenWithTimeout =
                 CancellationTokenHelper.CancellationTokenWithTimeout(ClientConfig.Timeout,
                     originalCancellationToken);
@@ -243,6 +244,16 @@ namespace TomLonghurst.RedisClient.Client
             catch (OperationCanceledException operationCanceledException)
             {
                 throw TimeoutOrCancelledException(operationCanceledException, originalCancellationToken);
+            }
+            catch (SocketException socketException)
+            {
+                if (socketException.InnerException?.GetType().IsAssignableFrom(typeof(OperationCanceledException)) ==
+                    true)
+                {
+                    throw TimeoutOrCancelledException(socketException.InnerException, originalCancellationToken);
+                }
+
+                throw;
             }
             finally
             {

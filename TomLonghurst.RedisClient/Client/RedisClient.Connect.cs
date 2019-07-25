@@ -206,12 +206,14 @@ namespace TomLonghurst.RedisClient.Client
                     }
 
                     LastAction = "Creating SSL Stream Pipe";
-                    _pipe = StreamConnection.GetDuplex(_sslStream, sendPipeOptions, receivePipeOptions);
+                    _pipe = StreamConnection.GetDuplex(_sslStream);
+                    //_pipe = StreamConnection.GetDuplex(_sslStream, sendPipeOptions, receivePipeOptions);
                 }
                 else
                 {
                     LastAction = "Creating Socket Pipe";
-                    _pipe = SocketConnection.Create(_socket, sendPipeOptions, receivePipeOptions);
+                    _pipe = SocketConnection.Create(_socket);
+                    //_pipe = SocketConnection.Create(_socket, sendPipeOptions, receivePipeOptions);
                 }
 
                 IsConnected = true;
