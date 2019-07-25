@@ -185,17 +185,17 @@ namespace TomLonghurst.RedisClient.Client
         private async Task<string> GetLine(ReadOnlySequence<byte> buffer)
         {
             var endOfLineAfterByteCount = await _pipe.Input.ReadUntilEndOfLineFound(_readResult);
-            
-            var line = buffer.Slice(0, endOfLineAfterByteCount.PositionBeforeLineTerminator).AsString();
-            
-            var sequencePositionOfLineTerminator = endOfLineAfterByteCount.SequencePositionOfLineTerminator;
-            
-            if (sequencePositionOfLineTerminator == null)
+
+            if (endOfLineAfterByteCount == null)
             {
                 throw new Exception("Can't find EOL");
             }
             
-            _pipe.Input.AdvanceTo(sequencePositionOfLineTerminator.Value);
+            buffer = buffer.Slice(0, endOfLineAfterByteCount.Value);
+            
+            var line = buffer.Slice(0, buffer.Length - 2).AsString();
+
+            _pipe.Input.AdvanceTo(endOfLineAfterByteCount.Value);
             
             return line;
         }
