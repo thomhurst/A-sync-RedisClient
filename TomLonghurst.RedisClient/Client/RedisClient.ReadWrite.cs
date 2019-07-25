@@ -17,7 +17,6 @@ namespace TomLonghurst.RedisClient.Client
         private static readonly Logger Log = new Logger();
 
         private readonly SemaphoreSlim _sendSemaphoreSlim = new SemaphoreSlim(1, 1);
-        private readonly SemaphoreSlim _reconnectSemaphoreSlim = new SemaphoreSlim(1, 1);
 
         private long _outStandingOperations;
 
@@ -41,11 +40,7 @@ namespace TomLonghurst.RedisClient.Client
             Interlocked.Increment(ref _outStandingOperations);
 
 
-            if (isReconnectionAttempt)
-            {
-                await _reconnectSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
-            }
-            else
+            if (!isReconnectionAttempt)
             {
                 await _sendSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
             }
@@ -83,11 +78,7 @@ namespace TomLonghurst.RedisClient.Client
             finally
             {
                 Interlocked.Decrement(ref _outStandingOperations);
-                if (isReconnectionAttempt)
-                {
-                    _reconnectSemaphoreSlim.Release();
-                }
-                else
+                if (!isReconnectionAttempt)
                 {
                     _sendSemaphoreSlim.Release();
                 }
@@ -96,7 +87,7 @@ namespace TomLonghurst.RedisClient.Client
 
         private async ValueTask Write(string command)
         {
-            var flushResult =  await _pipe.Output.WriteAsync(command.ToRedisProtocol().ToUtf8Bytes().AsMemory()).ConfigureAwait(false);;
+            var flushResult =  await _pipe.Output.WriteAsync(command.ToRedisProtocol().ToUtf8Bytes().AsMemory()).ConfigureAwait(false);
             if (!flushResult.IsCompleted)
             {
                 await _pipe.Output.FlushAsync().ConfigureAwait(false);
@@ -134,9 +125,9 @@ namespace TomLonghurst.RedisClient.Client
                     return null;
                 }
                 
-                if (!_pipe.Input.TryRead(out _readResult) || _readResult.Buffer.IsEmpty)
+                if (!_pipe.Input.TryRead(out _readResult))
                 {
-                    _readResult = await _pipe.Input.ReadAsync();
+                    _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
                 }
                 
                 buffer = _readResult.Buffer;
@@ -153,9 +144,9 @@ namespace TomLonghurst.RedisClient.Client
                     {
                         _pipe.Input.AdvanceTo(buffer.End);
                         
-                        if (!_pipe.Input.TryRead(out _readResult) || _readResult.Buffer.IsEmpty)
+                        if (!_pipe.Input.TryRead(out _readResult))
                         {
-                            _readResult = await _pipe.Input.ReadAsync();
+                            _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
                         }
                         
                         buffer = _readResult.Buffer;

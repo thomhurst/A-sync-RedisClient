@@ -144,9 +144,10 @@ namespace TomLonghurst.RedisClient.Client
             var results = new byte [count][];
             for (var i = 0; i < count; i++)
             {
-                if (!_pipe.Input.TryRead(out _readResult) || _readResult.Buffer.IsEmpty)
+                // Refresh the pipe buffer before 'ReadData' method reads it
+                if (!_pipe.Input.TryRead(out _readResult))
                 {
-                    _readResult = await _pipe.Input.ReadAsync();
+                    _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
                 }
                 
                 results[i] = (await ReadData()).ToArray();

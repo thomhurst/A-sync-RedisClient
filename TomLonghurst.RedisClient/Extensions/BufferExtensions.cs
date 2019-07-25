@@ -78,7 +78,7 @@ namespace TomLonghurst.RedisClient.Extensions
 
                 if (!pipeReader.TryRead(out readResult))
                 {
-                    readResult = await pipeReader.ReadAsync();
+                    readResult = await pipeReader.ReadAsync().ConfigureAwait(false);
                 }
 
                 buffer = readResult.Buffer;
@@ -97,28 +97,6 @@ namespace TomLonghurst.RedisClient.Extensions
             }
             
             return buffer.GetPosition(1, endOfLine.Value);
-        }
-        
-        internal static int VectorSafeIndexOf(this ReadOnlySpan<byte> span, byte value)
-        {
-            // yes, this has zero optimization; I'm OK with this as the fallback strategy
-            for (var i = 0; i < span.Length; i++)
-            {
-                if (span[i] == value) return i;
-            }
-            return -1;
-        }
-        internal static int VectorSafeIndexOfCRLF(this ReadOnlySpan<byte> span)
-        {
-            // yes, this has zero optimization; I'm OK with this as the fallback strategy
-            for (var i = 1; i < span.Length; i++)
-            {
-                if (span[i] == '\n' && span[i - 1] == '\r')
-                {
-                    return i - 1;
-                }
-            }
-            return -1;
         }
     }
 }

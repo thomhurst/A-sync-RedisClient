@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>latest</LangVersion>
-    <PackageVersion>0.0.76-alpha7</PackageVersion>
+    <PackageVersion>0.0.76-alpha8</PackageVersion>
     <Description>An Asynchronous Redis Client for .NET</Description>
     <Copyright>Tom Longhurst</Copyright>
     <PackageProjectUrl>https://github.com/thomhurst/A-sync-RedisClient</PackageProjectUrl>
