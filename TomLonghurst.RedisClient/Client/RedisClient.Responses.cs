@@ -11,7 +11,7 @@ namespace TomLonghurst.RedisClient.Client
     public partial class RedisClient : IDisposable
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<object> ExpectSuccess()
+        private async ValueTask<object> ExpectSuccess()
         {
             var response = await ReadLine();
             if (response.StartsWith("-"))
@@ -22,7 +22,7 @@ namespace TomLonghurst.RedisClient.Client
             return new object();
         }
 
-        private async Task<object> ExpectSuccess(int count)
+        private async ValueTask<object> ExpectSuccess(int count)
         {
             for (var i = 0; i < count; i++)
             {
@@ -33,18 +33,18 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<string> ExpectData()
+        private async ValueTask<string> ExpectData()
         {
             return (await ReadData()).AsString();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<string> ExpectData(bool readToEnd = false)
+        private async ValueTask<string> ExpectData(bool readToEnd = false)
         {
             return (await ReadData(readToEnd)).AsString();
         }
         
-        private async Task<IList<string>> ExpectData(int count)
+        private async ValueTask<IList<string>> ExpectData(int count)
         {
             var responses = new List<string>();
             for (var i = 0; i < count; i++)
@@ -56,7 +56,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<string> ExpectWord()
+        private async ValueTask<string> ExpectWord()
         {
             var word = await ReadLine();
 
@@ -68,7 +68,7 @@ namespace TomLonghurst.RedisClient.Client
             return word.Substring(1);
         }
         
-        private async Task<IList<string>> ExpectWord(int count)
+        private async ValueTask<IList<string>> ExpectWord(int count)
         {
             var responses = new List<string>();
             for (var i = 0; i < count; i++)
@@ -80,7 +80,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<int> ExpectInteger()
+        private async ValueTask<int> ExpectInteger()
         {
             var line = await ReadLine();
 
@@ -92,7 +92,7 @@ namespace TomLonghurst.RedisClient.Client
             return number;
         }
         
-        private async Task<IList<int>> ExpectInteger(int count)
+        private async ValueTask<IList<int>> ExpectInteger(int count)
         {
             var responses = new List<int>();
             for (var i = 0; i < count; i++)
@@ -103,7 +103,7 @@ namespace TomLonghurst.RedisClient.Client
             return responses;
         }
         
-        private async Task<float> ExpectFloat()
+        private async ValueTask<float> ExpectFloat()
         {
             var floatString = (await ReadData()).AsString();
 
@@ -115,7 +115,7 @@ namespace TomLonghurst.RedisClient.Client
             return number;
         }
         
-        private async Task<IList<float>> ExpectFloat(float count)
+        private async ValueTask<IList<float>> ExpectFloat(float count)
         {
             var responses = new List<float>();
             for (var i = 0; i < count; i++)
@@ -127,7 +127,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<IEnumerable<StringRedisValue>> ExpectArray()
+        private async ValueTask<IEnumerable<StringRedisValue>> ExpectArray()
         {
             var arrayWithCountLine = await ReadLine();
 
@@ -155,7 +155,7 @@ namespace TomLonghurst.RedisClient.Client
             return results.ToRedisValues();
         }
         
-        private async Task<IList<IEnumerable<StringRedisValue>>> ExpectArray(int count)
+        private async ValueTask<IList<IEnumerable<StringRedisValue>>> ExpectArray(int count)
         {
             var responses = new List<IEnumerable<StringRedisValue>>();
             
