@@ -32,7 +32,7 @@ namespace TomLonghurst.RedisClient.Client
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async ValueTask<T> SendAndReceiveAsync<T>(string command,
-            Func<Task<T>> responseReader,
+            Func<ValueTask<T>> responseReader,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
         {
@@ -94,7 +94,7 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        private async Task Write(string command)
+        private async ValueTask Write(string command)
         {
             var flushResult =  await _pipe.Output.WriteAsync(command.ToRedisProtocol().ToUtf8Bytes().AsMemory()).ConfigureAwait(false);;
             if (!flushResult.IsCompleted)
@@ -104,7 +104,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<Memory<byte>> ReadData(bool readToEnd = false)
+        private async ValueTask<Memory<byte>> ReadData(bool readToEnd = false)
         {
             var buffer = _readResult.Buffer;
 
@@ -181,7 +181,7 @@ namespace TomLonghurst.RedisClient.Client
             throw new UnexpectedRedisResponseException($"Unexpected reply: {line}");
         }
 
-        private async Task<string> GetLine()
+        private async ValueTask<string> GetLine()
         {
             _readResult = await _pipe.Input.ReadUntilEndOfLineFound(_readResult);
             var endOfLineAfterByteCount = _readResult.Buffer.GetEndOfLinePosition();
@@ -203,7 +203,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<string> ReadLine()
+        private async ValueTask<string> ReadLine()
         {
             return await GetLine();
         }
