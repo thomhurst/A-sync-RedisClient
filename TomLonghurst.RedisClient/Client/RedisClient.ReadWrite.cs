@@ -151,9 +151,17 @@ namespace TomLonghurst.RedisClient.Client
 
                     while (bytesReceived < byteSizeOfData)
                     {
-                        LastAction = "Advancing Buffer to End of Line in ReadData Loop";
-                        _pipe.Input.AdvanceTo(buffer.End);
-                        
+                        LastAction = "Advancing Buffer in ReadData Loop";
+                        var consumed = buffer.Slice(bytesReceived);
+                        if (consumed.Start.GetInteger() == buffer.End.GetInteger())
+                        {
+                            _pipe.Input.AdvanceTo(buffer.End);
+                        }
+                        else
+                        {
+                            _pipe.Input.AdvanceTo(consumed.Start, buffer.End);
+                        }
+
                         LastAction = "Reading Data Synchronously in ReadData Loop";
                         if (!_pipe.Input.TryRead(out _readResult))
                         {
