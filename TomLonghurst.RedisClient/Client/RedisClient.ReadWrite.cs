@@ -113,7 +113,7 @@ namespace TomLonghurst.RedisClient.Client
                 throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
             }
 
-            var line = await GetLine(buffer);
+            var line = await GetLine();
             
             var firstChar = line.First();
 
@@ -181,16 +181,26 @@ namespace TomLonghurst.RedisClient.Client
             throw new UnexpectedRedisResponseException($"Unexpected reply: {line}");
         }
 
-        private async Task<string> GetLine(ReadOnlySequence<byte> buffer)
+        private async Task<string> GetLine()
         {
-            var endOfLineAfterByteCount = await _pipe.Input.ReadUntilEndOfLineFound(_readResult);
-
+            _readResult = await _pipe.Input.ReadUntilEndOfLineFound(_readResult);
+            var endOfLineAfterByteCount = _readResult.Buffer.GetEndOfLinePosition();
+            
             if (endOfLineAfterByteCount == null)
             {
                 throw new Exception("Can't find EOL");
             }
             
-            buffer = buffer.Slice(0, endOfLineAfterByteCount.Value);
+            var buffer = _readResult.Buffer;
+
+            try
+            {
+                buffer = buffer.Slice(0, endOfLineAfterByteCount.Value);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
             
             var line = buffer.Slice(0, buffer.Length - 2).AsString();
 
@@ -202,8 +212,7 @@ namespace TomLonghurst.RedisClient.Client
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<string> ReadLine()
         {
-            var buffer = _readResult.Buffer;
-            return await GetLine(buffer);
+            return await GetLine();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
