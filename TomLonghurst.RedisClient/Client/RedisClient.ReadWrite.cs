@@ -146,13 +146,14 @@ namespace TomLonghurst.RedisClient.Client
                     var bytes = new byte[byteSizeOfData].AsMemory();
                     var dataBuffer = buffer.Slice(0, Math.Min(byteSizeOfData, buffer.Length));
                     var bytesReceived = dataBuffer.Length;
+                    var consumeThisBuffer = bytesReceived;
                     
                     dataBuffer.CopyTo(bytes.Slice(0, (int) bytesReceived).Span);
 
                     while (bytesReceived < byteSizeOfData)
                     {
                         LastAction = "Advancing Buffer in ReadData Loop";
-                        var consumed = buffer.Slice(bytesReceived);
+                        var consumed = buffer.Slice(consumeThisBuffer);
                         if (consumed.Start.GetInteger() == buffer.End.GetInteger())
                         {
                             _pipe.Input.AdvanceTo(buffer.End);
@@ -172,6 +173,7 @@ namespace TomLonghurst.RedisClient.Client
                         buffer = _readResult.Buffer;
                         buffer.Slice(0, Math.Min(buffer.Length, byteSizeOfData - bytesReceived)).CopyTo(bytes.Slice((int) bytesReceived, (int) Math.Min(buffer.Length, byteSizeOfData - bytesReceived)).Span);
                         bytesReceived += buffer.Length;
+                        consumeThisBuffer = buffer.Length;
                     }
 
                     if (readToEnd)
