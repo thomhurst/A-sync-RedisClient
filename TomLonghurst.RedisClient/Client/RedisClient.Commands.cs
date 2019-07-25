@@ -20,7 +20,7 @@ namespace TomLonghurst.RedisClient.Client
             _serverCommands = new ServerCommands(this);
         }
         
-        private string _lastCommand;
+        internal string LastCommand;
 
         private async ValueTask Authorize(CancellationToken cancellationToken)
         {

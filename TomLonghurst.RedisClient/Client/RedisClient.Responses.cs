@@ -16,7 +16,7 @@ namespace TomLonghurst.RedisClient.Client
             var response = await ReadLine();
             if (response.StartsWith("-"))
             {
-                throw new RedisFailedCommandException(response, _lastCommand);
+                throw new RedisFailedCommandException(response, LastCommand);
             }
 
             return new object();
@@ -145,8 +145,10 @@ namespace TomLonghurst.RedisClient.Client
             for (var i = 0; i < count; i++)
             {
                 // Refresh the pipe buffer before 'ReadData' method reads it
+                LastAction = "Reading Data Synchronously in ExpectArray";
                 if (!_pipe.Input.TryRead(out _readResult))
                 {
+                    LastAction = "Reading Data Asynchronously in ExpectArray";
                     _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
                 }
                 

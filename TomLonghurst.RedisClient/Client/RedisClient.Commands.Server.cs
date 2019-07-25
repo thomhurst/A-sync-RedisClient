@@ -27,7 +27,7 @@ namespace TomLonghurst.RedisClient.Client
             {
                 return await  _redisClient.RunWithTimeout(async token =>
                 {
-                    return await _redisClient.SendAndReceiveAsync(Commands.Info, () => _redisClient.ExpectData(true), CancellationToken.None, true);
+                    return await _redisClient.SendAndReceiveAsync(Commands.Info, () => _redisClient.ExpectData(true), CancellationToken.None);
                 }, cancellationToken);
             }
 
@@ -40,7 +40,7 @@ namespace TomLonghurst.RedisClient.Client
             {
                 return await _redisClient.RunWithTimeout(async token =>
                 {
-                    return await _redisClient.SendAndReceiveAsync(Commands.DbSize, _redisClient.ExpectInteger, CancellationToken.None, true);
+                    return await _redisClient.SendAndReceiveAsync(Commands.DbSize, _redisClient.ExpectInteger, CancellationToken.None);
                 }, cancellationToken);
             }
         }

@@ -120,6 +120,7 @@ namespace TomLonghurst.RedisClient.Client
             {
                 await RunWithTimeout(async token =>
                 {
+                    LastAction = "Reconnecting";
                     await ConnectAsync(token);
                 }, cancellationToken);
             }
@@ -138,6 +139,7 @@ namespace TomLonghurst.RedisClient.Client
                 return;
             }
 
+            LastAction = "Waiting for Connecting lock to be free";
             await _connectSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
 
             try
@@ -147,6 +149,7 @@ namespace TomLonghurst.RedisClient.Client
                     return;
                 }
 
+                LastAction = "Connecting";
                 Interlocked.Increment(ref _reconnectAttempts);
 
                 _socket = new RedisSocket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
@@ -190,6 +193,7 @@ namespace TomLonghurst.RedisClient.Client
                         ClientConfig.CertificateSelectionCallback,
                         EncryptionPolicy.RequireEncryption);
 
+                    LastAction = "Authenticating SSL Stream as Client";
                     await _sslStream.AuthenticateAsClientAsync(ClientConfig.Host).ConfigureAwait(false);
 
                     if (!_sslStream.IsEncrypted)
@@ -198,10 +202,12 @@ namespace TomLonghurst.RedisClient.Client
                         throw new SecurityException($"Could not establish an encrypted connection to Redis - {ClientConfig.Host}");
                     }
 
+                    LastAction = "Creating SSL Stream Pipe";
                     _pipe = StreamConnection.GetDuplex(_sslStream);
                 }
                 else
                 {
+                    LastAction = "Creating Socket Pipe";
                     _pipe = SocketConnection.Create(_socket);
                 }
 
@@ -209,16 +215,19 @@ namespace TomLonghurst.RedisClient.Client
                 
                 if (!string.IsNullOrEmpty(ClientConfig.Password))
                 {
+                    LastAction = "Authorizing";
                     await Authorize(cancellationToken);
                 }
 
                 if (ClientConfig.Db != 0)
                 {
+                    LastAction = "Selecting Database";
                     await SelectDb(cancellationToken);
                 }
 
                 if (ClientConfig.ClientName != null)
                 {
+                    LastAction = "Setting Client Name";
                     await SetClientNameAsync(cancellationToken);
                 }
             }
@@ -231,6 +240,7 @@ namespace TomLonghurst.RedisClient.Client
         public void Dispose()
         {
             DisposeNetwork();
+            LastAction = "Disposing Client";
             _connectionChecker?.Dispose();
             _sendSemaphoreSlim?.Dispose();
             _connectSemaphoreSlim?.Dispose();
@@ -238,6 +248,8 @@ namespace TomLonghurst.RedisClient.Client
 
         private void DisposeNetwork()
         {
+            IsConnected = false;
+            LastAction = "Disposing Network";
             _socket?.Close();
             _socket?.Dispose();
             _sslStream?.Dispose();
