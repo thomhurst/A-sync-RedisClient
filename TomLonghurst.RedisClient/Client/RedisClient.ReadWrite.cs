@@ -93,17 +93,23 @@ namespace TomLonghurst.RedisClient.Client
 
         private ValueTask<FlushResult> Write(string command)
         {
+            var encodedCommand = command.ToRedisProtocol();
+            
             LastAction = "Writing Bytes";
             var pipeWriter = _pipe.Output;
-            var writeSpan = pipeWriter.GetSpan(32);
+#if NETCORE
+            var charsSpan = encodedCommand.AsSpan();
+            
+            var bytesSpan = pipeWriter.GetSpan(32);
 
-            var byteCount = command.AsUtf8BytesSpan(out var bytesSpan);
-
-            bytesSpan.CopyTo(writeSpan);
-
-            pipeWriter.Advance(byteCount);
-
+            var bytesCount = Encoding.UTF8.GetBytes(charsSpan, bytesSpan);
+            
+            pipeWriter.Advance(bytesCount);
+            
             return _pipe.Output.FlushAsync();
+#else
+            return pipeWriter.WriteAsync(encodedCommand.ToUtf8Bytes().AsMemory());
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
