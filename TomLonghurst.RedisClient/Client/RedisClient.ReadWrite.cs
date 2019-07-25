@@ -192,16 +192,9 @@ namespace TomLonghurst.RedisClient.Client
             }
             
             var buffer = _readResult.Buffer;
-
-            try
-            {
-                buffer = buffer.Slice(0, endOfLineAfterByteCount.Value);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
             
+            buffer = buffer.Slice(0, endOfLineAfterByteCount.Value);
+
             var line = buffer.Slice(0, buffer.Length - 2).AsString();
 
             _pipe.Input.AdvanceTo(endOfLineAfterByteCount.Value);
