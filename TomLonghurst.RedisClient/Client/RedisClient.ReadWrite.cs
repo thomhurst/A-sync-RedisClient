@@ -169,7 +169,7 @@ namespace TomLonghurst.RedisClient.Client
                     }
                     else
                     {
-                        await _pipe.Input.AdvanceToLineTerminator(_readResult);
+                        _readResult = await _pipe.Input.AdvanceToLineTerminator(_readResult);
                     }
 
                     return bytes;

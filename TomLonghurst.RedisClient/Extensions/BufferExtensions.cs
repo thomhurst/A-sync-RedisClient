@@ -51,7 +51,7 @@ namespace TomLonghurst.RedisClient.Extensions
             }
         }
 
-        internal static async Task<ReadResult> AdvanceToLineTerminator(this PipeReader pipeReader, ReadResult readResult)
+        internal static async ValueTask<ReadResult> AdvanceToLineTerminator(this PipeReader pipeReader, ReadResult readResult)
         {
             readResult = await pipeReader.ReadUntilEndOfLineFound(readResult);
             var endOfLineSequencePosition = readResult.Buffer.GetEndOfLinePosition();
@@ -60,15 +60,13 @@ namespace TomLonghurst.RedisClient.Extensions
             {
                 throw new Exception("Can't find EOL");
             }
-            
-            var buffer = readResult.Buffer.Slice(endOfLineSequencePosition.Value);
 
-            pipeReader.AdvanceTo(buffer.Start);
+            pipeReader.AdvanceTo(endOfLineSequencePosition.Value);
 
             return readResult;
         }
 
-        internal static async Task<ReadResult> ReadUntilEndOfLineFound(this PipeReader pipeReader, ReadResult readResult)
+        internal static async ValueTask<ReadResult> ReadUntilEndOfLineFound(this PipeReader pipeReader, ReadResult readResult)
         {
             var buffer = readResult.Buffer;
             
