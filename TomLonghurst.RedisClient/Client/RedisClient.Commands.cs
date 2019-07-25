@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO.Pipelines;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Pipelines.Sockets.Unofficial;
 using TomLonghurst.RedisClient.Constants;
 using TomLonghurst.RedisClient.Enums;
 using TomLonghurst.RedisClient.Extensions;
@@ -16,10 +18,51 @@ namespace TomLonghurst.RedisClient.Client
     {
         private RedisClient()
         {
+            Options = new Lazy<Tuple<PipeOptions, PipeOptions>>(() =>
+            {
+                const long
+                    Receive_PauseWriterThreshold =
+                        4L * 1024 * 1024 * 1024; // receive: let's give it up to 4GiB of buffer for now
+                const long Receive_ResumeWriterThreshold = 3L * 1024 * 1024 * 1024; // (large replies get crazy big)
+
+                var defaultPipeOptions = PipeOptions.Default;
+
+                var sendPauseWriterThreshold = Math.Max(
+                    512 * 1024, // send: let's give it up to 0.5MiB
+                    defaultPipeOptions.PauseWriterThreshold); // or the default, whichever is bigger
+
+                var sendResumeWriterThreshold = Math.Max(
+                    sendPauseWriterThreshold / 2,
+                    defaultPipeOptions.ResumeWriterThreshold);
+
+                var schedulerPool = new DedicatedThreadPoolPipeScheduler($"RedisClient{ClientId}",
+                    workerCount: 10,
+                    priority: ThreadPriority.AboveNormal);
+
+                var sendPipeOptions = new PipeOptions(
+                    pool: defaultPipeOptions.Pool,
+                    readerScheduler: schedulerPool,
+                    writerScheduler: schedulerPool,
+                    pauseWriterThreshold: sendPauseWriterThreshold,
+                    resumeWriterThreshold: sendResumeWriterThreshold,
+                    minimumSegmentSize: Math.Max(defaultPipeOptions.MinimumSegmentSize, 8192),
+                    useSynchronizationContext: false);
+                var receivePipeOptions = new PipeOptions(
+                    pool: defaultPipeOptions.Pool,
+                    readerScheduler: schedulerPool,
+                    writerScheduler: schedulerPool,
+                    pauseWriterThreshold: Receive_PauseWriterThreshold,
+                    resumeWriterThreshold: Receive_ResumeWriterThreshold,
+                    minimumSegmentSize: Math.Max(defaultPipeOptions.MinimumSegmentSize, 8192),
+                    useSynchronizationContext: false);
+
+                return new Tuple<PipeOptions, PipeOptions>(sendPipeOptions, receivePipeOptions);
+            });
+
             _clusterCommands = new ClusterCommands(this);
             _serverCommands = new ServerCommands(this);
         }
-        
+
         internal string LastCommand;
 
         private async ValueTask Authorize(CancellationToken cancellationToken)

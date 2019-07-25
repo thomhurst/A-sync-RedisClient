@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -184,6 +185,8 @@ namespace TomLonghurst.RedisClient.Client
                 Log.Debug("Socket Connected");
 
                 Stream networkStream = new NetworkStream(_socket);
+                
+                var (sendPipeOptions, receivePipeOptions) = GetPipeOptions();
 
                 if (ClientConfig.Ssl)
                 {
@@ -203,12 +206,12 @@ namespace TomLonghurst.RedisClient.Client
                     }
 
                     LastAction = "Creating SSL Stream Pipe";
-                    _pipe = StreamConnection.GetDuplex(_sslStream);
+                    _pipe = StreamConnection.GetDuplex(_sslStream, sendPipeOptions, receivePipeOptions);
                 }
                 else
                 {
                     LastAction = "Creating Socket Pipe";
-                    _pipe = SocketConnection.Create(_socket);
+                    _pipe = SocketConnection.Create(_socket, sendPipeOptions, receivePipeOptions);
                 }
 
                 IsConnected = true;
@@ -235,6 +238,13 @@ namespace TomLonghurst.RedisClient.Client
             {
                 _connectSemaphoreSlim.Release();
             }
+        }
+
+        private Lazy<Tuple<PipeOptions, PipeOptions>> Options;
+
+        private Tuple<PipeOptions, PipeOptions> GetPipeOptions()
+        {
+            return Options.Value;
         }
 
         public void Dispose()
