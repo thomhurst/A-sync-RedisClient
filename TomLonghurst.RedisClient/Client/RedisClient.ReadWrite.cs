@@ -91,14 +91,19 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        private async ValueTask Write(string command)
+        private ValueTask<FlushResult> Write(string command)
         {
             LastAction = "Writing Bytes";
-            var flushResult =  await _pipe.Output.WriteAsync(command.ToRedisProtocol().ToUtf8Bytes().AsMemory()).ConfigureAwait(false);
-            if (!flushResult.IsCompleted)
-            {
-                await _pipe.Output.FlushAsync().ConfigureAwait(false);
-            }
+            var pipeWriter = _pipe.Output;
+            var writeSpan = pipeWriter.GetSpan(32);
+
+            var byteCount = command.AsUtf8BytesSpan(out var bytesSpan);
+
+            bytesSpan.CopyTo(writeSpan);
+
+            pipeWriter.Advance(byteCount);
+
+            return _pipe.Output.FlushAsync();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -16,6 +16,21 @@ namespace TomLonghurst.RedisClient.Extensions
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static unsafe int AsUtf8BytesSpan(this string value, out Span<byte> bytesSpan)
+        {
+            var charsSpan = value.AsSpan();
+
+            fixed(char* charPtr = charsSpan)
+            {
+                bytesSpan = new byte[Encoding.UTF8.GetByteCount(charPtr, charsSpan.Length)].AsSpan();
+                fixed (byte* bytePtr = bytesSpan)
+                {
+                    return Encoding.UTF8.GetBytes(charPtr, charsSpan.Length, bytePtr, bytesSpan.Length);
+                }
+            }
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static string ToRedisProtocol(this string value)
         {
             return RedisProtocolEncoder.Encode(value);
