@@ -4,6 +4,7 @@ using System.IO.Pipelines;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.RedisClient.Exceptions;
@@ -100,7 +101,7 @@ namespace TomLonghurst.RedisClient.Client
 #if NETCORE
             var charsSpan = encodedCommand.AsSpan();
             
-            var bytesSpan = pipeWriter.GetSpan(32);
+            var bytesSpan = pipeWriter.GetSpan(Encoding.UTF8.GetByteCount(charsSpan));
 
             var bytesCount = Encoding.UTF8.GetBytes(charsSpan, bytesSpan);
             
