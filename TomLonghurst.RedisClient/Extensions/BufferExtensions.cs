@@ -73,8 +73,9 @@ namespace TomLonghurst.RedisClient.Extensions
             while (buffer.GetEndOfLinePosition() == null)
             {
                 // We don't want to consume it yet - So don't advance past the start
+                // But do tell it we've examined up until the end - But it's not enough and we need more
                 // We need to call advance before calling another read though
-                pipeReader.AdvanceTo(buffer.Start);
+                pipeReader.AdvanceTo(buffer.Start, buffer.End);
 
                 if (!pipeReader.TryRead(out readResult))
                 {
