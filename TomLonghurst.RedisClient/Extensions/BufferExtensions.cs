@@ -60,8 +60,8 @@ namespace TomLonghurst.RedisClient.Extensions
             {
                 throw new Exception("Can't find EOL");
             }
-
-            if (readResult.Buffer.End.GetInteger() == endOfLineSequencePosition.Value.GetInteger())
+            
+            if(endOfLineSequencePosition.Value.IsSamePositionOrGreaterThanBufferLength(readResult.Buffer))
             {
                 pipeReader.AdvanceTo(endOfLineSequencePosition.Value);
             }

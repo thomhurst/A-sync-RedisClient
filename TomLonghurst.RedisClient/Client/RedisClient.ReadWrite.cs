@@ -166,7 +166,7 @@ namespace TomLonghurst.RedisClient.Client
                     {
                         LastAction = "Advancing Buffer in ReadData Loop";
                         var consumed = buffer.Slice(consumeThisBuffer);
-                        if (consumed.Start.GetInteger() == buffer.End.GetInteger())
+                        if(consumed.Start.IsSamePositionOrGreaterThanBufferLength(buffer))
                         {
                             _pipe.Input.AdvanceTo(buffer.End);
                         }
@@ -232,7 +232,7 @@ namespace TomLonghurst.RedisClient.Client
             var line = buffer.Slice(0, buffer.Length - 2).AsString();
 
             LastAction = "Advancing Buffer to End of Line";
-            if (_readResult.Buffer.End.GetInteger() == endOfLineAfterByteCount.Value.GetInteger())
+            if(endOfLineAfterByteCount.Value.IsSamePositionOrGreaterThanBufferLength(_readResult.Buffer))
             {
                 _pipe.Input.AdvanceTo(endOfLineAfterByteCount.Value);
             }
