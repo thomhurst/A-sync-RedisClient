@@ -148,7 +148,7 @@ namespace TomLonghurst.RedisClient.Pipes
                         }
 
                         reader.AdvanceTo(buffer.End);
-                    } while (!(buffer.IsEmpty && result.IsCompleted));
+                    } while (!(buffer.IsEmpty && result.IsCompleted) && reader.TryRead(out result));
 
                     if (result.IsCanceled)
                     {
