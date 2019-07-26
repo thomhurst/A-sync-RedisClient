@@ -185,8 +185,8 @@ namespace TomLonghurst.RedisClient.Client
 
                     if (readToEnd)
                     {
-                        LastAction = "Advancing Buffer to End of Line";
-                        _pipe.Input.AdvanceTo(buffer.End);
+                        LastAction = "Advancing Buffer to End of Buffer";
+                        _pipe.Input.AdvanceTo(_readResult.Buffer.End);
                     }
                     else
                     {
