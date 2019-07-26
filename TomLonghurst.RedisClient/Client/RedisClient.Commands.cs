@@ -16,17 +16,15 @@ namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient : IDisposable
     {
-        private DedicatedThreadPoolPipeScheduler _receivePipePool;
-        private DedicatedThreadPoolPipeScheduler _sendPipePool;
-        
+        private DedicatedThreadPoolPipeScheduler _pipePool;
+
         private RedisClient()
         {
-            _receivePipePool = new DedicatedThreadPoolPipeScheduler("ReceivePipePool", 10);
-            _sendPipePool = new DedicatedThreadPoolPipeScheduler("SendPipePool", 10);
+            _pipePool = new DedicatedThreadPoolPipeScheduler("RedisPipePool", 10);
             
             Options = new Lazy<Tuple<PipeOptions, PipeOptions>>(() =>
             {
-                const long Receive_PauseWriterThreshold = 4L * 1024 * 1024;
+                const long Receive_PauseWriterThreshold = 4L * 1024 * 1024 * 1024;
                 const long Receive_ResumeWriterThreshold = Receive_PauseWriterThreshold / 2;
 
                 var defaultPipeOptions = PipeOptions.Default;
@@ -37,8 +35,8 @@ namespace TomLonghurst.RedisClient.Client
 
                 var sendPipeOptions = new PipeOptions(
                     defaultPipeOptions.Pool,
-                    _sendPipePool,
-                    _sendPipePool,
+                    _pipePool,
+                    _pipePool,
                     sendPauseWriterThreshold,
                     sendResumeWriterThreshold,
                     Math.Max(defaultPipeOptions.MinimumSegmentSize, 8192),
@@ -46,8 +44,8 @@ namespace TomLonghurst.RedisClient.Client
                 
                 var receivePipeOptions = new PipeOptions(
                     defaultPipeOptions.Pool,
-                    _receivePipePool,
-                    _receivePipePool,
+                    _pipePool,
+                    _pipePool,
                     Receive_PauseWriterThreshold,
                     Receive_ResumeWriterThreshold,
                     Math.Max(defaultPipeOptions.MinimumSegmentSize, 8192),
