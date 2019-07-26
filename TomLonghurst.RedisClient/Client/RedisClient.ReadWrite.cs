@@ -33,7 +33,7 @@ namespace TomLonghurst.RedisClient.Client
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask<T> SendAndReceiveAsync<T>(string command,
+        private async Task<T> SendAndReceiveAsync<T>(string command,
             Func<ValueTask<T>> responseReader,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
@@ -67,7 +67,7 @@ namespace TomLonghurst.RedisClient.Client
                 LastAction = "Reading Bytes Async";
                 _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
 
-                return await responseReader.Invoke();
+                return await responseReader.Invoke().AsTask();
             }
             catch (Exception innerException)
             {
@@ -183,7 +183,10 @@ namespace TomLonghurst.RedisClient.Client
                         }
                         
                         buffer = _readResult.Buffer;
-                        buffer.Slice(0, Math.Min(buffer.Length, byteSizeOfData - bytesReceived)).CopyTo(bytes.Slice((int) bytesReceived, (int) Math.Min(buffer.Length, byteSizeOfData - bytesReceived)).Span);
+                        
+                        buffer.Slice(0, Math.Min(buffer.Length, byteSizeOfData - bytesReceived))
+                            .CopyTo(bytes.Slice((int) bytesReceived, (int) Math.Min(buffer.Length, byteSizeOfData - bytesReceived)).Span);
+                        
                         bytesReceived += buffer.Length;
                         consumeThisBuffer = buffer.Length;
                     }
