@@ -156,24 +156,17 @@ namespace TomLonghurst.RedisClient.Client
                 if (long.TryParse(line.Substring(1), out var byteSizeOfData))
                 {
                     var bytes = new byte[byteSizeOfData].AsMemory();
-                    var dataBuffer = buffer.Slice(0, Math.Min(byteSizeOfData, buffer.Length));
-                    var bytesReceived = dataBuffer.Length;
-                    var consumeThisBuffer = bytesReceived;
                     
-                    dataBuffer.CopyTo(bytes.Slice(0, (int) bytesReceived).Span);
+                    buffer = buffer.Slice(0, Math.Min(byteSizeOfData, buffer.Length));
+                    
+                    var bytesReceived = buffer.Length;
+
+                    buffer.CopyTo(bytes.Slice(0, (int) bytesReceived).Span);
 
                     while (bytesReceived < byteSizeOfData)
                     {
                         LastAction = "Advancing Buffer in ReadData Loop";
-                        var consumed = buffer.Slice(consumeThisBuffer);
-                        if(consumed.Start.IsSamePositionOrGreaterThanBufferLength(buffer))
-                        {
-                            _pipe.Input.AdvanceTo(buffer.End);
-                        }
-                        else
-                        {
-                            _pipe.Input.AdvanceTo(consumed.Start, buffer.End);
-                        }
+                        _pipe.Input.AdvanceTo(buffer.End);
 
                         LastAction = "Reading Data Synchronously in ReadData Loop";
                         if (!_pipe.Input.TryRead(out _readResult))
@@ -188,7 +181,6 @@ namespace TomLonghurst.RedisClient.Client
                             .CopyTo(bytes.Slice((int) bytesReceived, (int) Math.Min(buffer.Length, byteSizeOfData - bytesReceived)).Span);
                         
                         bytesReceived += buffer.Length;
-                        consumeThisBuffer = buffer.Length;
                     }
 
                     if (readToEnd)
@@ -215,31 +207,24 @@ namespace TomLonghurst.RedisClient.Client
         {
             LastAction = "Reading until End of Line found";
             _readResult = await _pipe.Input.ReadUntilEndOfLineFound(_readResult);
-            
+
             LastAction = "Finding End of Line Position";
             var endOfLineAfterByteCount = _readResult.Buffer.GetEndOfLinePosition();
-            
+
             if (endOfLineAfterByteCount == null)
             {
                 throw new Exception("Can't find EOL");
             }
-            
+
             var buffer = _readResult.Buffer;
-            
+
             buffer = buffer.Slice(0, endOfLineAfterByteCount.Value);
-            
+
             // Reslice but removing the line terminators
             var line = buffer.Slice(0, buffer.Length - 2).AsString();
 
             LastAction = "Advancing Buffer to End of Line";
-            if(endOfLineAfterByteCount.Value.IsSamePositionOrGreaterThanBufferLength(_readResult.Buffer))
-            {
-                _pipe.Input.AdvanceTo(endOfLineAfterByteCount.Value);
-            }
-            else
-            {
-                _pipe.Input.AdvanceTo(endOfLineAfterByteCount.Value, _readResult.Buffer.End);
-            }
+            _pipe.Input.AdvanceTo(endOfLineAfterByteCount.Value);
 
             return line;
         }
