@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -10,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Pipelines.Sockets.Unofficial;
 using TomLonghurst.RedisClient.Exceptions;
+using TomLonghurst.RedisClient.Helpers;
 
 namespace TomLonghurst.RedisClient.Client
 {
@@ -117,19 +117,23 @@ namespace TomLonghurst.RedisClient.Client
                 return;
             }
 
+            var cancellationTokenSourceWithTimeout = CancellationTokenHelper.CancellationTokenWithTimeout(ClientConfig.Timeout,
+                cancellationToken);
+            
             try
             {
-                await RunWithTimeout(async token =>
-                {
-                    LastAction = "Reconnecting";
-                    await ConnectAsync(token);
-                }, cancellationToken);
+                LastAction = "Reconnecting";
+                await ConnectAsync(cancellationTokenSourceWithTimeout.Token);
             }
             catch (Exception innerException)
             {
                 IsConnected = false;
                 DisposeNetwork();
                 throw new RedisConnectionException(innerException);
+            }
+            finally
+            {
+                cancellationTokenSourceWithTimeout?.Dispose();
             }
         }
         
@@ -185,8 +189,6 @@ namespace TomLonghurst.RedisClient.Client
                 Log.Debug("Socket Connected");
 
                 Stream networkStream = new NetworkStream(_socket);
-                
-                var (sendPipeOptions, receivePipeOptions) = GetPipeOptions();
 
                 if (ClientConfig.Ssl)
                 {
@@ -240,13 +242,6 @@ namespace TomLonghurst.RedisClient.Client
             {
                 _connectSemaphoreSlim.Release();
             }
-        }
-
-        private Lazy<Tuple<PipeOptions, PipeOptions>> Options;
-
-        private Tuple<PipeOptions, PipeOptions> GetPipeOptions()
-        {
-            return Options.Value;
         }
 
         public void Dispose()

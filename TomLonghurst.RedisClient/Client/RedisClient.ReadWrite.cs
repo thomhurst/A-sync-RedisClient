@@ -33,33 +33,40 @@ namespace TomLonghurst.RedisClient.Client
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<T> SendAndReceiveAsync<T>(string command,
+        private async ValueTask<T> SendAndReceiveAsync<T>(string command,
             Func<ValueTask<T>> responseReader,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
         {
-            LastAction = "Throwing Cancelled Exception due to Cancelled Token";
-            cancellationToken.ThrowIfCancellationRequested();
-
-            Interlocked.Increment(ref _outStandingOperations);
-
-
-            if (!isReconnectionAttempt)
-            {
-                LastAction = "Waiting for Send/Receive lock to be free";
-                await _sendSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
-            }
-
-            Log.Debug($"Executing Command: {command}");
-            LastCommand = command;
-
-            Interlocked.Increment(ref _operationsPerformed);
+            CancellationTokenSource cancellationTokenSourceWithTimeout = null;
 
             try
             {
+                LastAction = "Throwing Cancelled Exception due to Cancelled Token";
+                cancellationToken.ThrowIfCancellationRequested();
+                
+                cancellationTokenSourceWithTimeout = CancellationTokenHelper.CancellationTokenWithTimeout(ClientConfig.Timeout,
+                    cancellationToken);
+
+                var cancellationTokenWithTimeout = cancellationTokenSourceWithTimeout.Token;
+
+                Interlocked.Increment(ref _outStandingOperations);
+
+
                 if (!isReconnectionAttempt)
                 {
-                    await TryConnectAsync(cancellationToken).ConfigureAwait(false);
+                    LastAction = "Waiting for Send/Receive lock to be free";
+                    await _sendSemaphoreSlim.WaitAsync(cancellationTokenWithTimeout).ConfigureAwait(false);
+                }
+
+                Log.Debug($"Executing Command: {command}");
+                LastCommand = command;
+
+                Interlocked.Increment(ref _operationsPerformed);
+
+                if (!isReconnectionAttempt)
+                {
+                    await TryConnectAsync(cancellationTokenWithTimeout).ConfigureAwait(false);
                 }
 
                 await Write(command);
@@ -67,7 +74,21 @@ namespace TomLonghurst.RedisClient.Client
                 LastAction = "Reading Bytes Async";
                 _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
 
-                return await responseReader.Invoke().AsTask();
+                return await responseReader.Invoke();
+            }
+            catch (OperationCanceledException operationCanceledException)
+            {
+                throw TimeoutOrCancelledException(operationCanceledException, cancellationToken);
+            }
+            catch (SocketException socketException)
+            {
+                if (socketException.InnerException?.GetType().IsAssignableFrom(typeof(OperationCanceledException)) ==
+                    true)
+                {
+                    throw TimeoutOrCancelledException(socketException.InnerException, cancellationToken);
+                }
+
+                throw;
             }
             catch (Exception innerException)
             {
@@ -89,6 +110,8 @@ namespace TomLonghurst.RedisClient.Client
                     LastAction = "Releasing Send/Receive Lock";
                     _sendSemaphoreSlim.Release();
                 }
+
+                cancellationTokenSourceWithTimeout?.Dispose();
             }
         }
 
@@ -227,74 +250,6 @@ namespace TomLonghurst.RedisClient.Client
             _pipe.Input.AdvanceTo(endOfLineAfterByteCount.Value);
 
             return line;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal async ValueTask<T> RunWithTimeout<T>(Func<CancellationToken, ValueTask<T>> action,
-            CancellationToken originalCancellationToken)
-        {
-            originalCancellationToken.ThrowIfCancellationRequested();
-            
-            var cancellationTokenWithTimeout =
-                CancellationTokenHelper.CancellationTokenWithTimeout(ClientConfig.Timeout,
-                    originalCancellationToken);
-
-            try
-            {
-                return await action.Invoke(cancellationTokenWithTimeout.Token);
-            }
-            catch (OperationCanceledException operationCanceledException)
-            {
-                throw TimeoutOrCancelledException(operationCanceledException, originalCancellationToken);
-            }
-            catch (SocketException socketException)
-            {
-                if (socketException.InnerException?.GetType().IsAssignableFrom(typeof(OperationCanceledException)) ==
-                    true)
-                {
-                    throw TimeoutOrCancelledException(socketException.InnerException, originalCancellationToken);
-                }
-
-                throw;
-            }
-            finally
-            {
-                cancellationTokenWithTimeout.Dispose();
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask RunWithTimeout(Func<CancellationToken, ValueTask> action,
-            CancellationToken originalCancellationToken)
-        {
-            originalCancellationToken.ThrowIfCancellationRequested();
-
-            var cancellationTokenWithTimeout =
-                CancellationTokenHelper.CancellationTokenWithTimeout(ClientConfig.Timeout,
-                    originalCancellationToken);
-
-            try
-            {
-                await action.Invoke(cancellationTokenWithTimeout.Token);
-            }
-            catch (OperationCanceledException operationCanceledException)
-            {
-                throw TimeoutOrCancelledException(operationCanceledException, originalCancellationToken);
-            }
-            catch (SocketException socketException)
-            {
-                if (socketException.InnerException?.GetType().IsAssignableFrom(typeof(OperationCanceledException)) ==
-                    true)
-                {
-                    throw TimeoutOrCancelledException(socketException.InnerException, originalCancellationToken);
-                }
-
-                throw;
-            }
-            finally
-            {
-                cancellationTokenWithTimeout.Dispose();
-            }
         }
 
         private Exception TimeoutOrCancelledException(Exception exception, CancellationToken originalCancellationToken)

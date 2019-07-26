@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO.Pipelines;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Pipelines.Sockets.Unofficial;
 using TomLonghurst.RedisClient.Constants;
 using TomLonghurst.RedisClient.Enums;
 using TomLonghurst.RedisClient.Extensions;
@@ -18,47 +16,6 @@ namespace TomLonghurst.RedisClient.Client
     {
         private RedisClient()
         {
-            Options = new Lazy<Tuple<PipeOptions, PipeOptions>>(() =>
-            {
-                const long
-                    Receive_PauseWriterThreshold =
-                        4L * 1024 * 1024 * 1024; // receive: let's give it up to 4GiB of buffer for now
-                const long Receive_ResumeWriterThreshold = 3L * 1024 * 1024 * 1024; // (large replies get crazy big)
-
-                var defaultPipeOptions = PipeOptions.Default;
-
-                var sendPauseWriterThreshold = Math.Max(
-                    512 * 1024, // send: let's give it up to 0.5MiB
-                    defaultPipeOptions.PauseWriterThreshold); // or the default, whichever is bigger
-
-                var sendResumeWriterThreshold = Math.Max(
-                    sendPauseWriterThreshold / 2,
-                    defaultPipeOptions.ResumeWriterThreshold);
-
-                var schedulerPool = new DedicatedThreadPoolPipeScheduler($"RedisClient{ClientId}",
-                    workerCount: 10,
-                    priority: ThreadPriority.AboveNormal);
-
-                var sendPipeOptions = new PipeOptions(
-                    pool: defaultPipeOptions.Pool,
-                    readerScheduler: schedulerPool,
-                    writerScheduler: schedulerPool,
-                    pauseWriterThreshold: sendPauseWriterThreshold,
-                    resumeWriterThreshold: sendResumeWriterThreshold,
-                    minimumSegmentSize: Math.Max(defaultPipeOptions.MinimumSegmentSize, 8192),
-                    useSynchronizationContext: false);
-                var receivePipeOptions = new PipeOptions(
-                    pool: defaultPipeOptions.Pool,
-                    readerScheduler: schedulerPool,
-                    writerScheduler: schedulerPool,
-                    pauseWriterThreshold: Receive_PauseWriterThreshold,
-                    resumeWriterThreshold: Receive_ResumeWriterThreshold,
-                    minimumSegmentSize: Math.Max(defaultPipeOptions.MinimumSegmentSize, 8192),
-                    useSynchronizationContext: false);
-
-                return new Tuple<PipeOptions, PipeOptions>(sendPipeOptions, receivePipeOptions);
-            });
-
             _clusterCommands = new ClusterCommands(this);
             _serverCommands = new ServerCommands(this);
         }
@@ -67,20 +24,15 @@ namespace TomLonghurst.RedisClient.Client
 
         private async ValueTask Authorize(CancellationToken cancellationToken)
         {
-            await RunWithTimeout(async token =>
-            {
-                var command = $"{Commands.Auth} {ClientConfig.Password}";
-                await SendAndReceiveAsync(command, ExpectSuccess, CancellationToken.None, true);
-            }, cancellationToken);
+            var command = $"{Commands.Auth} {ClientConfig.Password}";
+            await SendAndReceiveAsync(command, ExpectSuccess, cancellationToken, true);
         }
-        
+
         private async ValueTask SelectDb(CancellationToken cancellationToken)
         {
-            await RunWithTimeout(async token =>
-            {
-                var command = $"{Commands.Select} {ClientConfig.Db}";
-                await SendAndReceiveAsync(command, ExpectSuccess, CancellationToken.None, true);
-            }, cancellationToken);
+
+            var command = $"{Commands.Select} {ClientConfig.Db}";
+            await SendAndReceiveAsync(command, ExpectSuccess, cancellationToken, true);
         }
 
         public async Task<Pong> Ping()
@@ -90,16 +42,13 @@ namespace TomLonghurst.RedisClient.Client
 
         public async Task<Pong> Ping(CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
-            {
-                var pingCommand = Commands.Ping;
+            var pingCommand = Commands.Ping;
 
-                var sw = Stopwatch.StartNew();
-                var pingResponse = await SendAndReceiveAsync(pingCommand, ExpectWord, CancellationToken.None);
-                sw.Stop();
+            var sw = Stopwatch.StartNew();
+            var pingResponse = await SendAndReceiveAsync(pingCommand, ExpectWord, cancellationToken);
+            sw.Stop();
 
-                return new Pong(sw.Elapsed, pingResponse);
-            }, cancellationToken);
+            return new Pong(sw.Elapsed, pingResponse);
         }
 
         public async Task<bool> KeyExistsAsync(string key)
@@ -110,11 +59,8 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<bool> KeyExistsAsync(string key,
             CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
-            {
-                var command = $"{Commands.Exists} {key}";
-                return await SendAndReceiveAsync(command, ExpectInteger, token);
-            }, cancellationToken).ConfigureAwait(false) == 1;
+            var command = $"{Commands.Exists} {key}";
+            return await SendAndReceiveAsync(command, ExpectInteger, cancellationToken) == 1;
         }
 
         public async Task<StringRedisValue> StringGetAsync(string key)
@@ -125,11 +71,10 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<StringRedisValue> StringGetAsync(string key,
             CancellationToken cancellationToken)
         {
-            return new StringRedisValue(await RunWithTimeout(async token =>
-                {
-                    var command = $"{Commands.Get} {key}";
-                    return await SendAndReceiveAsync(command, ExpectData, token);
-                }, cancellationToken).ConfigureAwait(false));
+            var command = $"{Commands.Get} {key}";
+            return new StringRedisValue(
+                await SendAndReceiveAsync(command, ExpectData, cancellationToken)
+            );
         }
 
         public async Task<IEnumerable<StringRedisValue>> StringGetAsync(IEnumerable<string> keys)
@@ -140,13 +85,10 @@ namespace TomLonghurst.RedisClient.Client
         public async Task<IEnumerable<StringRedisValue>> StringGetAsync(IEnumerable<string> keys,
             CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
-            {
-                var keysAsString = string.Join(" ", keys);
-                var command = $"{Commands.MGet} {keysAsString}";
+            var keysAsString = string.Join(" ", keys);
+            var command = $"{Commands.MGet} {keysAsString}";
 
-                return await SendAndReceiveAsync(command, ExpectArray, token);
-            }, cancellationToken).ConfigureAwait(false);
+            return await SendAndReceiveAsync(command, ExpectArray, cancellationToken);
         }
 
         public async Task StringSetAsync(string key, string value, int timeToLiveInSeconds,
@@ -155,9 +97,11 @@ namespace TomLonghurst.RedisClient.Client
             await StringSetAsync(new RedisKeyValue(key, value), awaitOptions);
         }
 
-        private async Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds, AwaitOptions awaitOptions)
+        private async Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds,
+            AwaitOptions awaitOptions)
         {
-            await StringSetAsync(redisKeyValue, timeToLiveInSeconds, awaitOptions, CancellationToken.None).ConfigureAwait(false);
+            await StringSetAsync(redisKeyValue, timeToLiveInSeconds, awaitOptions, CancellationToken.None)
+                .ConfigureAwait(false);
         }
 
         public async Task StringSetAsync(string key, string value, int timeToLiveInSeconds,
@@ -166,55 +110,47 @@ namespace TomLonghurst.RedisClient.Client
         {
             await StringSetAsync(new RedisKeyValue(key, value), awaitOptions, cancellationToken);
         }
-        
-        private async Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds, AwaitOptions awaitOptions,
+
+        private async Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds,
+            AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-           //CollateMultipleRequestsForPipelining(new Tuple<string, string, int>(key, value, timeToLiveInSeconds), _stringSetWithTtlQueue);
+            var command = $"{Commands.SetEx} {redisKeyValue.Key} {timeToLiveInSeconds} {redisKeyValue.Value}";
 
-            await RunWithTimeout(async token =>
+            var task = SendAndReceiveAsync(command, ExpectSuccess, cancellationToken);
+
+            if (awaitOptions == AwaitOptions.AwaitCompletion)
             {
-                var command = $"{Commands.SetEx} {redisKeyValue.Key} {timeToLiveInSeconds} {redisKeyValue.Value}";
-
-                var task = SendAndReceiveAsync(command, ExpectSuccess, token);
-                
-                if (awaitOptions == AwaitOptions.AwaitCompletion)
-                {
-                    await task;
-                }
-            }, cancellationToken).ConfigureAwait(false);
+                await task;
+            }
         }
 
         public async Task StringSetAsync(string key, string value, AwaitOptions awaitOptions)
         {
             await StringSetAsync(new RedisKeyValue(key, value), awaitOptions);
         }
-        
+
         private async Task StringSetAsync(RedisKeyValue redisKeyValue, AwaitOptions awaitOptions)
         {
             await StringSetAsync(redisKeyValue, awaitOptions, CancellationToken.None).ConfigureAwait(false);
         }
 
-        public async Task StringSetAsync(string key, string value, AwaitOptions awaitOptions, CancellationToken cancellationToken)
+        public async Task StringSetAsync(string key, string value, AwaitOptions awaitOptions,
+            CancellationToken cancellationToken)
         {
             await StringSetAsync(new RedisKeyValue(key, value), awaitOptions, cancellationToken);
         }
-        
+
         private async Task StringSetAsync(RedisKeyValue redisKeyValue, AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-            //CollateMultipleRequestsForPipelining(new Tuple<string, string>(key, value), _stringSetQueue);
+            var command = $"{Commands.Set} {redisKeyValue.Key} {redisKeyValue.Value}";
+            var task = SendAndReceiveAsync(command, ExpectSuccess, cancellationToken);
 
-            await RunWithTimeout(async token =>
+            if (awaitOptions == AwaitOptions.AwaitCompletion)
             {
-                var command = $"{Commands.Set} {redisKeyValue.Key} {redisKeyValue.Value}";
-                var task = SendAndReceiveAsync(command, ExpectSuccess, token);
-                
-                if (awaitOptions == AwaitOptions.AwaitCompletion)
-                {
-                    await task;
-                }
-            }, cancellationToken).ConfigureAwait(false);
+                await task;
+            }
         }
 
         public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
@@ -227,50 +163,47 @@ namespace TomLonghurst.RedisClient.Client
             AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-            await RunWithTimeout(async token =>
+            var keysAndPairs = string.Join(" ", keyValuePairs.Select(pair => $"{pair.Key} {pair.Value}"));
+
+            var command = $"{Commands.MSet} {keysAndPairs}";
+            var task = SendAndReceiveAsync(command, ExpectSuccess, cancellationToken);
+
+            if (awaitOptions == AwaitOptions.AwaitCompletion)
             {
-                var keysAndPairs = string.Join(" ", keyValuePairs.Select(pair => $"{pair.Key} {pair.Value}"));
-                
-                var command = $"{Commands.MSet} {keysAndPairs}";
-                var task = SendAndReceiveAsync(command, ExpectSuccess, token);
-                
-                if (awaitOptions == AwaitOptions.AwaitCompletion)
-                {
-                    await task;
-                }
-            }, cancellationToken).ConfigureAwait(false);
-        }
-        
-        public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs, 
-            int timeToLiveInSeconds, 
-            AwaitOptions awaitOptions)
-        {
-            await StringSetAsync(keyValuePairs, timeToLiveInSeconds, awaitOptions, CancellationToken.None).ConfigureAwait(false);
+                await task;
+            }
         }
 
         public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
-            int timeToLiveInSeconds, 
+            int timeToLiveInSeconds,
+            AwaitOptions awaitOptions)
+        {
+            await StringSetAsync(keyValuePairs, timeToLiveInSeconds, awaitOptions, CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+
+        public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
+            int timeToLiveInSeconds,
             AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-            await RunWithTimeout(async token =>
-            {
-                keyValuePairs = keyValuePairs.ToList();
-                var keys = keyValuePairs.Select(k => k.Key).ToList();
-                
-                var keysAndPairs = string.Join(" ", keyValuePairs.Select(pair => $"{pair.Key} {pair.Value}"));
-                
-                var setCommand = $"{Commands.MSet} {keysAndPairs}";
-                await SendAndReceiveAsync(setCommand, ExpectSuccess, token);
 
-                var expireCommand = keys.Select(key => $"{Commands.Expire} {key} {timeToLiveInSeconds}").ToFireAndForgetCommand();
-                var expireTask = SendAndReceiveAsync(expireCommand, ExpectSuccess, token);
-                
-                if (awaitOptions == AwaitOptions.AwaitCompletion)
-                {
-                    await expireTask;
-                }
-            }, cancellationToken).ConfigureAwait(false);
+            keyValuePairs = keyValuePairs.ToList();
+            var keys = keyValuePairs.Select(k => k.Key).ToList();
+
+            var keysAndPairs = string.Join(" ", keyValuePairs.Select(pair => $"{pair.Key} {pair.Value}"));
+
+            var setCommand = $"{Commands.MSet} {keysAndPairs}";
+            await SendAndReceiveAsync(setCommand, ExpectSuccess, cancellationToken);
+
+            var expireCommand = keys.Select(key => $"{Commands.Expire} {key} {timeToLiveInSeconds}")
+                .ToFireAndForgetCommand();
+            var expireTask = SendAndReceiveAsync(expireCommand, ExpectSuccess, cancellationToken);
+
+            if (awaitOptions == AwaitOptions.AwaitCompletion)
+            {
+                await expireTask;
+            }
         }
 
         public async Task DeleteKeyAsync(string key,
@@ -296,26 +229,21 @@ namespace TomLonghurst.RedisClient.Client
             AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-            await RunWithTimeout(async token => 
-            {
-                var keysAsString = string.Join(" ", keys);
-                var command = $"{Commands.Del} {keysAsString}";
-                var task = SendAndReceiveAsync(command, ExpectInteger, token);
+            var keysAsString = string.Join(" ", keys);
+            var command = $"{Commands.Del} {keysAsString}";
+            var task = SendAndReceiveAsync(command, ExpectInteger, cancellationToken);
 
-                if (awaitOptions == AwaitOptions.AwaitCompletion)
-                {
-                    await task;
-                }
-            }, cancellationToken).ConfigureAwait(false);
+            if (awaitOptions == AwaitOptions.AwaitCompletion)
+            {
+                await task;
+            }
         }
 
         private async ValueTask SetClientNameAsync(CancellationToken cancellationToken)
         {
-            await RunWithTimeout(async token => 
-            {
-                var command = $"{Commands.Client} {Commands.SetName} {ClientConfig.ClientName}";
-                await SendAndReceiveAsync(command, ExpectSuccess, token, true);
-            }, cancellationToken).ConfigureAwait(false);
+            var command = $"{Commands.Client} {Commands.SetName} {ClientConfig.ClientName}";
+            await SendAndReceiveAsync(command, ExpectSuccess, cancellationToken, true);
+
         }
 
         public ValueTask<int> IncrementAsync(string key)
@@ -325,11 +253,8 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask<int> IncrementAsync(string key, CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
-            {
-                var command = $"{Commands.Incr} {key}";
-                return await SendAndReceiveAsync(command, ExpectInteger, token);
-            }, cancellationToken).ConfigureAwait(false);
+            var command = $"{Commands.Incr} {key}";
+            return await SendAndReceiveAsync(command, ExpectInteger, cancellationToken);
         }
 
         public ValueTask<int> IncrementByAsync(string key, int amount)
@@ -339,11 +264,8 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask<int> IncrementByAsync(string key, int amount, CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
-            {
-                var command = $"{Commands.IncrBy} {key} {amount}";
-                return await SendAndReceiveAsync(command, ExpectInteger, token);
-            }, cancellationToken).ConfigureAwait(false);
+            var command = $"{Commands.IncrBy} {key} {amount}";
+            return await SendAndReceiveAsync(command, ExpectInteger, cancellationToken);
         }
 
         public ValueTask<float> IncrementByAsync(string key, float amount)
@@ -353,11 +275,8 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask<float> IncrementByAsync(string key, float amount, CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
-            {
-                var command = $"{Commands.IncrByFloat} {key} {amount}";
-                return await SendAndReceiveAsync(command, ExpectFloat, token);
-            }, cancellationToken).ConfigureAwait(false);
+            var command = $"{Commands.IncrByFloat} {key} {amount}";
+            return await SendAndReceiveAsync(command, ExpectFloat, cancellationToken);
         }
 
         public ValueTask<int> DecrementAsync(string key)
@@ -367,11 +286,8 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask<int> DecrementAsync(string key, CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
-            {
-                var command = $"{Commands.Decr} {key}";
-                return await SendAndReceiveAsync(command, ExpectInteger, token);
-            }, cancellationToken).ConfigureAwait(false);
+            var command = $"{Commands.Decr} {key}";
+            return await SendAndReceiveAsync(command, ExpectInteger, cancellationToken);
         }
 
         public ValueTask<int> DecrementByAsync(string key, int amount)
@@ -381,11 +297,8 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask<int> DecrementByAsync(string key, int amount, CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
-            {
-                var command = $"{Commands.DecrBy} {key} {amount}";
-                return await SendAndReceiveAsync(command, ExpectInteger, token);
-            }, cancellationToken).ConfigureAwait(false);
+            var command = $"{Commands.DecrBy} {key} {amount}";
+            return await SendAndReceiveAsync(command, ExpectInteger, cancellationToken);
         }
 
         public ValueTask ExpireAsync(string key, int seconds)
@@ -395,11 +308,8 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask ExpireAsync(string key, int seconds, CancellationToken cancellationToken)
         {
-            await RunWithTimeout(async token =>
-            {
-                var command = $"{Commands.Expire} {key} {seconds}";
-                return await SendAndReceiveAsync(command, ExpectInteger, token);
-            }, cancellationToken).ConfigureAwait(false);
+            var command = $"{Commands.Expire} {key} {seconds}";
+            await SendAndReceiveAsync(command, ExpectInteger, cancellationToken);
         }
 
         public ValueTask ExpireAtAsync(string key, DateTimeOffset dateTime)
@@ -409,11 +319,8 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask ExpireAtAsync(string key, DateTimeOffset dateTime, CancellationToken cancellationToken)
         {
-            await RunWithTimeout(async token =>
-            {
-                var command = $"{Commands.ExpireAt} {key} {dateTime.ToUnixTimeSeconds()}";
-                return await SendAndReceiveAsync(command, ExpectInteger, token);
-            }, cancellationToken).ConfigureAwait(false);
+            var command = $"{Commands.ExpireAt} {key} {dateTime.ToUnixTimeSeconds()}";
+            await SendAndReceiveAsync(command, ExpectInteger, cancellationToken);
         }
 
         public ValueTask PersistAsync(string key)
@@ -423,11 +330,8 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask PersistAsync(string key, CancellationToken cancellationToken)
         {
-            await RunWithTimeout(async token =>
-            {
-                var command = $"{Commands.Persist} {key}";
-                return await SendAndReceiveAsync(command, ExpectInteger, token);
-            }, cancellationToken).ConfigureAwait(false);
+            var command = $"{Commands.Persist} {key}";
+            await SendAndReceiveAsync(command, ExpectInteger, cancellationToken);
         }
 
         public ValueTask<int> TimeToLiveAsync(string key)
@@ -437,11 +341,8 @@ namespace TomLonghurst.RedisClient.Client
 
         public async ValueTask<int> TimeToLiveAsync(string key, CancellationToken cancellationToken)
         {
-            return await RunWithTimeout(async token =>
-            {
-                var command = $"{Commands.Ttl} {key}";
-                return await SendAndReceiveAsync(command, ExpectInteger, token);
-            }, cancellationToken).ConfigureAwait(false);
+            var command = $"{Commands.Ttl} {key}";
+            return await SendAndReceiveAsync(command, ExpectInteger, cancellationToken);
         }
     }
 }
