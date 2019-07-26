@@ -83,7 +83,7 @@ namespace TomLonghurst.RedisClient.Pipes
             {
                 while (true)
                 {
-                    var memory = writer.GetMemory(512);
+                    var memory = writer.GetMemory(1);
 #if NETCORE
                     var read = await _innerStream.ReadAsync(memory).ConfigureAwait(false);
 #else
