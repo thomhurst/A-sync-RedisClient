@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <LangVersion>latest</LangVersion>
-    <PackageVersion>0.0.76-alpha26</PackageVersion>
+    <PackageVersion>0.0.76-alpha27</PackageVersion>
     <Description>An Asynchronous Redis Client for .NET</Description>
     <Copyright>Tom Longhurst</Copyright>
     <PackageProjectUrl>https://github.com/thomhurst/A-sync-RedisClient</PackageProjectUrl>
@@ -13,6 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Pipelines.Sockets.Unofficial" Version="2.0.22" />
     <PackageReference Include="System.Buffers" Version="4.5.0" />
     <PackageReference Include="System.IO.Pipelines" Version="4.5.3" />
     <PackageReference Include="System.Memory" Version="4.5.3" />

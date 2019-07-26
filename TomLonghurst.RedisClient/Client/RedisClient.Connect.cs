@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using Pipelines.Sockets.Unofficial;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Pipes;
 
@@ -206,7 +207,7 @@ namespace TomLonghurst.RedisClient.Client
                     }
 
                     LastAction = "Creating SSL Stream Pipe";
-                    _pipe = StreamPipe.GetDuplexPipe(_sslStream, sendPipeOptions, receivePipeOptions);
+                    _pipe = StreamConnection.GetDuplex(_sslStream, sendPipeOptions, receivePipeOptions);
                     //_pipe = StreamConnection.GetDuplex(_sslStream, sendPipeOptions, receivePipeOptions);
                 }
                 else
