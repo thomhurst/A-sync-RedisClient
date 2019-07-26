@@ -13,7 +13,6 @@ namespace RedisClientTest
 {
     public class Tests
     {
-        private RedisClientManager _redisManager;
         private RedisClientConfig _config;
         private RedisClient _tomLonghurstRedisClient;
 
@@ -26,13 +25,12 @@ namespace RedisClientTest
             {
                 Ssl = true
             };
-            _redisManager = new RedisClientManager(_config, 1);
         }
 
         [SetUp]
         public async Task Setup()
         {
-            _tomLonghurstRedisClient = await _redisManager.GetRedisClientAsync();
+            _tomLonghurstRedisClient = await RedisClient.ConnectAsync(_config);
         }
         
         [TestCase("value with a space")]
@@ -294,14 +292,13 @@ namespace RedisClientTest
         [Repeat(2)]
         public async Task Disconnected()
         {
-            var client = await _redisManager.GetRedisClientAsync();
-            await client.StringSetAsync("DisconnectTest", "123", 120, AwaitOptions.AwaitCompletion);
-            var redisValue = await client.StringGetAsync("DisconnectTest");
+            await _tomLonghurstRedisClient.StringSetAsync("DisconnectTest", "123", 120, AwaitOptions.AwaitCompletion);
+            var redisValue = await _tomLonghurstRedisClient.StringGetAsync("DisconnectTest");
             Assert.AreEqual("123", redisValue.Value);
             
-            client.Socket.Close();
+            _tomLonghurstRedisClient.Socket.Close();
             
-            var result = await client.StringGetAsync("DisconnectTest");
+            var result = await _tomLonghurstRedisClient.StringGetAsync("DisconnectTest");
             
             Assert.AreEqual("123", result.Value);
         }
@@ -321,18 +318,14 @@ namespace RedisClientTest
         {
             var keys = GenerateMassKeys();
 
-            var client1 = await _redisManager.GetRedisClientAsync();
-            var client2 = await _redisManager.GetRedisClientAsync();
-            var client3 = await _redisManager.GetRedisClientAsync();
-            
             var resultTask =
-                client1.StringGetAsync(keys);
+                _tomLonghurstRedisClient.StringGetAsync(keys);
             
             var result2Task =
-                client2.StringGetAsync(keys);
+                _tomLonghurstRedisClient.StringGetAsync(keys);
             
             var result3Task =
-                client3.StringGetAsync(keys);
+                _tomLonghurstRedisClient.StringGetAsync(keys);
 
             var result = await Task.WhenAll(resultTask, result2Task, result3Task);
 
