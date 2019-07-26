@@ -123,7 +123,7 @@ namespace TomLonghurst.RedisClient.Client
                 throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
             }
 
-            var line = await GetLine();
+            var line = await ReadLine();
             
             var firstChar = line.First();
 
@@ -208,7 +208,7 @@ namespace TomLonghurst.RedisClient.Client
             throw new UnexpectedRedisResponseException($"Unexpected reply: {line}");
         }
 
-        private async ValueTask<string> GetLine()
+        private async ValueTask<string> ReadLine()
         {
             LastAction = "Reading until End of Line found";
             _readResult = await _pipe.Input.ReadUntilEndOfLineFound(_readResult);
@@ -224,19 +224,14 @@ namespace TomLonghurst.RedisClient.Client
             var buffer = _readResult.Buffer;
             
             buffer = buffer.Slice(0, endOfLineAfterByteCount.Value);
-
+            
+            // Reslice but removing the line terminators
             var line = buffer.Slice(0, buffer.Length - 2).AsString();
 
             LastAction = "Advancing Buffer to End of Line";
             _pipe.Input.AdvanceTo(endOfLineAfterByteCount.Value);
             
             return line;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask<string> ReadLine()
-        {
-            return await GetLine();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
