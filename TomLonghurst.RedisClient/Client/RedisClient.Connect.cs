@@ -255,6 +255,7 @@ namespace TomLonghurst.RedisClient.Client
         {
             DisposeNetwork();
             LastAction = "Disposing Client";
+            _receivePool.Dispose();
             _connectionChecker?.Dispose();
             _sendSemaphoreSlim?.Dispose();
             _connectSemaphoreSlim?.Dispose();

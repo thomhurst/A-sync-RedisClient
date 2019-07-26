@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace TomLonghurst.RedisClient.Pipes
 {
@@ -48,15 +50,14 @@ namespace TomLonghurst.RedisClient.Pipes
 
         //private int UseThreadPoolQueueLength { get; }
 
-        private ThreadPriority Priority { get; }
-
         private string Name { get; }
 
+        private List<Thread> _threads = new List<Thread>(); 
+        
         /// <summary>
         /// Create a new dedicated thread-pool
         /// </summary>
-        public PipeThreadPoolScheduler(string name = null, int workerCount = 5,
-            ThreadPriority priority = ThreadPriority.Normal)
+        public PipeThreadPoolScheduler(string name = null, int workerCount = 5)
         {
             if (workerCount <= 0)
             {
@@ -74,9 +75,7 @@ namespace TomLonghurst.RedisClient.Pipes
             }
             
             Name = name.Trim();
-            
-            Priority = priority;
-            
+
             for (var i = 0; i < workerCount; i++)
             {
                 StartWorker(i);
@@ -114,9 +113,11 @@ namespace TomLonghurst.RedisClient.Pipes
             var thread = new Thread(ThreadRunWorkLoop)
             {
                 Name = $"{nameof(PipeThreadPoolScheduler)}:{id}",
-                Priority = Priority,
+                Priority = ThreadPriority.Normal,
                 IsBackground = true
             };
+            
+            _threads.Add(thread);
             
             thread.Start(this);
         }
@@ -131,13 +132,13 @@ namespace TomLonghurst.RedisClient.Pipes
                 return; // nothing to do
             }
 
-            if (_disposed || _queue.Count > WorkerCount)
+            if (!_disposed && _queue.Count <= WorkerCount)
             {
-                ThreadPool.Schedule(action, state);
+                _queue.Enqueue(new WorkItem(action, state));
             }
             else
             {
-                _queue.Enqueue(new WorkItem(action, state));
+                ThreadPool.Schedule(action, state);
             }
         }
 
@@ -165,25 +166,26 @@ namespace TomLonghurst.RedisClient.Pipes
         private void RunWorkLoop()
         {
             s_threadWorkerPoolId = Id;
-            try
+            while (true)
             {
-                while (true)
+                if (_queue.TryDequeue(out var next))
                 {
-                    if (_queue.TryDequeue(out var next))
-                    {
-                        Execute(next.Action, next.State);
-                    }
+                    Execute(next.Action, next.State);
+                }
+
+                // Finish Queue Before we kill the thread
+                if (_queue.Count == 0 && _disposed)
+                {
+                    return;
                 }
             }
-            catch (Exception ex)
-            {
-                Debug.Write(ex.Message);
-            }
-            finally
-            {
-                s_threadWorkerPoolId = 0;
-            }
         }
+
+        ~PipeThreadPoolScheduler()
+        {
+            Dispose();
+        }
+        
         /// <summary>
         /// Release the threads associated with this pool; if additional work is requested, it will
         /// be sent to the main thread-pool

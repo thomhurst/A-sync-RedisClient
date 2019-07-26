@@ -8,7 +8,7 @@ namespace TomLonghurst.RedisClient.Client
     public class RedisClientManager
     {
         public RedisClientConfig ClientConfig { get; }
-        private readonly List<Lazy<Task<RedisClient>>> _lazyRedisClients = new List<Lazy<Task<RedisClient>>>();
+        private readonly List<Task<RedisClient>> _redisClients = new List<Task<RedisClient>>();
 
         public RedisClientManager(RedisClientConfig clientConfig, int redisClientPoolSize)
         {
@@ -21,15 +21,15 @@ namespace TomLonghurst.RedisClient.Client
 
             for (var i = 0; i < redisClientPoolSize; i++)
             {
-                _lazyRedisClients.Add(new Lazy<Task<RedisClient>>(() => RedisClient.ConnectAsync(clientConfig)));
+                _redisClients.Add(RedisClient.ConnectAsync(clientConfig));
             }
         }
 
         public async Task<RedisClient> GetRedisClientAsync()
         {
-            if (_lazyRedisClients.Count == 1)
+            if (_redisClients.Count == 1)
             {
-                var client = await _lazyRedisClients.First().Value;
+                var client = await _redisClients.First();
 
                 if (client.OnConnectionFailed == null)
                 {
@@ -43,27 +43,13 @@ namespace TomLonghurst.RedisClient.Client
 
                 return client;
             }
-            
-            var lazyClientNotYetLoaded = _lazyRedisClients.FirstOrDefault(lazy => !lazy.IsValueCreated);
 
-            if(lazyClientNotYetLoaded != null)
+            if (_redisClients.Any(task => !task.IsCompleted))
             {
-                var redisClient = await lazyClientNotYetLoaded.Value;
-                
-                redisClient.OnConnectionFailed = OnConnectionFailed;
-                redisClient.OnConnectionEstablished = OnConnectionEstablished;
-                
-                return redisClient;
+                return await await Task.WhenAny(_redisClients);
             }
 
-            var clientTasks = _lazyRedisClients.Select(lazyClient => lazyClient.Value).ToList();
-
-            if (clientTasks.Any(task => !task.IsCompleted))
-            {
-                return await await Task.WhenAny(clientTasks);
-            }
-
-            var clients = await Task.WhenAll(clientTasks);
+            var clients = await Task.WhenAll(_redisClients);
 
             var connectedClientWithLeastOutstandingOperations = clients.OrderBy(client => client.OutstandingOperations).FirstOrDefault(client => client.IsConnected);
 
@@ -77,7 +63,7 @@ namespace TomLonghurst.RedisClient.Client
 
         public async Task<IEnumerable<RedisClient>> GetAllRedisClientsAsync()
         {
-            return await Task.WhenAll(_lazyRedisClients.Select(lazyRedisClient => lazyRedisClient.Value));
+            return await Task.WhenAll(_redisClients);
         }
 
         public Action<RedisClient> OnConnectionEstablished { get; set; }

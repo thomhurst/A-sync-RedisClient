@@ -17,13 +17,11 @@ namespace TomLonghurst.RedisClient.Client
     public partial class RedisClient : IDisposable
     {
         private PipeThreadPoolScheduler _receivePool;
-        private PipeThreadPoolScheduler _sendPool;
 
         private RedisClient()
         {
-            _receivePool = new PipeThreadPoolScheduler("RedisReceivePipePool", 10);
-            _sendPool = new PipeThreadPoolScheduler("RedisSendPipePool", 10);
-            
+            _receivePool = new PipeThreadPoolScheduler("RedisPipePool");
+
             Options = new Lazy<Tuple<PipeOptions, PipeOptions>>(() =>
             {
                 const long Receive_PauseWriterThreshold = 4L * 1024 * 1024 * 1024;
@@ -37,8 +35,8 @@ namespace TomLonghurst.RedisClient.Client
 
                 var sendPipeOptions = new PipeOptions(
                     defaultPipeOptions.Pool,
-                    _sendPool,
-                    _sendPool,
+                    _receivePool,
+                    _receivePool,
                     sendPauseWriterThreshold,
                     sendResumeWriterThreshold,
                     Math.Max(defaultPipeOptions.MinimumSegmentSize, 8192),
