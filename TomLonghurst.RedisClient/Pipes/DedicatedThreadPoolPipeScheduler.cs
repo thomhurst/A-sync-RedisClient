@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
@@ -109,7 +108,7 @@ namespace TomLonghurst.RedisClient.Pipes
 
         private volatile bool _disposed;
 
-        private readonly Queue<WorkItem> _queue = new Queue<WorkItem>();
+        private readonly ConcurrentQueue<WorkItem> _queue = new ConcurrentQueue<WorkItem>();
         private void StartWorker(int id)
         {
             var thread = new Thread(ThreadRunWorkLoop)
@@ -132,16 +131,14 @@ namespace TomLonghurst.RedisClient.Pipes
                 return; // nothing to do
             }
 
-            lock (_queue)
+            if (!(_disposed || _queue.Count >= WorkerCount))
             {
-                if (!(_disposed || _queue.Count >= WorkerCount))
-                {
-                    _queue.Enqueue(new WorkItem(action, state));
-                    return;
-                }
+                _queue.Enqueue(new WorkItem(action, state));
             }
-
-            ThreadPool.Schedule(action, state);
+            else
+            {
+                ThreadPool.Schedule(action, state);
+            }
         }
 
         private static readonly ParameterizedThreadStart ThreadRunWorkLoop = state => ((DedicatedThreadPoolPipeScheduler)state).RunWorkLoop();
@@ -172,14 +169,7 @@ namespace TomLonghurst.RedisClient.Pipes
             {
                 while (true)
                 {
-                    WorkItem next;
-                    bool successfullyDequeued;
-                    lock (_queue)
-                    {
-                        successfullyDequeued = _queue.TryDequeue(out next);
-                    }
-
-                    if (successfullyDequeued)
+                    if (_queue.TryDequeue(out var next))
                     {
                         Execute(next.Action, next.State);
                     }

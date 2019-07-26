@@ -83,7 +83,7 @@ namespace TomLonghurst.RedisClient.Pipes
             {
                 while (true)
                 {
-                    var memory = writer.GetMemory(512);
+                    var memory = writer.GetMemory(1);
 #if NETCORE
                     var read = await _innerStream.ReadAsync(memory).ConfigureAwait(false);
 #else
@@ -136,7 +136,6 @@ namespace TomLonghurst.RedisClient.Pipes
                     }
 
                     var result = await pending;
-                    
                     ReadOnlySequence<byte> buffer;
                     do
                     {
@@ -194,19 +193,21 @@ namespace TomLonghurst.RedisClient.Pipes
                 return target.WriteAsync(arr.Array, arr.Offset, arr.Count);
 #endif
             }
-
-            return WriteBufferAwaited(target, data);
+            else
+            {
+                return WriteBufferAwaited(target, data);
+            }
         }
         
-        private static async Task WriteBufferAwaited(Stream target, ReadOnlySequence<byte> data)
+        private static async Task WriteBufferAwaited(Stream ttarget, ReadOnlySequence<byte> ddata)
         {
-            foreach (var segment in data)
+            foreach (var segment in ddata)
             {
 #if NETCORE
-                await target.WriteAsync(segment);
+                await ttarget.WriteAsync(segment);
 #else
                     var arr = segment.GetArraySegment();
-                    await target.WriteAsync(arr.Array, arr.Offset, arr.Count).ConfigureAwait(false);
+                    await ttarget.WriteAsync(arr.Array, arr.Offset, arr.Count).ConfigureAwait(false);
 #endif
             }
         }
