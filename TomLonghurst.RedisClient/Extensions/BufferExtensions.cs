@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.IO.Pipelines;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -80,7 +81,15 @@ namespace TomLonghurst.RedisClient.Extensions
 
                 if (!pipeReader.TryRead(out readResult))
                 {
-                    readResult = await pipeReader.ReadAsync().ConfigureAwait(false);
+                    var readPipeTask = pipeReader.ReadAsync();
+                    if (readPipeTask.IsCompleted)
+                    {
+                        readResult = readPipeTask.Result;
+                    }
+                    else
+                    {
+                        readResult = await readPipeTask.ConfigureAwait(false);
+                    }
                 }
 
                 buffer = readResult.Buffer;
@@ -99,6 +108,18 @@ namespace TomLonghurst.RedisClient.Extensions
             }
             
             return buffer.GetPosition(1, endOfLine.Value);
+        }
+        
+        internal static ArraySegment<byte> GetArraySegment(this Memory<byte> buffer) => GetArraySegment((ReadOnlyMemory<byte>)buffer);
+
+        internal static ArraySegment<byte> GetArraySegment(this ReadOnlyMemory<byte> buffer)
+        {
+            if (!MemoryMarshal.TryGetArray<byte>(buffer, out var segment))
+            {
+                throw new InvalidOperationException("MemoryMarshal.TryGetArray<byte> could not provide an array");
+            }
+            
+            return segment;
         }
     }
 }

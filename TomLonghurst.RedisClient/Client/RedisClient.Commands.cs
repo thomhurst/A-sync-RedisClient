@@ -5,56 +5,53 @@ using System.IO.Pipelines;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Pipelines.Sockets.Unofficial;
 using TomLonghurst.RedisClient.Constants;
 using TomLonghurst.RedisClient.Enums;
 using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Models;
 using TomLonghurst.RedisClient.Models.RequestModels;
+using TomLonghurst.RedisClient.Pipes;
 
 namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient : IDisposable
     {
+        private DedicatedThreadPoolPipeScheduler _receivePipePool;
+        private DedicatedThreadPoolPipeScheduler _sendPipePool;
+        
         private RedisClient()
         {
+            _receivePipePool = new DedicatedThreadPoolPipeScheduler("ReceivePipePool", 10);
+            _sendPipePool = new DedicatedThreadPoolPipeScheduler("SendPipePool", 10);
+            
             Options = new Lazy<Tuple<PipeOptions, PipeOptions>>(() =>
             {
-                const long
-                    Receive_PauseWriterThreshold =
-                        4L * 1024 * 1024 * 1024; // receive: let's give it up to 4GiB of buffer for now
-                const long Receive_ResumeWriterThreshold = 3L * 1024 * 1024 * 1024; // (large replies get crazy big)
+                const long Receive_PauseWriterThreshold = 4L * 1024 * 1024;
+                const long Receive_ResumeWriterThreshold = Receive_PauseWriterThreshold / 2;
 
                 var defaultPipeOptions = PipeOptions.Default;
 
-                var sendPauseWriterThreshold = Math.Max(
-                    512 * 1024, // send: let's give it up to 0.5MiB
-                    defaultPipeOptions.PauseWriterThreshold); // or the default, whichever is bigger
+                var sendPauseWriterThreshold = Math.Max(512 * 1024, defaultPipeOptions.PauseWriterThreshold);
 
-                var sendResumeWriterThreshold = Math.Max(
-                    sendPauseWriterThreshold / 2,
-                    defaultPipeOptions.ResumeWriterThreshold);
-
-                var schedulerPool = new DedicatedThreadPoolPipeScheduler($"RedisClient{ClientId}",
-                    workerCount: 10,
-                    priority: ThreadPriority.AboveNormal);
+                var sendResumeWriterThreshold = Math.Max(sendPauseWriterThreshold / 2, defaultPipeOptions.ResumeWriterThreshold);
 
                 var sendPipeOptions = new PipeOptions(
-                    pool: defaultPipeOptions.Pool,
-                    readerScheduler: schedulerPool,
-                    writerScheduler: schedulerPool,
-                    pauseWriterThreshold: sendPauseWriterThreshold,
-                    resumeWriterThreshold: sendResumeWriterThreshold,
-                    minimumSegmentSize: Math.Max(defaultPipeOptions.MinimumSegmentSize, 8192),
-                    useSynchronizationContext: false);
+                    defaultPipeOptions.Pool,
+                    _sendPipePool,
+                    _sendPipePool,
+                    sendPauseWriterThreshold,
+                    sendResumeWriterThreshold,
+                    Math.Max(defaultPipeOptions.MinimumSegmentSize, 8192),
+                    false);
+                
                 var receivePipeOptions = new PipeOptions(
-                    pool: defaultPipeOptions.Pool,
-                    readerScheduler: schedulerPool,
-                    writerScheduler: schedulerPool,
-                    pauseWriterThreshold: Receive_PauseWriterThreshold,
-                    resumeWriterThreshold: Receive_ResumeWriterThreshold,
-                    minimumSegmentSize: Math.Max(defaultPipeOptions.MinimumSegmentSize, 8192),
-                    useSynchronizationContext: false);
+                    defaultPipeOptions.Pool,
+                    _receivePipePool,
+                    _receivePipePool,
+                    Receive_PauseWriterThreshold,
+                    Receive_ResumeWriterThreshold,
+                    Math.Max(defaultPipeOptions.MinimumSegmentSize, 8192),
+                    false);
 
                 return new Tuple<PipeOptions, PipeOptions>(sendPipeOptions, receivePipeOptions);
             });

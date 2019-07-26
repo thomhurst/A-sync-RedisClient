@@ -4,7 +4,6 @@ using System.IO.Pipelines;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.RedisClient.Exceptions;
@@ -33,7 +32,7 @@ namespace TomLonghurst.RedisClient.Client
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<T> SendAndReceiveAsync<T>(string command,
+        private async ValueTask<T> SendAndReceiveAsync<T>(string command,
             Func<ValueTask<T>> responseReader,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
@@ -65,9 +64,17 @@ namespace TomLonghurst.RedisClient.Client
                 await Write(command);
 
                 LastAction = "Reading Bytes Async";
-                _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
+                var readPipeTask = _pipe.Input.ReadAsync();
+                if (readPipeTask.IsCompleted)
+                {
+                    _readResult = readPipeTask.Result;
+                }
+                else
+                {
+                    _readResult = await readPipeTask.ConfigureAwait(false);
+                }
 
-                return await responseReader.Invoke().AsTask();
+                return await responseReader.Invoke();
             }
             catch (Exception innerException)
             {
@@ -148,7 +155,15 @@ namespace TomLonghurst.RedisClient.Client
                 if (!_pipe.Input.TryRead(out _readResult))
                 {
                     LastAction = "Reading Data Asynchronously in ReadData";
-                    _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
+                    var readPipeTask = _pipe.Input.ReadAsync();
+                    if (readPipeTask.IsCompleted)
+                    {
+                        _readResult = readPipeTask.Result;
+                    }
+                    else
+                    {
+                        _readResult = await readPipeTask.ConfigureAwait(false);
+                    }
                 }
                 
                 buffer = _readResult.Buffer;
@@ -172,7 +187,15 @@ namespace TomLonghurst.RedisClient.Client
                         if (!_pipe.Input.TryRead(out _readResult))
                         {
                             LastAction = "Reading Data Asynchronously in ReadData Loop";
-                            _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
+                            var readPipeTask = _pipe.Input.ReadAsync();
+                            if (readPipeTask.IsCompleted)
+                            {
+                                _readResult = readPipeTask.Result;
+                            }
+                            else
+                            {
+                                _readResult = await readPipeTask.ConfigureAwait(false);
+                            }
                         }
                         
                         buffer = _readResult.Buffer;
