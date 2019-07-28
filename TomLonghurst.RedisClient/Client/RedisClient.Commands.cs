@@ -25,27 +25,20 @@ namespace TomLonghurst.RedisClient.Client
                 const long ResumeWriterThreshold = DefaultMinimumSegmentSize * 16 / 4 * 3;
                 const long PauseWriterThreshold = DefaultMinimumSegmentSize * 16;
 
+                // 2 for the Input Reader/Writer and 2 for the Output Reader/Writer
+                var pipeScheduler = new PipeThreadPoolScheduler(workerCount: 4);
                 var defaultPipeOptions = PipeOptions.Default;
 
-                var sendPipeOptions = new PipeOptions(
+                var pipeOptions = new PipeOptions(
                     defaultPipeOptions.Pool,
-                    PipeScheduler.ThreadPool,
-                    PipeScheduler.ThreadPool,
-                    PauseWriterThreshold,
-                    ResumeWriterThreshold,
-                    DefaultMinimumSegmentSize,
-                    false);
-                
-                var receivePipeOptions = new PipeOptions(
-                    defaultPipeOptions.Pool,
-                    PipeScheduler.ThreadPool,
-                    PipeScheduler.ThreadPool,
+                    pipeScheduler,
+                    pipeScheduler,
                     PauseWriterThreshold,
                     ResumeWriterThreshold,
                     DefaultMinimumSegmentSize,
                     false);
 
-                return new Tuple<PipeOptions, PipeOptions>(sendPipeOptions, receivePipeOptions);
+                return new Tuple<PipeOptions, PipeOptions>(pipeOptions, pipeOptions);
             });
 
             _clusterCommands = new ClusterCommands(this);
