@@ -10,12 +10,13 @@ namespace TomLonghurst.RedisClient.Pipes
 {
     public class StreamPipe : IDuplexPipe
     {
-        
-        public static IDuplexPipe GetDuplexPipe(Stream stream, PipeOptions sendPipeOptions, PipeOptions receivePipeOptions)
-            =>  new StreamPipe(stream, sendPipeOptions, receivePipeOptions, true, true);
-        
+
+        public static IDuplexPipe GetDuplexPipe(Stream stream, PipeOptions sendPipeOptions,
+            PipeOptions receivePipeOptions)
+            => new StreamPipe(stream, sendPipeOptions, receivePipeOptions, true, true);
+
         private readonly Stream _innerStream;
-        
+
         private readonly Pipe _readPipe;
         private readonly Pipe _writePipe;
 
@@ -38,21 +39,21 @@ namespace TomLonghurst.RedisClient.Pipes
             }
 
             _innerStream = stream;
-            
+
             if (!(read || write))
             {
                 throw new ArgumentException("At least one of read/write must be set");
             }
-            
+
             if (read)
             {
                 if (!stream.CanRead)
                 {
                     throw new InvalidOperationException("Cannot create a read pipe over a non-readable stream");
                 }
-                
+
                 _readPipe = new Pipe(receivePipeOptions);
-                
+
                 receivePipeOptions.ReaderScheduler.Schedule(
                     obj => ((StreamPipe) obj).CopyFromStreamToReadPipe(), this);
             }
@@ -63,56 +64,62 @@ namespace TomLonghurst.RedisClient.Pipes
                 {
                     throw new InvalidOperationException("Cannot create a write pipe over a non-writable stream");
                 }
-                
+
                 _writePipe = new Pipe(sendPipeOptions);
-                
+
                 sendPipeOptions.WriterScheduler.Schedule(
                     obj => ((StreamPipe) obj).CopyFromWritePipeToStream(), this);
             }
         }
 
-        public PipeWriter Output => _readPipe?.Writer ?? throw new InvalidOperationException("Cannot write to this pipe");
+        public PipeWriter Output =>
+            _writePipe?.Writer ?? throw new InvalidOperationException("Cannot write to this pipe");
 
-        public PipeReader Input => _readPipe?.Reader ?? throw new InvalidOperationException("Cannot read from this pipe");
+        public PipeReader Input =>
+            _readPipe?.Reader ?? throw new InvalidOperationException("Cannot read from this pipe");
 
-        private async Task CopyFromStreamToReadPipe()
+        private void CopyFromStreamToReadPipe()
         {
             Exception exception = null;
             var writer = _readPipe.Writer;
-            try
-            {
-                while (true)
-                {
-                    var memory = writer.GetMemory();
-#if NETCORE
-                    var read = await _innerStream.ReadAsync(memory).ConfigureAwait(false);
-#else
-                    var arr = memory.GetArraySegment();
 
-                    var read = await _innerStream.ReadAsync(arr.Array, arr.Offset, arr.Count).ConfigureAwait(false);
+            Task.Run(new Action(async delegate
+            {
+                try
+                {
+                    while (true)
+                    {
+                        var memory = writer.GetMemory();
+#if NETCORE
+                        var bytesRead = await _innerStream.ReadAsync(memory).ConfigureAwait(false);
+#else
+                        var arr = memory.GetArraySegment();
+
+                        var bytesRead = await _innerStream.ReadAsync(arr.Array, arr.Offset, arr.Count)
+                            .ConfigureAwait(false);
 #endif
-                    if (read <= 0)
-                    {
-                        break;
-                    }
-                    
-                    writer.Advance(read);
-                    Interlocked.Add(ref _totalBytesSent, read);
-                    
-                    var flush = await writer.FlushAsync().ConfigureAwait(false);
-                    
-                    if (flush.IsCompleted || flush.IsCanceled)
-                    {
-                        break;
+
+                        if (bytesRead == 0)
+                        {
+                            break;
+                        }
+
+                        writer.Advance(bytesRead);
+
+                        var result = await writer.FlushAsync().ConfigureAwait(false);
+                        if (result.IsCompleted)
+                        {
+                            break;
+                        }
                     }
                 }
-            }
-            catch (Exception e)
-            {
-                exception = e;
-            }
+                catch (Exception e)
+                {
+                    exception = e;
+                }
 
-            writer.Complete(exception);
+                writer.Complete(exception);
+            }));
         }
 
         private long _totalBytesSent, _totalBytesReceived;
@@ -120,96 +127,58 @@ namespace TomLonghurst.RedisClient.Pipes
         //long IMeasuredDuplexPipe.TotalBytesSent => Interlocked.Read(ref _totalBytesSent);
         //long IMeasuredDuplexPipe.TotalBytesReceived => Interlocked.Read(ref _totalBytesReceived);
 
-        private async Task CopyFromWritePipeToStream()
+        private void CopyFromWritePipeToStream()
         {
+            Exception exception = null;
             var reader = _writePipe.Reader;
-            try
+            
+            Task.Run(new Action(async delegate
             {
-                while (true)
+                try
                 {
-                    // ask to be awakened by work
-                    var pending = reader.ReadAsync();
-
-                    if (!pending.IsCompleted)
+                    while (true)
                     {
-                        await _innerStream.FlushAsync().ConfigureAwait(false);
-                    }
-
-                    var result = await pending;
-                    ReadOnlySequence<byte> buffer;
-                    do
-                    {
-                        buffer = result.Buffer;
-
-                        if (!buffer.IsEmpty)
+                        var pendingReadResult = reader.ReadAsync();
+                        
+                        if (!pendingReadResult.IsCompleted)
                         {
-                            await WriteBuffer(_innerStream, buffer).ConfigureAwait(false);
-                            Interlocked.Add(ref _totalBytesReceived, buffer.Length);
+                            await _innerStream.FlushAsync().ConfigureAwait(false);
                         }
 
-                        reader.AdvanceTo(buffer.End);
-                    } while (!(buffer.IsEmpty && result.IsCompleted) && reader.TryRead(out result));
-
-                    if (result.IsCanceled)
-                    {
-                        break;
-                    }
-
-                    if (buffer.IsEmpty && result.IsCompleted)
-                    {
-                        break;
-                    }
-                }
-
-                try
-                {
-                    reader.Complete(null);
-                }
-                catch
-                {
-                }
-            }
-            catch (Exception ex)
-            {
-                try
-                {
-                    reader.Complete(ex);
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        private static Task WriteBuffer(Stream target, in ReadOnlySequence<byte> data)
-        {
-            if (data.IsSingleSegment)
-            {
+                        var readResult = await pendingReadResult.ConfigureAwait(false);
+                        
+                        if (!readResult.Buffer.IsEmpty)
+                        {
+                            foreach (var segment in readResult.Buffer)
+                            {
 #if NETCORE
-                    var valueTask = target.WriteAsync(data.First);
-                    return valueTask.IsCompletedSuccessfully ? Task.CompletedTask : valueTask.AsTask();
+                            await _innerStream.WriteAsync(segment);
 #else
-                var arr = data.First.GetArraySegment();
-                return target.WriteAsync(arr.Array, arr.Offset, arr.Count);
+                                var arraySegment = segment.GetArraySegment();
+                                await _innerStream
+                                    .WriteAsync(arraySegment.Array, arraySegment.Offset, arraySegment.Count)
+                                    .ConfigureAwait(false);
 #endif
-            }
-            else
-            {
-                return WriteBufferAwaited(target, data);
-            }
-        }
-        
-        private static async Task WriteBufferAwaited(Stream target, ReadOnlySequence<byte> data)
-        {
-            foreach (var segment in data)
-            {
-#if NETCORE
-                await target.WriteAsync(segment);
-#else
-                    var arr = segment.GetArraySegment();
-                    await target.WriteAsync(arr.Array, arr.Offset, arr.Count).ConfigureAwait(false);
-#endif
-            }
+                            }
+
+                            await _innerStream.FlushAsync().ConfigureAwait(false);
+                        }
+
+                        reader.AdvanceTo(readResult.Buffer.End);
+
+                        if (readResult.IsCompleted && readResult.Buffer.IsEmpty)
+                        {
+                            break;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    exception = e;
+                }
+
+                reader.Complete(exception);
+            }));
         }
     }
 }

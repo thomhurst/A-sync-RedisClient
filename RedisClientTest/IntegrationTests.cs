@@ -153,9 +153,12 @@ namespace RedisClientTest
         [Repeat(2)]
         public async Task Ping()
         {
-            var pong = await _tomLonghurstRedisClient.Ping();
+            var pong = await _tomLonghurstRedisClient.Ping(); 
+            
             Assert.AreEqual(true, pong.IsSuccessful);
             Assert.AreEqual("PONG", pong.Message);
+            
+            Console.WriteLine($"Time Taken: {pong.TimeTaken.TotalMilliseconds} ms");
         }
         
         [Test]

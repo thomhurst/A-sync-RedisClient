@@ -207,7 +207,7 @@ namespace TomLonghurst.RedisClient.Client
                     }
 
                     LastAction = "Creating SSL Stream Pipe";
-                    _pipe = StreamConnection.GetDuplex(_sslStream, sendPipeOptions, receivePipeOptions);
+                    _pipe = StreamPipe.GetDuplexPipe(_sslStream, PipeOptions.Default, PipeOptions.Default);
                     //_pipe = StreamConnection.GetDuplex(_sslStream, sendPipeOptions, receivePipeOptions);
                 }
                 else
