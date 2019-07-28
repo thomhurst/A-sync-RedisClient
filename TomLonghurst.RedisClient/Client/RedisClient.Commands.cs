@@ -29,8 +29,8 @@ namespace TomLonghurst.RedisClient.Client
 
                 var sendPipeOptions = new PipeOptions(
                     defaultPipeOptions.Pool,
-                    PipeScheduler.Inline,
-                    PipeScheduler.Inline,
+                    PipeScheduler.ThreadPool,
+                    PipeScheduler.ThreadPool,
                     PauseWriterThreshold,
                     ResumeWriterThreshold,
                     DefaultMinimumSegmentSize,
@@ -38,8 +38,8 @@ namespace TomLonghurst.RedisClient.Client
                 
                 var receivePipeOptions = new PipeOptions(
                     defaultPipeOptions.Pool,
-                    PipeScheduler.Inline,
-                    PipeScheduler.Inline,
+                    PipeScheduler.ThreadPool,
+                    PipeScheduler.ThreadPool,
                     PauseWriterThreshold,
                     ResumeWriterThreshold,
                     DefaultMinimumSegmentSize,
