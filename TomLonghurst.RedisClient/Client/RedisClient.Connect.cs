@@ -207,14 +207,11 @@ namespace TomLonghurst.RedisClient.Client
                     }
 
                     LastAction = "Creating SSL Stream Pipe";
-                    _pipe = StreamPipe.GetDuplexPipe(_sslStream, PipeOptions.Default, PipeOptions.Default);
-                    //_pipe = StreamConnection.GetDuplex(_sslStream, sendPipeOptions, receivePipeOptions);
+                    _pipe = StreamPipe.GetDuplexPipe(_sslStream, sendPipeOptions, receivePipeOptions);
                 }
                 else
                 {
                     LastAction = "Creating Socket Pipe";
-                    // TODO
-                    //_pipe = SocketConnection.Create(_socket);
                     //_pipe = SocketConnection.Create(_socket, sendPipeOptions, receivePipeOptions);
                 }
 
@@ -255,7 +252,6 @@ namespace TomLonghurst.RedisClient.Client
         {
             DisposeNetwork();
             LastAction = "Disposing Client";
-            _receivePool.Dispose();
             _connectionChecker?.Dispose();
             _sendSemaphoreSlim?.Dispose();
             _connectSemaphoreSlim?.Dispose();

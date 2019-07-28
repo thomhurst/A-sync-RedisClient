@@ -29,13 +29,6 @@ namespace TomLonghurst.RedisClient.Pipes
         private static int s_threadWorkerPoolId;
         private static int s_nextWorkerPoolId;
 
-        /// <summary>
-        /// Indicates whether the current thread is a worker, optionally for the specific pool
-        /// (otherwise for any pool)
-        /// </summary>
-        public static bool IsWorker(PipeThreadPoolScheduler pool = null)
-            => pool == null ? s_threadWorkerPoolId != 0 : s_threadWorkerPoolId == pool.Id;
-
         private int Id { get; }
 
         /// <summary>
@@ -52,8 +45,6 @@ namespace TomLonghurst.RedisClient.Pipes
 
         private string Name { get; }
 
-        private List<Thread> _threads = new List<Thread>(); 
-        
         /// <summary>
         /// Create a new dedicated thread-pool
         /// </summary>
@@ -75,52 +66,11 @@ namespace TomLonghurst.RedisClient.Pipes
             }
             
             Name = name.Trim();
-
-            for (var i = 0; i < workerCount; i++)
-            {
-                StartWorker(i);
-            }
         }
 
         private long _totalServicedByQueue, _totalServicedByPool;
 
-        /// <summary>
-        /// The total number of operations serviced by the queue
-        /// </summary>
-        public long TotalServicedByQueue => Volatile.Read(ref _totalServicedByQueue);
 
-        /// <summary>
-        /// The total number of operations that could not be serviced by the queue, but which were sent to the thread-pool instead
-        /// </summary>
-        public long TotalServicedByPool => Volatile.Read(ref _totalServicedByPool);
-
-        private readonly struct WorkItem
-        {
-            public readonly Action<object> Action;
-            public readonly object State;
-            public WorkItem(Action<object> action, object state)
-            {
-                Action = action;
-                State = state;
-            }
-        }
-
-        private volatile bool _disposed;
-
-        private readonly ConcurrentQueue<WorkItem> _queue = new ConcurrentQueue<WorkItem>();
-        private void StartWorker(int id)
-        {
-            var thread = new Thread(ThreadRunWorkLoop)
-            {
-                Name = $"{nameof(PipeThreadPoolScheduler)}:{id}",
-                Priority = ThreadPriority.Normal,
-                IsBackground = true
-            };
-            
-            _threads.Add(thread);
-            
-            thread.Start(this);
-        }
 
         /// <summary>
         /// Requests <paramref name="action"/> to be run on scheduler with <paramref name="state"/> being passed in
@@ -132,23 +82,14 @@ namespace TomLonghurst.RedisClient.Pipes
                 return; // nothing to do
             }
 
-            if (!_disposed && _queue.Count <= WorkerCount)
-            {
-                _queue.Enqueue(new WorkItem(action, state));
-            }
-            else
-            {
-                ThreadPool.Schedule(action, state);
-            }
+            Task.Factory.StartNew(action, state);
         }
-
-        private static readonly ParameterizedThreadStart ThreadRunWorkLoop = state => ((PipeThreadPoolScheduler)state).RunWorkLoop();
 
         private int _availableCount;
         /// <summary>
         /// The number of workers currently actively engaged in work
         /// </summary>
-        public int AvailableCount => Thread.VolatileRead(ref _availableCount);
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Execute(Action<object> action, object state)
@@ -163,24 +104,6 @@ namespace TomLonghurst.RedisClient.Pipes
             }
         }
 
-        private void RunWorkLoop()
-        {
-            s_threadWorkerPoolId = Id;
-            while (true)
-            {
-                if (_queue.TryDequeue(out var next))
-                {
-                    Execute(next.Action, next.State);
-                }
-
-                // Finish Queue Before we kill the thread
-                if (_queue.Count == 0 && _disposed)
-                {
-                    return;
-                }
-            }
-        }
-
         ~PipeThreadPoolScheduler()
         {
             Dispose();
@@ -192,7 +115,7 @@ namespace TomLonghurst.RedisClient.Pipes
         /// </summary>
         public void Dispose()
         {
-            _disposed = true;
+            
         }
     }
 }

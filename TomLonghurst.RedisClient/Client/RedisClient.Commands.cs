@@ -16,39 +16,33 @@ namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient : IDisposable
     {
-        private PipeThreadPoolScheduler _receivePool;
-
         private RedisClient()
         {
-            _receivePool = new PipeThreadPoolScheduler("RedisPipePool");
-
             Options = new Lazy<Tuple<PipeOptions, PipeOptions>>(() =>
             {
-                const long Receive_PauseWriterThreshold = 4L * 1024 * 1024 * 1024;
-                const long Receive_ResumeWriterThreshold = Receive_PauseWriterThreshold / 2;
+                const int DefaultMinimumSegmentSize = 1024 * 8;
+
+                const long ResumeWriterThreshold = DefaultMinimumSegmentSize * 16 / 4 * 3;
+                const long PauseWriterThreshold = DefaultMinimumSegmentSize * 16;
 
                 var defaultPipeOptions = PipeOptions.Default;
 
-                var sendPauseWriterThreshold = Math.Max(512 * 1024, defaultPipeOptions.PauseWriterThreshold);
-
-                var sendResumeWriterThreshold = Math.Max(sendPauseWriterThreshold / 2, defaultPipeOptions.ResumeWriterThreshold);
-
                 var sendPipeOptions = new PipeOptions(
                     defaultPipeOptions.Pool,
-                    _receivePool,
-                    _receivePool,
-                    sendPauseWriterThreshold,
-                    sendResumeWriterThreshold,
-                    Math.Max(defaultPipeOptions.MinimumSegmentSize, 8192),
+                    PipeScheduler.Inline,
+                    PipeScheduler.Inline,
+                    PauseWriterThreshold,
+                    ResumeWriterThreshold,
+                    DefaultMinimumSegmentSize,
                     false);
                 
                 var receivePipeOptions = new PipeOptions(
                     defaultPipeOptions.Pool,
-                    _receivePool,
-                    _receivePool,
-                    Receive_PauseWriterThreshold,
-                    Receive_ResumeWriterThreshold,
-                    Math.Max(defaultPipeOptions.MinimumSegmentSize, 8192),
+                    PipeScheduler.Inline,
+                    PipeScheduler.Inline,
+                    PauseWriterThreshold,
+                    ResumeWriterThreshold,
+                    DefaultMinimumSegmentSize,
                     false);
 
                 return new Tuple<PipeOptions, PipeOptions>(sendPipeOptions, receivePipeOptions);

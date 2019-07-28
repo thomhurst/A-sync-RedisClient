@@ -84,35 +84,41 @@ namespace RedisClientTest
 
             await stackExchange.StringSetAsync("SingleKey", "123");
             await _tomLonghurstRedisClient.StringSetAsync("SingleKey", "123", 120, AwaitOptions.AwaitCompletion);
-            
-            Console.WriteLine("StackExchange.Redis");
-            
-            var stackExchangeRedisClientStopwatch = Stopwatch.StartNew();
 
-            for (var i = 0; i < 250; i++)
+            for (var outer = 0; outer < 5; outer++)
             {
-                var redisValue = await stackExchange.StringGetAsync("SingleKey");
-            }
-            
-            stackExchangeRedisClientStopwatch.Stop();
-            var stackExchangeRedisClientStopwatchTimeTaken = stackExchangeRedisClientStopwatch.ElapsedMilliseconds;
-            Console.WriteLine($"Time Taken: {stackExchangeRedisClientStopwatchTimeTaken} ms");
-            
-            Console.WriteLine();
-            Console.WriteLine();
-            
-            Console.WriteLine("TomLonghurst.RedisClient");
-            
-            var tomLonghurstRedisClientStopwatch = Stopwatch.StartNew();
+                Console.WriteLine("------------------------------");
+                Console.WriteLine("StackExchange.Redis");
 
-            for (var i = 0; i < 250; i++)
-            {
-                var redisValue = await _tomLonghurstRedisClient.StringGetAsync("SingleKey");
+                var stackExchangeRedisClientStopwatch = Stopwatch.StartNew();
+
+                for (var i = 0; i < 200; i++)
+                {
+                    var redisValue = await stackExchange.StringGetAsync("SingleKey");
+                }
+
+                stackExchangeRedisClientStopwatch.Stop();
+                var stackExchangeRedisClientStopwatchTimeTaken = stackExchangeRedisClientStopwatch.ElapsedMilliseconds;
+                Console.WriteLine($"Time Taken: {stackExchangeRedisClientStopwatchTimeTaken} ms");
+
+                Console.WriteLine();
+                Console.WriteLine();
+
+                Console.WriteLine("TomLonghurst.RedisClient");
+
+                var tomLonghurstRedisClientStopwatch = Stopwatch.StartNew();
+
+                for (var i = 0; i < 200; i++)
+                {
+                    var redisValue = await _tomLonghurstRedisClient.StringGetAsync("SingleKey");
+                }
+
+                tomLonghurstRedisClientStopwatch.Stop();
+                var tomLonghurstRedisClientStopwatchTimeTaken = tomLonghurstRedisClientStopwatch.ElapsedMilliseconds;
+                Console.WriteLine($"Time Taken: {tomLonghurstRedisClientStopwatchTimeTaken} ms");
+
+                Console.WriteLine("------------------------------");
             }
-            
-            tomLonghurstRedisClientStopwatch.Stop();
-            var tomLonghurstRedisClientStopwatchTimeTaken = tomLonghurstRedisClientStopwatch.ElapsedMilliseconds;
-            Console.WriteLine($"Time Taken: {tomLonghurstRedisClientStopwatchTimeTaken} ms");
         }
 
         [Test]
