@@ -1,12 +1,8 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO.Pipelines;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace TomLonghurst.RedisClient.Pipes
 {
@@ -193,7 +189,7 @@ namespace TomLonghurst.RedisClient.Pipes
                         _availableCount--;
                     }
 
-                    if (_queue.Count > 0)
+                    if (_queue.Count == 0)
                     {
                         if (_disposed)
                         {
