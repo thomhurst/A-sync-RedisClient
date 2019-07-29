@@ -22,9 +22,9 @@ namespace TomLonghurst.RedisClient.Client
             {
                 const int DefaultMinimumSegmentSize = 1024 * 8;
 
-                const long Receive_ResumeWriterThreshold = DefaultMinimumSegmentSize * 1024 * 16 / 2;
                 const long Receive_PauseWriterThreshold = DefaultMinimumSegmentSize * 1024 * 16;
-                
+                const long Receive_ResumeWriterThreshold = DefaultMinimumSegmentSize * 1024 *  16 / 2;
+
                 const long Send_PauseWriterThreshold = 512 * 1024;
                 const long Send_ResumeWriterThreshold = Send_PauseWriterThreshold / 2;
                 
