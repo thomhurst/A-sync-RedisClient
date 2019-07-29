@@ -7,7 +7,7 @@ namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient : IDisposable
     {
-        private readonly ServerCommands _serverCommands;
+        private ServerCommands _serverCommands;
         public ServerCommands Server => _serverCommands;
         public class ServerCommands
         {

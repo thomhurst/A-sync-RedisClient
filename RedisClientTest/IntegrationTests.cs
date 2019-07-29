@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -26,7 +27,7 @@ namespace RedisClientTest
             {
                 Ssl = true
             };
-            _redisManager = new RedisClientManager(_config, 1);
+            _redisManager = new RedisClientManager(_config, 10);
         }
 
         [SetUp]
@@ -36,6 +37,7 @@ namespace RedisClientTest
         }
         
         [TestCase("value with a space")]
+        [TestCase("value with two  spaces")]
         [TestCase("value")]
         [TestCase("value with a\nnew line")]
         [TestCase("value with a\r\nnew line")]
@@ -71,53 +73,105 @@ namespace RedisClientTest
             Assert.That(redisValue3.Value, Is.EqualTo("value with a space3"));
         }
 
-        //[Ignore("")]
-        [Test]
-        public async Task PerformanceTest()
+        //[Test]
+        public async Task MemoryTest()
         {
-            var stackExchange = (await ConnectionMultiplexer.ConnectAsync(new ConfigurationOptions
+            var largeJsonContents = await File.ReadAllTextAsync("large_json.json");
+            var sw = Stopwatch.StartNew();
+            var tasks = new List<Task>();
+
+            for (int i = 0; i < 50; i++)
             {
-                EndPoints = {{TestInformation.Host, TestInformation.Port}},
-                Password = TestInformation.Password,
-                Ssl = true
-            })).GetDatabase(0);
-
-            await stackExchange.StringSetAsync("SingleKey", "123");
-            await _tomLonghurstRedisClient.StringSetAsync("SingleKey", "123", 120, AwaitOptions.AwaitCompletion);
-
-            for (var outer = 0; outer < 5; outer++)
-            {
-                Console.WriteLine("------------------------------");
-                Console.WriteLine("StackExchange.Redis");
-
-                var stackExchangeRedisClientStopwatch = Stopwatch.StartNew();
-
-                for (var i = 0; i < 200; i++)
+                var i1 = i;
+                var task = Task.Run(async () =>
                 {
-                    var redisValue = await stackExchange.StringGetAsync("SingleKey");
+                    while (sw.Elapsed < TimeSpan.FromMinutes(5))
+                    {
+                        try
+                        {
+                            var client = await _redisManager.GetRedisClientAsync();
+                            await client.StringSetAsync($"MemoryTestKey{i1}", largeJsonContents, 120,
+                                AwaitOptions.AwaitCompletion);
+                            var result = await client.StringGetAsync($"MemoryTestKey{i1}");
+                            Assert.That(result.Value, Is.EqualTo(largeJsonContents));
+                            await client.DeleteKeyAsync($"MultiTestKey{i1}", AwaitOptions.AwaitCompletion);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            throw;
+                        }
+                    }
+                });
+
+                tasks.Add(task);
+            }
+
+            await Task.WhenAll(tasks);
+            Console.WriteLine("Finished.");
+        }
+
+        public enum TestClient
+        {
+            StackExchange,
+            TomLonghurst
+        }
+        //[Ignore("")]
+       [TestCase(TestClient.StackExchange)]
+        [TestCase(TestClient.TomLonghurst)]
+        public async Task PerformanceTest(TestClient testClient)
+        {
+            if (testClient == TestClient.StackExchange)
+            {
+                var stackExchange = (await ConnectionMultiplexer.ConnectAsync(new ConfigurationOptions
+                {
+                    EndPoints = {{TestInformation.Host, TestInformation.Port}},
+                    Password = TestInformation.Password,
+                    Ssl = true
+                })).GetDatabase(0);
+
+                await stackExchange.StringSetAsync("SingleKey", "123", TimeSpan.FromSeconds(120));
+
+                for (var outer = 0; outer < 5; outer++)
+                {
+                    Console.WriteLine("------------------------------");
+                    Console.WriteLine("StackExchange.Redis");
+
+                    var stackExchangeRedisClientStopwatch = Stopwatch.StartNew();
+
+                    for (var i = 0; i < 200; i++)
+                    {
+                        var redisValue = await stackExchange.StringGetAsync("SingleKey");
+                    }
+
+                    stackExchangeRedisClientStopwatch.Stop();
+                    var stackExchangeRedisClientStopwatchTimeTaken =
+                        stackExchangeRedisClientStopwatch.ElapsedMilliseconds;
+                    Console.WriteLine($"Time Taken: {stackExchangeRedisClientStopwatchTimeTaken} ms");
                 }
-
-                stackExchangeRedisClientStopwatch.Stop();
-                var stackExchangeRedisClientStopwatchTimeTaken = stackExchangeRedisClientStopwatch.ElapsedMilliseconds;
-                Console.WriteLine($"Time Taken: {stackExchangeRedisClientStopwatchTimeTaken} ms");
-
-                Console.WriteLine();
-                Console.WriteLine();
-
+            }
+            else
+            {
                 Console.WriteLine("TomLonghurst.RedisClient");
 
-                var tomLonghurstRedisClientStopwatch = Stopwatch.StartNew();
+                await _tomLonghurstRedisClient.StringSetAsync("SingleKey", "123", 120, AwaitOptions.AwaitCompletion);
 
-                for (var i = 0; i < 200; i++)
+                for (var outer = 0; outer < 5; outer++)
                 {
-                    var redisValue = await _tomLonghurstRedisClient.StringGetAsync("SingleKey");
+                    var tomLonghurstRedisClientStopwatch = Stopwatch.StartNew();
+                    
+                    for (var i = 0; i < 200; i++)
+                    {
+                        var redisValue = await _tomLonghurstRedisClient.StringGetAsync("SingleKey");
+                    }
+
+                    tomLonghurstRedisClientStopwatch.Stop();
+                    var tomLonghurstRedisClientStopwatchTimeTaken =
+                        tomLonghurstRedisClientStopwatch.ElapsedMilliseconds;
+                    Console.WriteLine($"Time Taken: {tomLonghurstRedisClientStopwatchTimeTaken} ms");
+
+                    Console.WriteLine("------------------------------");
                 }
-
-                tomLonghurstRedisClientStopwatch.Stop();
-                var tomLonghurstRedisClientStopwatchTimeTaken = tomLonghurstRedisClientStopwatch.ElapsedMilliseconds;
-                Console.WriteLine($"Time Taken: {tomLonghurstRedisClientStopwatchTimeTaken} ms");
-
-                Console.WriteLine("------------------------------");
             }
         }
 

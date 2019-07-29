@@ -4,12 +4,12 @@ using System.IO.Pipelines;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Helpers;
+using TomLonghurst.RedisClient.Models.Commands;
 
 namespace TomLonghurst.RedisClient.Client
 {
@@ -33,7 +33,7 @@ namespace TomLonghurst.RedisClient.Client
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask<T> SendAndReceiveAsync<T>(string command,
+        private async ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command,
             Func<ValueTask<T>> responseReader,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
@@ -100,24 +100,22 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        private ValueTask<FlushResult> Write(string command)
+        private ValueTask<FlushResult> Write(IRedisCommand command)
         {
-            var encodedCommand = command.ToRedisProtocol();
+            var encodedCommand = command.EncodedCommand;
             
             LastAction = "Writing Bytes";
             var pipeWriter = _pipe.Output;
 #if NETCORE
-            var charsSpan = encodedCommand.AsSpan();
             
-            var bytesSpan = pipeWriter.GetSpan(Encoding.UTF8.GetByteCount(charsSpan));
-
-            var bytesCount = Encoding.UTF8.GetBytes(charsSpan, bytesSpan);
+            var bytesSpan = pipeWriter.GetSpan(encodedCommand.Length);
+            encodedCommand.CopyTo(bytesSpan);
             
-            pipeWriter.Advance(bytesCount);
+            pipeWriter.Advance(encodedCommand.Length);
             
             return _pipe.Output.FlushAsync();
 #else
-            return pipeWriter.WriteAsync(encodedCommand.ToUtf8Bytes().AsMemory());
+            return pipeWriter.WriteAsync(encodedCommand.AsMemory());
 #endif
         }
 

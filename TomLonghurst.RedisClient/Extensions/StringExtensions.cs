@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using TomLonghurst.RedisClient.Helpers;
+using TomLonghurst.RedisClient.Constants;
+using TomLonghurst.RedisClient.Models.Commands;
 
 namespace TomLonghurst.RedisClient.Extensions
 {
@@ -13,6 +14,12 @@ namespace TomLonghurst.RedisClient.Extensions
         internal static byte[] ToUtf8Bytes(this string value)
         {
             return Encoding.UTF8.GetBytes(value);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static byte[] ToUtf8BytesWithTerminator(this string value)
+        {
+            return value.ToUtf8Bytes().Concat(ByteConstants.LINE_TERMINATOR).ToArray();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -31,29 +38,21 @@ namespace TomLonghurst.RedisClient.Extensions
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static string ToRedisProtocol(this string value)
-        {
-            return RedisProtocolEncoder.Encode(value);
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static string FromRedisProtocol(this string value)
-        {
-            return RedisProtocolEncoder.Decode(value);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static IEnumerable<string> Split(this string value, string delimiter)
         {
             return value.Split(new[] {delimiter}, StringSplitOptions.RemoveEmptyEntries);
         }
 
-        internal static string ToFireAndForgetCommand(this IEnumerable<string> commands)
+        internal static RedisCommand ToFireAndForgetCommand(this IEnumerable<RedisCommand> commands)
         {
             var enumerable = commands.ToList();
             if (enumerable.Count > 1)
             { 
-                return $"CLIENT REPLY OFF\r\n{string.Join("\r\n", enumerable)}\r\nCLIENT REPLY ON\r\n";
+                var redisCommands = new List<IRedisCommand>();
+                redisCommands.Add(RedisCommand.From("CLIENT".ToRedisEncoded(), "REPLY".ToRedisEncoded(), "OFF".ToRedisEncoded()));
+                redisCommands.AddRange(enumerable);
+                redisCommands.Add(RedisCommand.From("CLIENT".ToRedisEncoded(), "REPLY".ToRedisEncoded(), "ON".ToRedisEncoded()));
+                return RedisCommand.From(redisCommands);
             }
             else
             {

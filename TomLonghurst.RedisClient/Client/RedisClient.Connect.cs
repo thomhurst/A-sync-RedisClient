@@ -56,11 +56,17 @@ namespace TomLonghurst.RedisClient.Client
                 
                 if (!value)
                 {
-                    Task.Run(() => OnConnectionFailed.Invoke(this));
+                    if (OnConnectionFailed != null)
+                    {
+                        Task.Run(() => OnConnectionFailed.Invoke(this));
+                    }
                 }
                 else
                 {
-                    Task.Run(() => OnConnectionEstablished.Invoke(this));
+                    if (OnConnectionEstablished != null)
+                    {
+                        Task.Run(() => OnConnectionEstablished.Invoke(this));
+                    }
                 }
             }
         }

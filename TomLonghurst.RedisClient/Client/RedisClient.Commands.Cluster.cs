@@ -7,7 +7,7 @@ namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient : IDisposable
     {
-        private readonly ClusterCommands _clusterCommands;
+        private ClusterCommands _clusterCommands;
         public ClusterCommands Cluster => _clusterCommands;
         public class ClusterCommands
         {
