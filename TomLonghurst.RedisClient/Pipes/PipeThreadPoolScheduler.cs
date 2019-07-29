@@ -135,9 +135,10 @@ namespace TomLonghurst.RedisClient.Pipes
                 {
                     _queue.Enqueue(new WorkItem(action, state));
 
-                    if (_availableCount != 0)
+                    if (_availableThreads != 0)
                     {
-                        Monitor.Pulse(_queue); // wake up someone
+                        // Wake up a thread to do some work
+                        Monitor.Pulse(_queue);
                     }
                     
                     return;
@@ -150,11 +151,11 @@ namespace TomLonghurst.RedisClient.Pipes
 
         private static readonly ParameterizedThreadStart ThreadRunWorkLoop = state => ((PipeThreadPoolScheduler)state).RunWorkLoop();
 
-        private int _availableCount;
+        private int _availableThreads;
         /// <summary>
         /// The number of workers currently actively engaged in work
         /// </summary>
-        public int AvailableCount => Thread.VolatileRead(ref _availableCount);
+        public int AvailableCount => Thread.VolatileRead(ref _availableThreads);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Execute(Action<object> action, object state)
@@ -184,23 +185,20 @@ namespace TomLonghurst.RedisClient.Pipes
                             break;
                         }
 
-                        _availableCount++;
+                        _availableThreads++;
                         Monitor.Wait(_queue);
-                        _availableCount--;
+                        _availableThreads--;
                     }
 
                     if (_queue.Count == 0)
                     {
                         if (_disposed)
                         {
+                            // Only break once the queue has been emptied
                             break;
                         }
 
                         continue;
-                    }
-                    else if (_queue.Count == 0 && _disposed)
-                    {
-                        return;
                     }
 
                     next = _queue.Dequeue();

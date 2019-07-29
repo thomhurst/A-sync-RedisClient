@@ -1,8 +1,6 @@
 using System;
-using System.Buffers;
 using System.IO;
 using System.IO.Pipelines;
-using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.RedisClient.Extensions;
 
@@ -55,7 +53,9 @@ namespace TomLonghurst.RedisClient.Pipes
                 _readPipe = new Pipe(receivePipeOptions);
 
                 receivePipeOptions.ReaderScheduler.Schedule(
+#pragma warning disable 4014
                     obj => ((StreamPipe) obj).CopyFromStreamToReadPipe(), this);
+#pragma warning restore 4014
             }
 
             if (write)
@@ -68,7 +68,9 @@ namespace TomLonghurst.RedisClient.Pipes
                 _writePipe = new Pipe(sendPipeOptions);
 
                 sendPipeOptions.WriterScheduler.Schedule(
+#pragma warning disable 4014
                     obj => ((StreamPipe) obj).CopyFromWritePipeToStream(), this);
+#pragma warning restore 4014
             }
         }
 

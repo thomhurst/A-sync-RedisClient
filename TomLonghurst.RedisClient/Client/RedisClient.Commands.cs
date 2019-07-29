@@ -22,23 +22,34 @@ namespace TomLonghurst.RedisClient.Client
             {
                 const int DefaultMinimumSegmentSize = 1024 * 8;
 
-                const long ResumeWriterThreshold = DefaultMinimumSegmentSize * 16 / 4 * 3;
-                const long PauseWriterThreshold = DefaultMinimumSegmentSize * 16;
-
-                // 2 for the Input Reader/Writer and 2 for the Output Reader/Writer
-                var pipeScheduler = new PipeThreadPoolScheduler(workerCount: 4);
+                const long Receive_ResumeWriterThreshold = DefaultMinimumSegmentSize * 1024 * 16 / 2;
+                const long Receive_PauseWriterThreshold = DefaultMinimumSegmentSize * 1024 * 16;
+                
+                const long Send_PauseWriterThreshold = 512 * 1024;
+                const long Send_ResumeWriterThreshold = Send_PauseWriterThreshold / 2;
+                
+                var pipeScheduler = new PipeThreadPoolScheduler(workerCount: 5);
                 var defaultPipeOptions = PipeOptions.Default;
 
-                var pipeOptions = new PipeOptions(
+                var receivePipeOptions = new PipeOptions(
                     defaultPipeOptions.Pool,
                     pipeScheduler,
                     pipeScheduler,
-                    PauseWriterThreshold,
-                    ResumeWriterThreshold,
+                    Receive_PauseWriterThreshold,
+                    Receive_ResumeWriterThreshold,
+                    DefaultMinimumSegmentSize,
+                    false);
+                
+                var sendPipeOptions = new PipeOptions(
+                    defaultPipeOptions.Pool,
+                    pipeScheduler,
+                    pipeScheduler,
+                    Send_PauseWriterThreshold,
+                    Send_ResumeWriterThreshold,
                     DefaultMinimumSegmentSize,
                     false);
 
-                return new Tuple<PipeOptions, PipeOptions>(pipeOptions, pipeOptions);
+                return new Tuple<PipeOptions, PipeOptions>(sendPipeOptions, receivePipeOptions);
             });
 
             _clusterCommands = new ClusterCommands(this);

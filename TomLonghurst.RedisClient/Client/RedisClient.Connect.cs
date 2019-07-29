@@ -8,7 +8,6 @@ using System.Net.Sockets;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
-using Pipelines.Sockets.Unofficial;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Pipes;
 
