@@ -48,8 +48,6 @@ namespace TomLonghurst.RedisClient.Pipes
         //private int UseThreadPoolQueueLength { get; }
 
         private string Name { get; }
-
-        private List<Thread> _threads = new List<Thread>(); 
         
         /// <summary>
         /// Create a new dedicated thread-pool
@@ -114,8 +112,6 @@ namespace TomLonghurst.RedisClient.Pipes
                 IsBackground = true
             };
             
-            _threads.Add(thread);
-            
             thread.Start(this);
         }
 
@@ -131,7 +127,7 @@ namespace TomLonghurst.RedisClient.Pipes
 
             lock (_queue)
             {
-                if (!_disposed && _queue.Count < WorkerCount * 2)
+                if (!_disposed && _queue.Count <= WorkerCount * 2)
                 {
                     _queue.Enqueue(new WorkItem(action, state));
 
@@ -185,6 +181,7 @@ namespace TomLonghurst.RedisClient.Pipes
                             break;
                         }
 
+                        // Thread is paused and available to be woken up to do some work
                         _availableThreads++;
                         Monitor.Wait(_queue);
                         _availableThreads--;
@@ -222,6 +219,7 @@ namespace TomLonghurst.RedisClient.Pipes
             _disposed = true;
             lock (_queue)
             {
+                // Resume all available and waiting threads so that they can exit/shut down
                 Monitor.PulseAll(_queue);
             }
         }

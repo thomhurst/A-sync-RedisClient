@@ -18,17 +18,17 @@ namespace TomLonghurst.RedisClient.Client
     {
         private RedisClient()
         {
-            Options = new Lazy<Tuple<PipeOptions, PipeOptions>>(() =>
+            Options = new Lazy<RedisPipeOptions>(() =>
             {
                 const int DefaultMinimumSegmentSize = 1024 * 8;
-
-                const long Receive_PauseWriterThreshold = DefaultMinimumSegmentSize * 1024 * 16;
-                const long Receive_ResumeWriterThreshold = DefaultMinimumSegmentSize * 1024 *  16 / 2;
 
                 const long Send_PauseWriterThreshold = 512 * 1024;
                 const long Send_ResumeWriterThreshold = Send_PauseWriterThreshold / 2;
                 
-                var pipeScheduler = new PipeThreadPoolScheduler(workerCount: 4);
+                const long Receive_PauseWriterThreshold = 128 * 1024 * 1024;
+                const long Receive_ResumeWriterThreshold = Receive_PauseWriterThreshold / 2;
+
+                var pipeScheduler = new PipeThreadPoolScheduler(workerCount: 5);
                 var defaultPipeOptions = PipeOptions.Default;
 
                 var receivePipeOptions = new PipeOptions(
@@ -49,7 +49,11 @@ namespace TomLonghurst.RedisClient.Client
                     DefaultMinimumSegmentSize,
                     false);
 
-                return new Tuple<PipeOptions, PipeOptions>(sendPipeOptions, receivePipeOptions);
+                return new RedisPipeOptions
+                {
+                    SendOptions = sendPipeOptions,
+                    ReceiveOptions = receivePipeOptions
+                };
             });
 
             _clusterCommands = new ClusterCommands(this);

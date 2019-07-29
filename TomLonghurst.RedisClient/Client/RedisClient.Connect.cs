@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -9,6 +8,7 @@ using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.RedisClient.Exceptions;
+using TomLonghurst.RedisClient.Models;
 using TomLonghurst.RedisClient.Pipes;
 
 namespace TomLonghurst.RedisClient.Client
@@ -186,7 +186,7 @@ namespace TomLonghurst.RedisClient.Client
 
                 Stream networkStream = new NetworkStream(_socket);
                 
-                var (sendPipeOptions, receivePipeOptions) = GetPipeOptions();
+                var redisPipeOptions = GetPipeOptions();
 
                 if (ClientConfig.Ssl)
                 {
@@ -206,7 +206,7 @@ namespace TomLonghurst.RedisClient.Client
                     }
 
                     LastAction = "Creating SSL Stream Pipe";
-                    _pipe = StreamPipe.GetDuplexPipe(_sslStream, sendPipeOptions, receivePipeOptions);
+                    _pipe = StreamPipe.GetDuplexPipe(_sslStream, redisPipeOptions.SendOptions, redisPipeOptions.ReceiveOptions);
                 }
                 else
                 {
@@ -240,9 +240,9 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        private Lazy<Tuple<PipeOptions, PipeOptions>> Options;
+        private Lazy<RedisPipeOptions> Options;
 
-        private Tuple<PipeOptions, PipeOptions> GetPipeOptions()
+        private RedisPipeOptions GetPipeOptions()
         {
             return Options.Value;
         }
