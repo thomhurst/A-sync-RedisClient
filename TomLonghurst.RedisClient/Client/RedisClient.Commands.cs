@@ -223,7 +223,7 @@ namespace TomLonghurst.RedisClient.Client
                 var setCommand = RedisCommand.From(Commands.MSet, encodedKeysAndValues);
                 await SendAndReceiveAsync(setCommand, ExpectSuccess, token);
                 
-                var expireCommand = keyValuePairs.Select(key => RedisCommand.From(Commands.Expire, key.ToRedisEncoded(), timeToLiveInSeconds.ToRedisEncoded())).ToFireAndForgetCommand();
+                var expireCommand = keyValuePairs.Select(keyValuePair => RedisCommand.From(Commands.Expire, keyValuePair.Key.ToRedisEncoded(), timeToLiveInSeconds.ToRedisEncoded())).ToFireAndForgetCommand();
                 var expireTask = SendAndReceiveAsync(expireCommand, ExpectSuccess, token);
                 
                 if (awaitOptions == AwaitOptions.AwaitCompletion)

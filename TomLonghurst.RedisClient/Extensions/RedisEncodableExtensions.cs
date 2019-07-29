@@ -16,7 +16,17 @@ namespace TomLonghurst.RedisClient.Extensions
             return values.Select(x => x.ToRedisEncoded());
         }
         
-        internal static IRedisEncodable ToRedisEncoded(this object value)
+        internal static IRedisEncodable ToRedisEncoded(this int value)
+        {
+            return new RedisEncodable(value.ToString());
+        }
+        
+        internal static IRedisEncodable ToRedisEncoded(this float value)
+        {
+            return new RedisEncodable(value.ToString());
+        }
+        
+        internal static IRedisEncodable ToRedisEncoded(this long value)
         {
             return new RedisEncodable(value.ToString());
         }

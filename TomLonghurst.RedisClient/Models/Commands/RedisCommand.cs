@@ -6,21 +6,15 @@ namespace TomLonghurst.RedisClient.Models.Commands
 {
     public class RedisCommand : IRedisCommand
     {
-        private readonly IEnumerable<IRedisEncodable> _redisEncodables;
-        private readonly byte[][] redisCommand;
-        private byte[] _preEncodedCommand;
+        internal readonly IEnumerable<IRedisEncodable> _redisEncodables;
+        internal readonly byte[][] rawBytes;
 
         public byte[] EncodedCommand
         {
             get
             {
-                if (_preEncodedCommand != null)
-                {
-                    return _preEncodedCommand;
-                }
-                
-                return $"*{redisCommand.Length}".ToUtf8BytesWithTerminator()
-                    .Concat(redisCommand.SelectMany(x => $"${x.Length - 2}".ToRedisEncoded().RedisEncodedBytes.Concat(x)))
+                return $"*{rawBytes.Length}".ToUtf8BytesWithTerminator()
+                    .Concat(rawBytes.SelectMany(x => $"${x.Length - 2}".ToRedisEncoded().RedisEncodedBytes.Concat(x)))
                     .ToArray();
             }
         }
@@ -30,7 +24,7 @@ namespace TomLonghurst.RedisClient.Models.Commands
         private RedisCommand(IEnumerable<IRedisEncodable> redisEncodables)
         {
             _redisEncodables = redisEncodables;
-            redisCommand = redisEncodables.Select(x => x.RedisEncodedBytes).ToArray();
+            rawBytes = redisEncodables.Select(x => x.RedisEncodedBytes).ToArray();
         }
         
         public static RedisCommand From(IEnumerable<IRedisEncodable> redisEncodables)
@@ -41,7 +35,7 @@ namespace TomLonghurst.RedisClient.Models.Commands
         private RedisCommand(params IRedisEncodable[] redisEncodables)
         {
             _redisEncodables = redisEncodables;
-            redisCommand = redisEncodables.Select(x => x.RedisEncodedBytes).ToArray();
+            rawBytes = redisEncodables.Select(x => x.RedisEncodedBytes).ToArray();
         }
         
         public static RedisCommand From(params IRedisEncodable[] redisEncodables)
@@ -57,33 +51,12 @@ namespace TomLonghurst.RedisClient.Models.Commands
         private RedisCommand(IRedisEncodable redisEncodable)
         {
             _redisEncodables = new[] {redisEncodable};
-            redisCommand = new []{ redisEncodable.RedisEncodedBytes };
-        }
-
-        private RedisCommand(IEnumerable<IRedisCommand> redisEncodables) : this(redisEncodables.Select(x => x.EncodedCommand))
-        {
-        }
-
-        private RedisCommand(IEnumerable<byte[]> bytes)
-        {
-            var joinedArray = new List<byte>();
-            
-            foreach (var bytese in bytes)
-            {
-                joinedArray.AddRange(bytese);
-            }
-
-            _preEncodedCommand = joinedArray.ToArray();
+            rawBytes = new []{ redisEncodable.RedisEncodedBytes };
         }
 
         public static RedisCommand From(IRedisEncodable redisEncodable)
         {
             return new RedisCommand(redisEncodable);
-        }
-        
-        public static RedisCommand From(IEnumerable<IRedisCommand> redisCommands)
-        {
-            return new RedisCommand(redisCommands);
         }
 
         public static IRedisCommand From(IRedisEncodable redisEncodable, IEnumerable<IRedisEncodable> redisEncodables)

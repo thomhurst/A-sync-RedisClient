@@ -43,16 +43,26 @@ namespace TomLonghurst.RedisClient.Extensions
             return value.Split(new[] {delimiter}, StringSplitOptions.RemoveEmptyEntries);
         }
 
-        internal static RedisCommand ToFireAndForgetCommand(this IEnumerable<RedisCommand> commands)
+        internal static IRedisCommand ToFireAndForgetCommand(this IEnumerable<RedisCommand> commands)
         {
             var enumerable = commands.ToList();
             if (enumerable.Count > 1)
-            { 
-                var redisCommands = new List<IRedisCommand>();
-                redisCommands.Add(RedisCommand.From("CLIENT".ToRedisEncoded(), "REPLY".ToRedisEncoded(), "OFF".ToRedisEncoded()));
-                redisCommands.AddRange(enumerable);
-                redisCommands.Add(RedisCommand.From("CLIENT".ToRedisEncoded(), "REPLY".ToRedisEncoded(), "ON".ToRedisEncoded()));
-                return RedisCommand.From(redisCommands);
+            {
+                var clientReplyOff = RedisCommand.From("CLIENT".ToRedisEncoded(),
+                    "REPLY".ToRedisEncoded(),
+                    "OFF".ToRedisEncoded());
+
+                var fireAndForgetCommands = new List<RedisCommand> { clientReplyOff };
+                
+                fireAndForgetCommands.AddRange(enumerable);
+                
+                var clientReplyOn = RedisCommand.From("CLIENT".ToRedisEncoded(),
+                    "REPLY".ToRedisEncoded(),
+                    "ON".ToRedisEncoded());
+            
+                fireAndForgetCommands.Add(clientReplyOn);
+                
+                return MultiRedisCommand.From(fireAndForgetCommands);
             }
             else
             {
