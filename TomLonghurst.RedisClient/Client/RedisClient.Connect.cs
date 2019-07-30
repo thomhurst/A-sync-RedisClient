@@ -246,9 +246,9 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        private Lazy<RedisPipeOptions> Options;
+        private static Lazy<RedisPipeOptions> Options;
 
-        private RedisPipeOptions GetPipeOptions()
+        private static RedisPipeOptions GetPipeOptions()
         {
             return Options.Value;
         }

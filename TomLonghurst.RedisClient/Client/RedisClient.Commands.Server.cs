@@ -18,9 +18,9 @@ namespace TomLonghurst.RedisClient.Client
                 _redisClient = redisClient;
             }
             
-            public async ValueTask<string> Info()
+            public ValueTask<string> Info()
             {
-                return await Info(CancellationToken.None);
+                return Info(CancellationToken.None);
             }
         
             public async ValueTask<string> Info(CancellationToken cancellationToken)
@@ -31,9 +31,9 @@ namespace TomLonghurst.RedisClient.Client
                 }, cancellationToken);
             }
 
-            public async Task<int> DBSize()
+            public Task<int> DBSize()
             {
-                return await DBSize(CancellationToken.None);
+                return DBSize(CancellationToken.None);
             }
 
             public async Task<int> DBSize(CancellationToken cancellationToken)

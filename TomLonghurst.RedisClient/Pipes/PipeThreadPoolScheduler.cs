@@ -15,11 +15,12 @@ namespace TomLonghurst.RedisClient.Pipes
         /// <summary>
         /// Reusable shared scheduler instance
         /// </summary>
-        public static PipeThreadPoolScheduler Default => StaticContext.Instance;
+        public static PipeThreadPoolScheduler Default => StaticContext.SharedScheduler;
 
         private static class StaticContext
-        {   // locating here rather than as a static field on DedicatedThreadPoolPipeScheduler so that it isn't instantiated too eagerly
-            internal static readonly PipeThreadPoolScheduler Instance = new PipeThreadPoolScheduler(nameof(Default));
+        {
+            // Only Instantiated When First Accessed
+            internal static readonly PipeThreadPoolScheduler SharedScheduler = new PipeThreadPoolScheduler("SharedPipeThreadPoolScheduler", 10);
         }
 
         [ThreadStatic]

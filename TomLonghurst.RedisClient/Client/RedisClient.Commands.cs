@@ -35,9 +35,9 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken);
         }
 
-        public async Task<Pong> Ping()
+        public Task<Pong> Ping()
         {
-            return await Ping(CancellationToken.None);
+            return Ping(CancellationToken.None);
         }
 
         public async Task<Pong> Ping(CancellationToken cancellationToken)
@@ -54,9 +54,9 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken);
         }
 
-        public async Task<bool> KeyExistsAsync(string key)
+        public Task<bool> KeyExistsAsync(string key)
         {
-            return await KeyExistsAsync(key, CancellationToken.None).ConfigureAwait(false);
+            return KeyExistsAsync(key, CancellationToken.None);
         }
 
         public async Task<bool> KeyExistsAsync(string key,
@@ -69,9 +69,9 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken).ConfigureAwait(false) == 1;
         }
 
-        public async Task<StringRedisValue> StringGetAsync(string key)
+        public Task<StringRedisValue> StringGetAsync(string key)
         {
-            return await StringGetAsync(key, CancellationToken.None).ConfigureAwait(false);
+            return StringGetAsync(key, CancellationToken.None);
         }
 
         public async Task<StringRedisValue> StringGetAsync(string key,
@@ -84,9 +84,9 @@ namespace TomLonghurst.RedisClient.Client
                 }, cancellationToken).ConfigureAwait(false));
         }
 
-        public async Task<IEnumerable<StringRedisValue>> StringGetAsync(IEnumerable<string> keys)
+        public Task<IEnumerable<StringRedisValue>> StringGetAsync(IEnumerable<string> keys)
         {
-            return await StringGetAsync(keys, CancellationToken.None).ConfigureAwait(false);
+            return StringGetAsync(keys, CancellationToken.None);
         }
 
         public async Task<IEnumerable<StringRedisValue>> StringGetAsync(IEnumerable<string> keys,
@@ -100,22 +100,22 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task StringSetAsync(string key, string value, int timeToLiveInSeconds,
+        public Task StringSetAsync(string key, string value, int timeToLiveInSeconds,
             AwaitOptions awaitOptions)
         {
-            await StringSetAsync(new RedisKeyValue(key, value), awaitOptions);
+            return StringSetAsync(new RedisKeyValue(key, value), awaitOptions);
         }
 
-        private async Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds, AwaitOptions awaitOptions)
+        private Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds, AwaitOptions awaitOptions)
         {
-            await StringSetAsync(redisKeyValue, timeToLiveInSeconds, awaitOptions, CancellationToken.None).ConfigureAwait(false);
+            return StringSetAsync(redisKeyValue, timeToLiveInSeconds, awaitOptions, CancellationToken.None);
         }
 
-        public async Task StringSetAsync(string key, string value, int timeToLiveInSeconds,
+        public Task StringSetAsync(string key, string value, int timeToLiveInSeconds,
             AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-            await StringSetAsync(new RedisKeyValue(key, value), awaitOptions, cancellationToken);
+            return StringSetAsync(new RedisKeyValue(key, value), awaitOptions, cancellationToken);
         }
         
         private async Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds, AwaitOptions awaitOptions,
@@ -137,19 +137,19 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task StringSetAsync(string key, string value, AwaitOptions awaitOptions)
+        public Task StringSetAsync(string key, string value, AwaitOptions awaitOptions)
         {
-            await StringSetAsync(new RedisKeyValue(key, value), awaitOptions);
+            return StringSetAsync(new RedisKeyValue(key, value), awaitOptions);
         }
         
-        private async Task StringSetAsync(RedisKeyValue redisKeyValue, AwaitOptions awaitOptions)
+        private Task StringSetAsync(RedisKeyValue redisKeyValue, AwaitOptions awaitOptions)
         {
-            await StringSetAsync(redisKeyValue, awaitOptions, CancellationToken.None).ConfigureAwait(false);
+            return StringSetAsync(redisKeyValue, awaitOptions, CancellationToken.None);
         }
 
-        public async Task StringSetAsync(string key, string value, AwaitOptions awaitOptions, CancellationToken cancellationToken)
+        public Task StringSetAsync(string key, string value, AwaitOptions awaitOptions, CancellationToken cancellationToken)
         {
-            await StringSetAsync(new RedisKeyValue(key, value), awaitOptions, cancellationToken);
+            return StringSetAsync(new RedisKeyValue(key, value), awaitOptions, cancellationToken);
         }
         
         private async Task StringSetAsync(RedisKeyValue redisKeyValue, AwaitOptions awaitOptions,
@@ -170,10 +170,10 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
+        public Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
             AwaitOptions awaitOptions)
         {
-            await StringSetAsync(keyValuePairs, awaitOptions, CancellationToken.None).ConfigureAwait(false);
+            return StringSetAsync(keyValuePairs, awaitOptions, CancellationToken.None);
         }
 
         public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
@@ -199,11 +199,11 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken).ConfigureAwait(false);
         }
         
-        public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs, 
+        public Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs, 
             int timeToLiveInSeconds, 
             AwaitOptions awaitOptions)
         {
-            await StringSetAsync(keyValuePairs, timeToLiveInSeconds, awaitOptions, CancellationToken.None).ConfigureAwait(false);
+            return StringSetAsync(keyValuePairs, timeToLiveInSeconds, awaitOptions, CancellationToken.None);
         }
 
         public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
@@ -233,23 +233,23 @@ namespace TomLonghurst.RedisClient.Client
             }, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task DeleteKeyAsync(string key,
+        public Task DeleteKeyAsync(string key,
             AwaitOptions awaitOptions)
         {
-            await DeleteKeyAsync(key, awaitOptions, CancellationToken.None).ConfigureAwait(false);
+            return DeleteKeyAsync(key, awaitOptions, CancellationToken.None);
         }
 
-        public async Task DeleteKeyAsync(string key,
+        public Task DeleteKeyAsync(string key,
             AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-            await DeleteKeyAsync(new[] {key}, awaitOptions, cancellationToken).ConfigureAwait(false);
+            return DeleteKeyAsync(new[] { key }, awaitOptions, cancellationToken);
         }
 
-        public async Task DeleteKeyAsync(IEnumerable<string> keys,
+        public Task DeleteKeyAsync(IEnumerable<string> keys,
             AwaitOptions awaitOptions)
         {
-            await DeleteKeyAsync(keys, awaitOptions, CancellationToken.None).ConfigureAwait(false);
+            return DeleteKeyAsync(keys, awaitOptions, CancellationToken.None);
         }
 
         public async Task DeleteKeyAsync(IEnumerable<string> keys,

@@ -18,9 +18,9 @@ namespace TomLonghurst.RedisClient.Client
                 _redisClient = redisClient;
             }
 
-            public async Task<string> ClusterInfoAsync()
+            public Task<string> ClusterInfoAsync()
             {
-                return await ClusterInfoAsync(CancellationToken.None).ConfigureAwait(false);
+                return ClusterInfoAsync(CancellationToken.None);
             }
         
             public async Task<string> ClusterInfoAsync(CancellationToken cancellationToken)

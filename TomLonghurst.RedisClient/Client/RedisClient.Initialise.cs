@@ -32,7 +32,7 @@ namespace TomLonghurst.RedisClient.Client
                 const long receivePauseWriterThreshold = 128 * 1024 * 1024;
                 const long receiveResumeWriterThreshold = receivePauseWriterThreshold / 2;
 
-                var pipeScheduler = new PipeThreadPoolScheduler(workerCount: 5);
+                var pipeScheduler = PipeThreadPoolScheduler.Default;
                 var defaultPipeOptions = PipeOptions.Default;
 
                 var receivePipeOptions = new PipeOptions(
