@@ -1,8 +1,8 @@
 using System;
+using System.Buffers;
 using System.IO;
 using System.IO.Pipelines;
 using System.Threading.Tasks;
-using TomLonghurst.RedisClient.Extensions;
 
 namespace TomLonghurst.RedisClient.Pipes
 {
@@ -89,7 +89,7 @@ namespace TomLonghurst.RedisClient.Pipes
             {
                 while (true)
                 {
-                    var memory = writer.GetMemory();
+                    var memory = writer.GetMemory(512);
 #if NETCORE
                     var bytesRead = await _innerStream.ReadAsync(memory).ConfigureAwait(false);
 #else
@@ -107,7 +107,7 @@ namespace TomLonghurst.RedisClient.Pipes
                     writer.Advance(bytesRead);
 
                     var result = await writer.FlushAsync().ConfigureAwait(false);
-                    if (result.IsCompleted)
+                    if (result.IsCompleted || result.IsCanceled)
                     {
                         break;
                     }
@@ -144,24 +144,22 @@ namespace TomLonghurst.RedisClient.Pipes
 
                     var readResult = await pendingReadResult.ConfigureAwait(false);
 
-                    if (!readResult.Buffer.IsEmpty)
+                    do
                     {
-                        foreach (var segment in readResult.Buffer)
+                        if (!readResult.Buffer.IsEmpty)
                         {
-#if NETCORE
-                            await _innerStream.WriteAsync(segment);
-#else
-                            var arraySegment = segment.GetArraySegment();
-                            await _innerStream
-                                .WriteAsync(arraySegment.Array, arraySegment.Offset, arraySegment.Count)
-                                .ConfigureAwait(false);
-#endif
+                            if (readResult.Buffer.IsSingleSegment)
+                            {
+                                await WriteSingle(readResult.Buffer);
+                            }
+                            else
+                            {
+                                await WriteMultiple(readResult.Buffer);
+                            }
                         }
-
-                        await _innerStream.FlushAsync().ConfigureAwait(false);
-                    }
-
-                    reader.AdvanceTo(readResult.Buffer.End);
+                        reader.AdvanceTo(readResult.Buffer.End);
+                    } while (!(readResult.Buffer.IsEmpty && readResult.IsCompleted)
+                             && reader.TryRead(out readResult));
 
                     if (readResult.IsCompleted && readResult.Buffer.IsEmpty)
                     {
@@ -175,6 +173,32 @@ namespace TomLonghurst.RedisClient.Pipes
             }
 
             reader.Complete(exception);
+        }
+
+        private Task WriteSingle(ReadOnlySequence<byte> buffer)
+        {
+#if NETCORE
+            var valueTask = _innerStream.WriteAsync(buffer.First);
+            return valueTask.IsCompletedSuccessfully ? Task.CompletedTask : valueTask.AsTask();
+#else
+            var arr = buffer.First.GetArraySegment();
+            return _innerStream.WriteAsync(arr.Array, arr.Offset, arr.Count);
+#endif
+        }
+
+        private async Task WriteMultiple(ReadOnlySequence<byte> buffer)
+        {
+            foreach (var segment in buffer)
+            {
+#if NETCORE
+                await _innerStream.WriteAsync(segment);
+#else
+                var arraySegment = segment.GetArraySegment();
+                await _innerStream
+                    .WriteAsync(arraySegment.Array, arraySegment.Offset, arraySegment.Count)
+                    .ConfigureAwait(false);
+#endif
+            }
         }
     }
 }

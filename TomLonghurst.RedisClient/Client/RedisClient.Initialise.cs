@@ -1,6 +1,7 @@
 using System;
 using System.IO.Pipelines;
 using TomLonghurst.RedisClient.Models;
+using TomLonghurst.RedisClient.Pipes;
 
 namespace TomLonghurst.RedisClient.Client
 {
@@ -31,7 +32,7 @@ namespace TomLonghurst.RedisClient.Client
                 const long receivePauseWriterThreshold = 128 * 1024 * 1024;
                 const long receiveResumeWriterThreshold = receivePauseWriterThreshold / 2;
 
-                var pipeScheduler = PipeScheduler.ThreadPool;
+                var pipeScheduler = PipeThreadPoolScheduler.Default;
                 var defaultPipeOptions = PipeOptions.Default;
 
                 var receivePipeOptions = new PipeOptions(

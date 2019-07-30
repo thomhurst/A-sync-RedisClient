@@ -73,7 +73,7 @@ namespace RedisClientTest
             Assert.That(redisValue3.Value, Is.EqualTo("value with a space3"));
         }
 
-        [Test]
+       // [Test]
         public async Task MemoryTest()
         {
             var largeJsonContents = await File.ReadAllTextAsync("large_json.json");
