@@ -168,6 +168,11 @@ namespace TomLonghurst.RedisClient.Client
                         LastAction = "Advancing Buffer in ReadData Loop";
                         _pipe.Input.AdvanceTo(buffer.End);
 
+                        if ((_readResult.IsCompleted || _readResult.IsCanceled) && _readResult.Buffer.IsEmpty)
+                        {
+                            break;
+                        }
+                        
                         LastAction = "Reading Data Synchronously in ReadData Loop";
                         if (!_pipe.Input.TryRead(out _readResult))
                         {
@@ -181,6 +186,11 @@ namespace TomLonghurst.RedisClient.Client
                             .CopyTo(bytes.Slice((int) bytesReceived, (int) Math.Min(buffer.Length, byteSizeOfData - bytesReceived)).Span);
                         
                         bytesReceived += buffer.Length;
+                    }
+
+                    if (_readResult.IsCompleted && _readResult.Buffer.IsEmpty)
+                    {
+                        return bytes;
                     }
 
                     if (readToEnd)
@@ -211,7 +221,7 @@ namespace TomLonghurst.RedisClient.Client
             LastAction = "Finding End of Line Position";
             var endOfLineAfterByteCount = _readResult.Buffer.GetEndOfLinePosition();
 
-            if (!endOfLineAfterByteCount.HasValue)
+            if (endOfLineAfterByteCount == null)
             {
                 throw new Exception("Can't find EOL");
             }

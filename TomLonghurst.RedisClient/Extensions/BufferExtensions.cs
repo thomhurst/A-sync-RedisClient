@@ -55,15 +55,31 @@ namespace TomLonghurst.RedisClient.Extensions
         internal static async ValueTask<ReadResult> AdvanceToLineTerminator(this PipeReader pipeReader,
             ReadResult readResult)
         {
-            readResult = await pipeReader.ReadUntilEndOfLineFound(readResult);
-            var endOfLineSequencePosition = readResult.Buffer.GetEndOfLinePosition();
+            if (readResult.IsCompleted || readResult.IsCanceled)
+            {
+                return readResult;
+            }
+            
+            var endOfLinePosition = readResult.Buffer.GetEndOfLinePosition();
+            if (endOfLinePosition == null)
+            {
+                readResult = await pipeReader.ReadUntilEndOfLineFound(readResult);
+                endOfLinePosition = readResult.Buffer.GetEndOfLinePosition();
+            }
 
-            if (!endOfLineSequencePosition.HasValue)
+            if (endOfLinePosition == null)
             {
                 throw new Exception("Can't find EOL");
             }
 
-            pipeReader.AdvanceTo(endOfLineSequencePosition.Value);
+            if (readResult.Buffer.Start.GetInteger() != endOfLinePosition.Value.GetInteger())
+            {
+                pipeReader.AdvanceTo(endOfLinePosition.Value);
+            }
+            else
+            {
+                pipeReader.AdvanceTo(readResult.Buffer.Start, readResult.Buffer.End);
+            }
 
             return readResult;
         }
@@ -72,12 +88,17 @@ namespace TomLonghurst.RedisClient.Extensions
         {
             var buffer = readResult.Buffer;
 
-            while (buffer.GetEndOfLinePosition() == null || !buffer.GetEndOfLinePosition().HasValue)
+            while (buffer.GetEndOfLinePosition() == null)
             {
                 // We don't want to consume it yet - So don't advance past the start
                 // But do tell it we've examined up until the end - But it's not enough and we need more
                 // We need to call advance before calling another read though
                 pipeReader.AdvanceTo(buffer.Start, buffer.End);
+
+                if (readResult.IsCompleted || readResult.IsCanceled)
+                {
+                    break;
+                }
 
                 if (!pipeReader.TryRead(out readResult))
                 {
@@ -94,7 +115,7 @@ namespace TomLonghurst.RedisClient.Extensions
         {
             var endOfLine = buffer.PositionOf((byte) '\n');
 
-            if (!endOfLine.HasValue)
+            if (endOfLine == null)
             {
                 return null;
             }
