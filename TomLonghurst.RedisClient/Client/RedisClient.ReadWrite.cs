@@ -66,14 +66,7 @@ namespace TomLonghurst.RedisClient.Client
 
                 LastAction = "Reading Bytes Async";
                 var readPipeTask = _pipe.Input.ReadAsync();
-                if (readPipeTask.IsCompleted)
-                {
-                    _readResult = readPipeTask.Result;
-                }
-                else
-                {
-                    _readResult = await readPipeTask.ConfigureAwait(false);
-                }
+                _readResult = await readPipeTask.ConfigureAwait(false);
 
                 return await responseReader.Invoke();
             }
@@ -157,16 +150,9 @@ namespace TomLonghurst.RedisClient.Client
                 {
                     LastAction = "Reading Data Asynchronously in ReadData";
                     var readPipeTask = _pipe.Input.ReadAsync();
-                    if (readPipeTask.IsCompleted)
-                    {
-                        _readResult = readPipeTask.Result;
-                    }
-                    else
-                    {
-                        _readResult = await readPipeTask.ConfigureAwait(false);
-                    }
+                    _readResult = await readPipeTask.ConfigureAwait(false);
                 }
-                
+
                 buffer = _readResult.Buffer;
 
                 if (long.TryParse(line.Substring(1), out var byteSizeOfData))
@@ -189,14 +175,7 @@ namespace TomLonghurst.RedisClient.Client
                         {
                             LastAction = "Reading Data Asynchronously in ReadData Loop";
                             var readPipeTask = _pipe.Input.ReadAsync();
-                            if (readPipeTask.IsCompleted)
-                            {
-                                _readResult = readPipeTask.Result;
-                            }
-                            else
-                            {
-                                _readResult = await readPipeTask.ConfigureAwait(false);
-                            }
+                            _readResult = await readPipeTask.ConfigureAwait(false);
                         }
                         
                         buffer = _readResult.Buffer;

@@ -150,14 +150,7 @@ namespace TomLonghurst.RedisClient.Client
                 {
                     LastAction = "Reading Data Asynchronously in ExpectArray";
                     var readPipeTask = _pipe.Input.ReadAsync();
-                    if (readPipeTask.IsCompleted)
-                    {
-                        _readResult = readPipeTask.Result;
-                    }
-                    else
-                    {
-                        _readResult = await readPipeTask.ConfigureAwait(false);
-                    }
+                    _readResult = await readPipeTask.ConfigureAwait(false);
                 }
                 
                 results[i] = (await ReadData()).ToArray();

@@ -82,14 +82,7 @@ namespace TomLonghurst.RedisClient.Extensions
                 if (!pipeReader.TryRead(out readResult))
                 {
                     var readPipeTask = pipeReader.ReadAsync();
-                    if (readPipeTask.IsCompleted)
-                    {
-                        readResult = readPipeTask.Result;
-                    }
-                    else
-                    {
-                        readResult = await readPipeTask.ConfigureAwait(false);
-                    }
+                    readResult = await readPipeTask.ConfigureAwait(false);
                 }
 
                 buffer = readResult.Buffer;
