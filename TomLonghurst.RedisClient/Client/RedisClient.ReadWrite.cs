@@ -224,7 +224,7 @@ namespace TomLonghurst.RedisClient.Client
                 _readResult = readResultWithEndOfLine.ReadResult;
 
                 LastAction = "Finding End of Line Position";
-                endOfLinePosition = _readResult.Buffer.GetEndOfLinePosition();
+                endOfLinePosition = readResultWithEndOfLine.EndOfLinePosition;
             }
 
             if (endOfLinePosition == null)
