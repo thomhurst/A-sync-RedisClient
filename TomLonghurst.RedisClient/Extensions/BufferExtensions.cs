@@ -58,7 +58,7 @@ namespace TomLonghurst.RedisClient.Extensions
             readResult = await pipeReader.ReadUntilEndOfLineFound(readResult);
             var endOfLineSequencePosition = readResult.Buffer.GetEndOfLinePosition();
 
-            if (endOfLineSequencePosition == null)
+            if (!endOfLineSequencePosition.HasValue)
             {
                 throw new Exception("Can't find EOL");
             }
@@ -71,8 +71,8 @@ namespace TomLonghurst.RedisClient.Extensions
         internal static async ValueTask<ReadResult> ReadUntilEndOfLineFound(this PipeReader pipeReader, ReadResult readResult)
         {
             var buffer = readResult.Buffer;
-            
-            while (buffer.GetEndOfLinePosition() == null)
+
+            while (buffer.GetEndOfLinePosition() == null || !buffer.GetEndOfLinePosition().HasValue)
             {
                 // We don't want to consume it yet - So don't advance past the start
                 // But do tell it we've examined up until the end - But it's not enough and we need more
@@ -81,8 +81,7 @@ namespace TomLonghurst.RedisClient.Extensions
 
                 if (!pipeReader.TryRead(out readResult))
                 {
-                    var readPipeTask = pipeReader.ReadAsync();
-                    readResult = await readPipeTask.ConfigureAwait(false);
+                    readResult = await pipeReader.ReadAsync().ConfigureAwait(false);
                 }
 
                 buffer = readResult.Buffer;
@@ -95,7 +94,7 @@ namespace TomLonghurst.RedisClient.Extensions
         {
             var endOfLine = buffer.PositionOf((byte) '\n');
 
-            if (endOfLine == null)
+            if (!endOfLine.HasValue)
             {
                 return null;
             }

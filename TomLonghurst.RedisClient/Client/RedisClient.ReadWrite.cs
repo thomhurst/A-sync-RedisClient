@@ -65,8 +65,7 @@ namespace TomLonghurst.RedisClient.Client
                 await Write(command);
 
                 LastAction = "Reading Bytes Async";
-                var readPipeTask = _pipe.Input.ReadAsync();
-                _readResult = await readPipeTask.ConfigureAwait(false);
+                _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
 
                 return await responseReader.Invoke();
             }
@@ -149,8 +148,7 @@ namespace TomLonghurst.RedisClient.Client
                 if (!_pipe.Input.TryRead(out _readResult))
                 {
                     LastAction = "Reading Data Asynchronously in ReadData";
-                    var readPipeTask = _pipe.Input.ReadAsync();
-                    _readResult = await readPipeTask.ConfigureAwait(false);
+                    _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
                 }
 
                 buffer = _readResult.Buffer;
@@ -174,8 +172,7 @@ namespace TomLonghurst.RedisClient.Client
                         if (!_pipe.Input.TryRead(out _readResult))
                         {
                             LastAction = "Reading Data Asynchronously in ReadData Loop";
-                            var readPipeTask = _pipe.Input.ReadAsync();
-                            _readResult = await readPipeTask.ConfigureAwait(false);
+                            _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
                         }
                         
                         buffer = _readResult.Buffer;
@@ -214,7 +211,7 @@ namespace TomLonghurst.RedisClient.Client
             LastAction = "Finding End of Line Position";
             var endOfLineAfterByteCount = _readResult.Buffer.GetEndOfLinePosition();
 
-            if (endOfLineAfterByteCount == null)
+            if (!endOfLineAfterByteCount.HasValue)
             {
                 throw new Exception("Can't find EOL");
             }
