@@ -128,7 +128,7 @@ namespace TomLonghurst.RedisClient.Pipes
 
             lock (_queue)
             {
-                if (!_disposed && _queue.Count <= WorkerCount * 2)
+                if (!_disposed && _queue.Count <= WorkerCount)
                 {
                     _queue.Enqueue(new WorkItem(action, state));
 
