@@ -13,21 +13,21 @@ namespace TomLonghurst.RedisClient.Extensions
         {
             return buffer.Span.AsString();
         }
-        
+
         internal static string AsString(this ReadOnlySequence<byte> buffer)
         {
             if (buffer.IsEmpty)
             {
                 return null;
             }
-            
+
             if (buffer.IsSingleSegment)
             {
                 return AsString(buffer.First.Span);
             }
 
-            var arr = ArrayPool<byte>.Shared.Rent(checked((int)buffer.Length));
-            var span = new Span<byte>(arr, 0, (int)buffer.Length);
+            var arr = ArrayPool<byte>.Shared.Rent(checked((int) buffer.Length));
+            var span = new Span<byte>(arr, 0, (int) buffer.Length);
             buffer.CopyTo(span);
             var s = AsString(span);
             ArrayPool<byte>.Shared.Return(arr);
@@ -45,7 +45,7 @@ namespace TomLonghurst.RedisClient.Extensions
             {
                 return null;
             }
-            
+
             fixed (byte* ptr = span)
             {
                 return Encoding.UTF8.GetString(ptr, span.Length);
@@ -59,12 +59,13 @@ namespace TomLonghurst.RedisClient.Extensions
             {
                 return readResult;
             }
-            
+
             var endOfLinePosition = readResult.Buffer.GetEndOfLinePosition();
             if (endOfLinePosition == null)
             {
-                readResult = await pipeReader.ReadUntilEndOfLineFound(readResult);
-                endOfLinePosition = readResult.Buffer.GetEndOfLinePosition();
+                var readResultWithEndOfLine = await pipeReader.ReadUntilEndOfLineFound(readResult);
+                readResult = readResultWithEndOfLine.ReadResult;
+                endOfLinePosition = readResultWithEndOfLine.EndOfLinePosition;
             }
 
             if (endOfLinePosition == null)
@@ -84,11 +85,24 @@ namespace TomLonghurst.RedisClient.Extensions
             return readResult;
         }
 
-        internal static async ValueTask<ReadResult> ReadUntilEndOfLineFound(this PipeReader pipeReader, ReadResult readResult)
+        public class ReadResultWithEndOfLine
+        {
+            public ReadResult ReadResult { get; }
+            public SequencePosition? EndOfLinePosition { get; }
+
+            public ReadResultWithEndOfLine(ReadResult readResult, SequencePosition? endOfLinePosition)
+            {
+                ReadResult = readResult;
+                EndOfLinePosition = endOfLinePosition;
+            }
+        }
+
+        internal static async ValueTask<ReadResultWithEndOfLine> ReadUntilEndOfLineFound(this PipeReader pipeReader, ReadResult readResult)
         {
             var buffer = readResult.Buffer;
 
-            while (buffer.GetEndOfLinePosition() == null)
+            SequencePosition? endOfLinePosition;
+            while ((endOfLinePosition = buffer.GetEndOfLinePosition()) == null)
             {
                 // We don't want to consume it yet - So don't advance past the start
                 // But do tell it we've examined up until the end - But it's not enough and we need more
@@ -108,7 +122,7 @@ namespace TomLonghurst.RedisClient.Extensions
                 buffer = readResult.Buffer;
             }
 
-            return readResult;
+            return new ReadResultWithEndOfLine(readResult, endOfLinePosition);
         }
 
         internal static SequencePosition? GetEndOfLinePosition(this ReadOnlySequence<byte> buffer)

@@ -215,26 +215,32 @@ namespace TomLonghurst.RedisClient.Client
 
         private async ValueTask<string> ReadLine()
         {
-            LastAction = "Reading until End of Line found";
-            _readResult = await _pipe.Input.ReadUntilEndOfLineFound(_readResult);
-
             LastAction = "Finding End of Line Position";
-            var endOfLineAfterByteCount = _readResult.Buffer.GetEndOfLinePosition();
+            var endOfLinePosition = _readResult.Buffer.GetEndOfLinePosition();
+            if (endOfLinePosition == null)
+            {
+                LastAction = "Reading until End of Line found";
+                var readResultWithEndOfLine = await _pipe.Input.ReadUntilEndOfLineFound(_readResult);
+                _readResult = readResultWithEndOfLine.ReadResult;
 
-            if (endOfLineAfterByteCount == null)
+                LastAction = "Finding End of Line Position";
+                endOfLinePosition = _readResult.Buffer.GetEndOfLinePosition();
+            }
+
+            if (endOfLinePosition == null)
             {
                 throw new Exception("Can't find EOL");
             }
 
             var buffer = _readResult.Buffer;
 
-            buffer = buffer.Slice(0, endOfLineAfterByteCount.Value);
+            buffer = buffer.Slice(0, endOfLinePosition.Value);
 
             // Reslice but removing the line terminators
             var line = buffer.Slice(0, buffer.Length - 2).AsString();
 
             LastAction = "Advancing Buffer to End of Line";
-            _pipe.Input.AdvanceTo(endOfLineAfterByteCount.Value);
+            _pipe.Input.AdvanceTo(endOfLinePosition.Value);
 
             return line;
         }
