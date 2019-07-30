@@ -102,20 +102,22 @@ namespace TomLonghurst.RedisClient.Client
 
         private ValueTask<FlushResult> Write(IRedisCommand command)
         {
-            var encodedCommand = command.EncodedCommand;
+            var encodedCommandList = command.EncodedCommandList;
             
             LastAction = "Writing Bytes";
             var pipeWriter = _pipe.Output;
 #if NETCORE
             
-            var bytesSpan = pipeWriter.GetSpan(encodedCommand.Length);
-            encodedCommand.CopyTo(bytesSpan);
-            
-            pipeWriter.Advance(encodedCommand.Length);
-            
+            foreach (var encodedCommand in encodedCommandList)
+            {
+                var bytesSpan = pipeWriter.GetSpan(encodedCommand.Length);
+                encodedCommand.CopyTo(bytesSpan);
+                pipeWriter.Advance(encodedCommand.Length);
+            }
+
             return _pipe.Output.FlushAsync();
 #else
-            return pipeWriter.WriteAsync(encodedCommand.AsMemory());
+            return pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray().AsMemory());
 #endif
         }
 

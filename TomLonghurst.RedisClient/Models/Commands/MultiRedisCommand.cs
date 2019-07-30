@@ -5,12 +5,12 @@ namespace TomLonghurst.RedisClient.Models.Commands
 {
     public class MultiRedisCommand : IRedisCommand
     {
-        public byte[] EncodedCommand { get; }
+        public IList<byte[]> EncodedCommandList { get; }
         public string AsString { get; }
 
         public MultiRedisCommand(IEnumerable<IRedisCommand> redisCommands)
         {
-            EncodedCommand = redisCommands.SelectMany(x => x.EncodedCommand).ToArray();
+            EncodedCommandList = redisCommands.SelectMany(x => x.EncodedCommandList).ToArray();
         }
         
         public static MultiRedisCommand From(IEnumerable<IRedisCommand> redisCommands)

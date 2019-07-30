@@ -1,8 +1,10 @@
+using System.Collections.Generic;
+
 namespace TomLonghurst.RedisClient.Models.Commands
 {
     public interface IRedisCommand
     {
-        byte[] EncodedCommand { get; }
+        IList<byte[]> EncodedCommandList { get; }
         string AsString { get; }
     }
 }

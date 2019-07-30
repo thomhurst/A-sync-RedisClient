@@ -9,13 +9,26 @@ namespace TomLonghurst.RedisClient.Models.Commands
         internal readonly IEnumerable<IRedisEncodable> _redisEncodables;
         internal readonly byte[][] rawBytes;
 
-        public byte[] EncodedCommand
+        private IList<byte[]> _encodedCommand;
+
+        public IList<byte[]> EncodedCommandList
         {
             get
             {
-                return $"*{rawBytes.Length}".ToUtf8BytesWithTerminator()
-                    .Concat(rawBytes.SelectMany(x => $"${x.Length - 2}".ToRedisEncoded().RedisEncodedBytes.Concat(x)))
-                    .ToArray();
+                if (_encodedCommand != null)
+                {
+                    return _encodedCommand;
+                }
+
+                _encodedCommand = new List<byte[]> {$"*{rawBytes.Length}".ToUtf8BytesWithTerminator()};
+
+                foreach (var rawByte in rawBytes)
+                {
+                    _encodedCommand.Add($"${rawByte.Length - 2}".ToUtf8BytesWithTerminator());
+                    _encodedCommand.Add(rawByte);
+                }
+
+                return _encodedCommand;
             }
         }
 
