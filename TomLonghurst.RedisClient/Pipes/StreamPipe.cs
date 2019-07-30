@@ -4,6 +4,10 @@ using System.IO;
 using System.IO.Pipelines;
 using System.Threading.Tasks;
 
+#if !NETCORE
+using TomLonghurst.RedisClient.Extensions;
+#endif
+
 namespace TomLonghurst.RedisClient.Pipes
 {
     public class StreamPipe : IDuplexPipe
