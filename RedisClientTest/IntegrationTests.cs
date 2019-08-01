@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.Versioning;
+using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using StackExchange.Redis;
@@ -73,9 +76,19 @@ namespace RedisClientTest
             Assert.That(redisValue3.Value, Is.EqualTo("value with a space3"));
         }
 
-       // [Test]
+        public async Task Time(Func<Task> action)
+        {
+            var sw = Stopwatch.StartNew();
+            await action.Invoke();
+            sw.Stop();
+            Console.WriteLine($"Time Taken: {sw.ElapsedMilliseconds} ms");
+        }
+        
+        //[Test]
         public async Task MemoryTest()
         {
+            string ver = Assembly.GetEntryAssembly()?.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName;
+
             var largeJsonContents = await File.ReadAllTextAsync("large_json.json");
             var sw = Stopwatch.StartNew();
             var tasks = new List<Task>();
@@ -90,11 +103,23 @@ namespace RedisClientTest
                         try
                         {
                             var client = await _redisManager.GetRedisClientAsync();
-                            await client.StringSetAsync($"MemoryTestKey{i1}", largeJsonContents, 120,
-                                AwaitOptions.AwaitCompletion);
-                            var result = await client.StringGetAsync($"MemoryTestKey{i1}");
-                            Assert.That(result.Value, Is.EqualTo(largeJsonContents));
-                            await client.DeleteKeyAsync($"MultiTestKey{i1}", AwaitOptions.AwaitCompletion);
+                            
+                            await Time(async delegate
+                            {
+                                await client.StringSetAsync($"MemoryTestKey{i1}", largeJsonContents, 120,
+                                    AwaitOptions.AwaitCompletion);
+                            });
+
+                            await Time(async delegate
+                            {
+                                var result = await client.StringGetAsync($"MemoryTestKey{i1}");
+                                Assert.That(result.Value, Is.EqualTo(largeJsonContents));
+                            });
+
+                            await Time(async delegate
+                            {
+                                await client.DeleteKeyAsync($"MultiTestKey{i1}", AwaitOptions.AwaitCompletion);
+                            });
                         }
                         catch (Exception e)
                         {
@@ -514,7 +539,7 @@ namespace RedisClientTest
             await _tomLonghurstRedisClient.StringSetAsync("ExpireKeyDateTime", "123", AwaitOptions.AwaitCompletion);
             await _tomLonghurstRedisClient.ExpireAtAsync("ExpireKeyDateTime", DateTimeOffset.Now.AddSeconds(30));
             var ttl = await _tomLonghurstRedisClient.TimeToLiveAsync("ExpireKeyDateTime");
-            Assert.That(ttl, Is.LessThanOrEqualTo(30));
+            Assert.That(ttl, Is.LessThanOrEqualTo(31));
         }
     }
 }

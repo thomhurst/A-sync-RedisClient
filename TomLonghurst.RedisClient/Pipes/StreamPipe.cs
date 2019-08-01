@@ -57,10 +57,9 @@ namespace TomLonghurst.RedisClient.Pipes
                 _readPipe = new Pipe(receivePipeOptions);
 
                 receivePipeOptions.ReaderScheduler.Schedule(
-#pragma warning disable 4014
-                    obj => ((StreamPipe) obj).CopyFromStreamToReadPipe(), this);
-#pragma warning restore 4014
+                    async obj => await ((StreamPipe) obj).CopyFromStreamToReadPipe(), this);
             }
+
 
             if (write)
             {
@@ -70,11 +69,9 @@ namespace TomLonghurst.RedisClient.Pipes
                 }
 
                 _writePipe = new Pipe(sendPipeOptions);
-
+                
                 sendPipeOptions.WriterScheduler.Schedule(
-#pragma warning disable 4014
-                    obj => ((StreamPipe) obj).CopyFromWritePipeToStream(), this);
-#pragma warning restore 4014
+                    async obj => await ((StreamPipe) obj).CopyFromWritePipeToStream(), this);
             }
         }
 

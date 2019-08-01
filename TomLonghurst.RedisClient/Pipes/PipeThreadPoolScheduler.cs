@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace TomLonghurst.RedisClient.Pipes
 {
@@ -50,11 +52,16 @@ namespace TomLonghurst.RedisClient.Pipes
 
         private string Name { get; }
         
+        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly CancellationToken _cancellationToken;
+        
         /// <summary>
         /// Create a new dedicated thread-pool
         /// </summary>
         public PipeThreadPoolScheduler(string name = null, int workerCount = 2)
         {
+            _cancellationToken = _cancellationTokenSource.Token;
+            
             if (workerCount <= 0)
             {
                 throw new ArgumentNullException(nameof(workerCount));
@@ -103,7 +110,7 @@ namespace TomLonghurst.RedisClient.Pipes
 
         private volatile bool _disposed;
 
-        private readonly Queue<WorkItem> _queue = new Queue<WorkItem>();
+        private readonly AsyncQueue<WorkItem> _queue = new AsyncQueue<WorkItem>();
         private void StartWorker(int id)
         {
             var thread = new Thread(ThreadRunWorkLoop)
@@ -125,23 +132,13 @@ namespace TomLonghurst.RedisClient.Pipes
             {
                 return; // nothing to do
             }
-
-            lock (_queue)
-            {
-                if (!_disposed && _queue.Count <= WorkerCount)
-                {
-                    _queue.Enqueue(new WorkItem(action, state));
-
-                    if (_availableThreads != 0)
-                    {
-                        // Wake up a thread to do some work
-                        Monitor.Pulse(_queue);
-                    }
-                    
-                    return;
-                }
-            }
             
+            if (!_disposed && _queue.Count <= WorkerCount)
+            {
+                _queue.Enqueue(new WorkItem(action, state));
+                return;
+            }
+
             // If condition above not met - We'll go to the Global ThreadPool
             ThreadPool.Schedule(action, state);
         }
@@ -167,40 +164,21 @@ namespace TomLonghurst.RedisClient.Pipes
             }
         }
 
-        private void RunWorkLoop()
+        private async Task RunWorkLoop()
         {
             s_threadWorkerPoolId = Id;
             while (true)
             {
-                WorkItem next;
-                lock (_queue)
+                if (_queue.Count == 0)
                 {
-                    while (_queue.Count == 0)
+                    if (_disposed)
                     {
-                        if (_disposed)
-                        {
-                            break;
-                        }
-
-                        // Thread is paused and available to be woken up to do some work
-                        _availableThreads++;
-                        Monitor.Wait(_queue);
-                        _availableThreads--;
+                        // Only break once the queue has been emptied
+                        break;
                     }
-
-                    if (_queue.Count == 0)
-                    {
-                        if (_disposed)
-                        {
-                            // Only break once the queue has been emptied
-                            break;
-                        }
-
-                        continue;
-                    }
-
-                    next = _queue.Dequeue();
                 }
+
+                var next = await _queue.DequeueAsync(_cancellationToken);
 
                 Execute(next.Action, next.State);
             }
@@ -218,11 +196,9 @@ namespace TomLonghurst.RedisClient.Pipes
         public void Dispose()
         {
             _disposed = true;
-            lock (_queue)
-            {
-                // Resume all available and waiting threads so that they can exit/shut down
-                Monitor.PulseAll(_queue);
-            }
+            
+            _cancellationTokenSource.Cancel();
+            _cancellationTokenSource.Dispose();
         }
     }
 }

@@ -111,10 +111,28 @@ namespace TomLonghurst.RedisClient.Client
                 pipeWriter.Advance(encodedCommand.Length);
             }
 
-            return _pipe.Output.FlushAsync();
+            return Flush();
 #else
             return pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray().AsMemory());
 #endif
+        }
+
+        private ValueTask<FlushResult> Flush()
+        {
+            bool GetResult(FlushResult flush)
+                // tell the calling code whether any more messages
+                // should be written
+                => !(flush.IsCanceled || flush.IsCompleted);
+
+            async ValueTask<FlushResult> Awaited(ValueTask<FlushResult> incomplete)
+                => await incomplete;
+
+            // apply back-pressure etc
+            var flushTask = _pipe.Output.FlushAsync();
+
+            return flushTask.IsCompletedSuccessfully
+                ? new ValueTask<FlushResult>(flushTask.Result)
+                : Awaited(flushTask);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
