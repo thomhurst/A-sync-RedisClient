@@ -43,12 +43,11 @@ namespace TomLonghurst.RedisClient.Client
 
             Interlocked.Increment(ref _outStandingOperations);
 
-
             if (!isReconnectionAttempt)
             {
                 LastAction = "Waiting for Send/Receive lock to be free";
                 var wait = _sendSemaphoreSlim.WaitAsync(cancellationToken);
-                if (!wait.IsCompleted)
+                if (!wait.IsCompletedSuccessfully())
                 {
                     await wait.ConfigureAwait(false);
                 }
@@ -63,10 +62,13 @@ namespace TomLonghurst.RedisClient.Client
             {
                 if (!isReconnectionAttempt)
                 {
-                    await TryConnectAsync(cancellationToken).ConfigureAwait(false);
+                    if (!IsConnected)
+                    {
+                        await TryConnectAsync(cancellationToken).ConfigureAwait(false);
+                    }
                 }
 
-                await Write(command);
+                var flushResult = await Write(command);
 
                 LastAction = "Reading Bytes Async";
                 _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);

@@ -8,6 +8,7 @@ using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.RedisClient.Exceptions;
+using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Models;
 using TomLonghurst.RedisClient.Pipes;
 
@@ -148,7 +149,7 @@ namespace TomLonghurst.RedisClient.Client
 
             LastAction = "Waiting for Connecting lock to be free";
             var wait = _connectSemaphoreSlim.WaitAsync(cancellationToken);
-            if (!wait.IsCompleted)
+            if (!wait.IsCompletedSuccessfully())
             {
                 await wait.ConfigureAwait(false);
             }

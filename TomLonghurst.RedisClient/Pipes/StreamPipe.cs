@@ -138,7 +138,7 @@ namespace TomLonghurst.RedisClient.Pipes
                 {
                     var pendingReadResult = reader.ReadAsync();
 
-                    if (!pendingReadResult.IsCompleted)
+                    if (!pendingReadResult.IsCompletedSuccessfully)
                     {
                         await _innerStream.FlushAsync().ConfigureAwait(false);
                     }

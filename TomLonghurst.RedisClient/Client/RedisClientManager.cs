@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TomLonghurst.RedisClient.Extensions;
 
 namespace TomLonghurst.RedisClient.Client
 {
@@ -46,6 +47,17 @@ namespace TomLonghurst.RedisClient.Client
 
             if (_redisClients.Any(task => !task.IsCompleted))
             {
+                var leastLoadedAvailableConnection = _redisClients
+                    .Where(task => task.IsCompletedSuccessfully())
+                    .Select(task => task.Result)
+                    .OrderBy(client => client.OutstandingOperations)
+                    .FirstOrDefault();
+
+                if (leastLoadedAvailableConnection != null)
+                {
+                    return leastLoadedAvailableConnection;
+                }
+                    
                 return await await Task.WhenAny(_redisClients);
             }
 
