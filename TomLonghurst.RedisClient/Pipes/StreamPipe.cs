@@ -183,7 +183,7 @@ namespace TomLonghurst.RedisClient.Pipes
             {
                 exception = e;
             }
-
+            
             reader.Complete(exception);
         }
 

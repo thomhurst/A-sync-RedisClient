@@ -68,10 +68,12 @@ namespace TomLonghurst.RedisClient.Client
                     }
                 }
 
-                var flushResult = await Write(command);
+                await Write(command);
 
                 LastAction = "Reading Bytes Async";
-                _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
+                if(!_pipe.Input.TryRead(out _readResult)) {
+                    _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
+                }
 
                 return await responseReader.Invoke();
             }
