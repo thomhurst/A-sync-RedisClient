@@ -40,8 +40,8 @@ namespace TomLonghurst.RedisClient.Extensions
                 }
             }
 
-            byteArray[encodedLength - 2] = (byte) '\r';
-            byteArray[encodedLength - 2] = (byte) '\n';
+            byteArray[encodedLength] = (byte) '\r';
+            byteArray[encodedLength + 1] = (byte) '\n';
 
             return byteArray;
         }
