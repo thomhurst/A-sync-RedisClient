@@ -76,12 +76,12 @@ namespace RedisClientTest
             Assert.That(redisValue3.Value, Is.EqualTo("value with a space3"));
         }
 
-        public async Task Time(Func<Task> action)
+        public async Task Time(string title, Func<Task> action)
         {
             var sw = Stopwatch.StartNew();
             await action.Invoke();
             sw.Stop();
-            Console.WriteLine($"Time Taken: {sw.ElapsedMilliseconds} ms");
+            Console.WriteLine($"{title} - Time Taken: {sw.ElapsedMilliseconds} ms");
         }
         
         //[Test]
@@ -104,19 +104,19 @@ namespace RedisClientTest
                         {
                             var client = await _redisManager.GetRedisClientAsync();
                             
-                            await Time(async delegate
+                            await Time("Set", async delegate
                             {
                                 await client.StringSetAsync($"MemoryTestKey{i1}", largeJsonContents, 120,
                                     AwaitOptions.AwaitCompletion);
                             });
 
-                            await Time(async delegate
+                            await Time("Get", async delegate
                             {
                                 var result = await client.StringGetAsync($"MemoryTestKey{i1}");
                                 Assert.That(result.Value, Is.EqualTo(largeJsonContents));
                             });
 
-                            await Time(async delegate
+                            await Time("Delete", async delegate
                             {
                                 await client.DeleteKeyAsync($"MultiTestKey{i1}", AwaitOptions.AwaitCompletion);
                             });

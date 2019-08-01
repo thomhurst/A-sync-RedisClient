@@ -187,10 +187,11 @@ namespace TomLonghurst.RedisClient.Client
 
                     buffer.CopyTo(bytes.Slice(0, (int) bytesReceived).Span);
 
+                    _pipe.Input.AdvanceTo(buffer.End);
+                    
                     while (bytesReceived < byteSizeOfData)
                     {
                         LastAction = "Advancing Buffer in ReadData Loop";
-                        _pipe.Input.AdvanceTo(buffer.End);
 
                         if ((_readResult.IsCompleted || _readResult.IsCanceled) && _readResult.Buffer.IsEmpty)
                         {
@@ -204,12 +205,14 @@ namespace TomLonghurst.RedisClient.Client
                             _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
                         }
                         
-                        buffer = _readResult.Buffer;
+                        buffer = _readResult.Buffer.Slice(0, Math.Min(buffer.Length, byteSizeOfData - bytesReceived));
                         
-                        buffer.Slice(0, Math.Min(buffer.Length, byteSizeOfData - bytesReceived))
+                        buffer
                             .CopyTo(bytes.Slice((int) bytesReceived, (int) Math.Min(buffer.Length, byteSizeOfData - bytesReceived)).Span);
                         
                         bytesReceived += buffer.Length;
+                        
+                        _pipe.Input.AdvanceTo(buffer.End);
                     }
 
                     if (_readResult.IsCompleted && _readResult.Buffer.IsEmpty)
@@ -217,16 +220,13 @@ namespace TomLonghurst.RedisClient.Client
                         return bytes;
                     }
 
-                    if (readToEnd)
+                    if (!_pipe.Input.TryRead(out _readResult))
                     {
-                        LastAction = "Advancing Buffer to End of Buffer";
-                        _pipe.Input.AdvanceTo(_readResult.Buffer.End);
+                        LastAction = "Reading Data Asynchronously in ReadData Loop";
+                        _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
                     }
-                    else
-                    {
-                        LastAction = "Advancing Buffer to Line Terminator";
-                        _readResult = await _pipe.Input.AdvanceToLineTerminator(_readResult);
-                    }
+                    
+                    _pipe.Input.AdvanceToLineTerminator(_readResult);
 
                     return bytes;
                 }

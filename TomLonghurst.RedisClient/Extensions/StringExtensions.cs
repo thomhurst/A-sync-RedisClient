@@ -62,6 +62,28 @@ namespace TomLonghurst.RedisClient.Extensions
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static unsafe int AsUtf8BytesSpanWithTerminator(this string value, out Span<byte> bytesSpan)
+        {
+            var charsSpan = value.AsSpan();
+            int encodedLength;
+                
+            fixed(char* charPtr = charsSpan)
+            {
+                encodedLength = Encoding.UTF8.GetByteCount(charPtr, charsSpan.Length);
+                bytesSpan = new byte[encodedLength + 2].AsSpan();
+                fixed (byte* bytePtr = bytesSpan)
+                {
+                    Encoding.UTF8.GetBytes(charPtr, charsSpan.Length, bytePtr, bytesSpan.Length);
+                }
+            }
+            
+            bytesSpan[encodedLength] = (byte) '\r';
+            bytesSpan[encodedLength + 1] = (byte) '\n';
+
+            return encodedLength + 2;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static IEnumerable<string> Split(this string value, string delimiter)
         {
             return value.Split(new[] {delimiter}, StringSplitOptions.RemoveEmptyEntries);

@@ -92,7 +92,7 @@ namespace TomLonghurst.RedisClient.Pipes
                 {
                     var memory = writer.GetMemory(512);
 #if NETCORE
-                    var bytesRead = await _innerStream.ReadAsync(memory).ConfigureAwait(false);
+                    var bytesRead = await _innerStream.ReadAsync(memory);
 #else
                     var arr = memory.GetArraySegment();
 
@@ -108,6 +108,7 @@ namespace TomLonghurst.RedisClient.Pipes
                     writer.Advance(bytesRead);
 
                     var result = await writer.FlushAsync().ConfigureAwait(false);
+
                     if (result.IsCompleted || result.IsCanceled)
                     {
                         break;
@@ -138,7 +139,7 @@ namespace TomLonghurst.RedisClient.Pipes
                 {
                     var pendingReadResult = reader.ReadAsync();
 
-                    if (!pendingReadResult.IsCompletedSuccessfully)
+                    if (!pendingReadResult.IsCompleted)
                     {
                         await _innerStream.FlushAsync().ConfigureAwait(false);
                     }
@@ -151,14 +152,24 @@ namespace TomLonghurst.RedisClient.Pipes
                         {
                             if (readResult.Buffer.IsSingleSegment)
                             {
-                                await WriteSingle(readResult.Buffer);
+                                var writeTask = WriteSingle(readResult.Buffer);
+                                if (!writeTask.IsCompleted)
+                                {
+                                    await writeTask.ConfigureAwait(false);
+                                }
                             }
                             else
                             {
-                                await WriteMultiple(readResult.Buffer);
+                                var writeTask = WriteMultiple(readResult.Buffer);
+                                if (!writeTask.IsCompleted)
+                                {
+                                    await writeTask.ConfigureAwait(false);
+                                }
                             }
                         }
+                        
                         reader.AdvanceTo(readResult.Buffer.End);
+                        
                     } while (!(readResult.Buffer.IsEmpty && readResult.IsCompleted)
                              && reader.TryRead(out readResult));
 
