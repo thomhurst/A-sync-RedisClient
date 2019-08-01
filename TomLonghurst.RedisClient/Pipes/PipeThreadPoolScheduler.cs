@@ -150,7 +150,7 @@ namespace TomLonghurst.RedisClient.Pipes
         /// The number of workers currently actively engaged in work
         /// </summary>
         public int AvailableCount => Thread.VolatileRead(ref _availableThreads);
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Execute(Action<object> action, object state)
         {
@@ -158,7 +158,7 @@ namespace TomLonghurst.RedisClient.Pipes
             {
                 action(state);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 
             }

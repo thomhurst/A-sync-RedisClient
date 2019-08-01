@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.IO;
 using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Tasks;
 
 #if !NETCORE
@@ -90,28 +91,36 @@ namespace TomLonghurst.RedisClient.Pipes
             {
                 while (true)
                 {
-                    var memory = writer.GetMemory(512);
+                    try
+                    {
+                        var memory = writer.GetMemory(512);
 #if NETCORE
                     var bytesRead = await _innerStream.ReadAsync(memory);
 #else
-                    var arr = memory.GetArraySegment();
+                        var arr = memory.GetArraySegment();
 
-                    var bytesRead = await _innerStream.ReadAsync(arr.Array, arr.Offset, arr.Count)
-                        .ConfigureAwait(false);
+                        var bytesRead = await _innerStream.ReadAsync(arr.Array, arr.Offset, arr.Count)
+                            .ConfigureAwait(false);
 #endif
 
-                    if (bytesRead == 0)
-                    {
-                        break;
+                        if (bytesRead == 0)
+                        {
+                            break;
+                        }
+
+                        writer.Advance(bytesRead);
+
+                        var result = await writer.FlushAsync().ConfigureAwait(false);
+
+                        if (result.IsCompleted || result.IsCanceled)
+                        {
+                            break;
+                        }
                     }
-
-                    writer.Advance(bytesRead);
-
-                    var result = await writer.FlushAsync().ConfigureAwait(false);
-
-                    if (result.IsCompleted || result.IsCanceled)
+                    catch (IOException)
                     {
-                        break;
+                        // TODO Why does this occur?
+                        //    "Unable to read data from the transport connection: The I/O operation has been aborted because of either a thread exit or an application request."
                     }
                 }
             }
@@ -167,9 +176,9 @@ namespace TomLonghurst.RedisClient.Pipes
                                 }
                             }
                         }
-                        
+
                         reader.AdvanceTo(readResult.Buffer.End);
-                        
+
                     } while (!(readResult.Buffer.IsEmpty && readResult.IsCompleted)
                              && reader.TryRead(out readResult));
 
@@ -183,8 +192,10 @@ namespace TomLonghurst.RedisClient.Pipes
             {
                 exception = e;
             }
-            
-            reader.Complete(exception);
+            finally
+            {
+                reader.Complete(exception);
+            }
         }
 
         private Task WriteSingle(ReadOnlySequence<byte> buffer)
