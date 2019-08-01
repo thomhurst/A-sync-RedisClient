@@ -47,7 +47,11 @@ namespace TomLonghurst.RedisClient.Client
             if (!isReconnectionAttempt)
             {
                 LastAction = "Waiting for Send/Receive lock to be free";
-                await _sendSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
+                var wait = _sendSemaphoreSlim.WaitAsync(cancellationToken);
+                if (!wait.IsCompleted)
+                {
+                    await wait.ConfigureAwait(false);
+                }
             }
 
             Log.Debug($"Executing Command: {command}");

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using TomLonghurst.RedisClient.Constants;
 using TomLonghurst.RedisClient.Models.Commands;
 
 namespace TomLonghurst.RedisClient.Extensions
@@ -11,15 +10,40 @@ namespace TomLonghurst.RedisClient.Extensions
     internal static class StringExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static byte[] ToUtf8Bytes(this string value)
+        internal static unsafe byte[] ToUtf8Bytes(this string value)
         {
-            return Encoding.UTF8.GetBytes(value);
+            var encodedLength = Encoding.UTF8.GetByteCount(value);
+            var byteArray = new byte[encodedLength];
+
+            fixed (char* charPtr = value)
+            {
+                fixed (byte* bytePtr = byteArray)
+                {
+                    Encoding.UTF8.GetBytes(charPtr, value.Length, bytePtr, encodedLength);
+                }
+            }
+
+            return byteArray;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static byte[] ToUtf8BytesWithTerminator(this string value)
+        internal static unsafe byte[] ToUtf8BytesWithTerminator(this string value)
         {
-            return value.ToUtf8Bytes().Concat(ByteConstants.LINE_TERMINATOR).ToArray();
+            var encodedLength = Encoding.UTF8.GetByteCount(value);
+            var byteArray = new byte[encodedLength + 2];
+
+            fixed (char* charPtr = value)
+            {
+                fixed (byte* bytePtr = byteArray)
+                {
+                    Encoding.UTF8.GetBytes(charPtr, value.Length, bytePtr, encodedLength);
+                }
+            }
+
+            byteArray[encodedLength - 2] = (byte) '\r';
+            byteArray[encodedLength - 2] = (byte) '\n';
+
+            return byteArray;
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

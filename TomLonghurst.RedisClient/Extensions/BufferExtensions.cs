@@ -23,13 +23,13 @@ namespace TomLonghurst.RedisClient.Extensions
 
             if (buffer.IsSingleSegment)
             {
-                return AsString(buffer.First.Span);
+                return buffer.First.Span.AsString();
             }
 
             var arr = ArrayPool<byte>.Shared.Rent(checked((int) buffer.Length));
             var span = new Span<byte>(arr, 0, (int) buffer.Length);
             buffer.CopyTo(span);
-            var s = AsString(span);
+            var s = span.AsString();
             ArrayPool<byte>.Shared.Return(arr);
             return s;
         }
@@ -45,6 +45,10 @@ namespace TomLonghurst.RedisClient.Extensions
             {
                 return null;
             }
+
+#if  NETCORE
+            return Encoding.UTF8.GetString(span);
+#endif
 
             fixed (byte* ptr = span)
             {
