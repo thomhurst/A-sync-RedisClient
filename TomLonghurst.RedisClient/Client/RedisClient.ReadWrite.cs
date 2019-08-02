@@ -207,7 +207,7 @@ namespace TomLonghurst.RedisClient.Client
                             _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
                         }
                         
-                        buffer = _readResult.Buffer.Slice(0, Math.Min(buffer.Length, byteSizeOfData - bytesReceived));
+                        buffer = _readResult.Buffer.Slice(0, Math.Min(_readResult.Buffer.Length, byteSizeOfData - bytesReceived));
                         
                         buffer
                             .CopyTo(bytes.Slice((int) bytesReceived, (int) Math.Min(buffer.Length, byteSizeOfData - bytesReceived)).Span);
