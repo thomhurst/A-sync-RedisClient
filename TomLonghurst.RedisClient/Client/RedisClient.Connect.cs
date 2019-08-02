@@ -105,15 +105,17 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        internal static Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig)
+        internal static RedisClient ConnectAsync(RedisClientConfig redisClientConfig)
         {
             return ConnectAsync(redisClientConfig, CancellationToken.None);
         }
 
-        internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
+        internal static RedisClient ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
         {
             var redisClient = new RedisClient(redisClientConfig);
-            await redisClient.TryConnectAsync(cancellationToken);
+#pragma warning disable 4014
+            redisClient.TryConnectAsync(cancellationToken);
+#pragma warning restore 4014
             return redisClient;
         }
 
