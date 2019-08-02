@@ -228,7 +228,7 @@ namespace TomLonghurst.RedisClient.Client
                         _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
                     }
                     
-                    _pipe.Input.AdvanceToLineTerminator(_readResult);
+                    await _pipe.Input.AdvanceToLineTerminator(_readResult);
 
                     return bytes;
                 }
