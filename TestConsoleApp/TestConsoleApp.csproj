@@ -10,4 +10,8 @@
       <ProjectReference Include="..\TomLonghurst.RedisClient\TomLonghurst.RedisClient.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="MiniProfiler.AspNetCore" Version="4.0.180" />
+    </ItemGroup>
+
 </Project>

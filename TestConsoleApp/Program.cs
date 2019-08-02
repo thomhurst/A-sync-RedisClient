@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using RedisClientTest;
+using StackExchange.Profiling;
 using TomLonghurst.RedisClient.Client;
 using TomLonghurst.RedisClient.Enums;
 
@@ -10,17 +11,19 @@ namespace TestConsoleApp
 {
     class Program
     {
+        private static RedisClientManager _redisManager;
+        private static RedisClient TomLonghurstRedisClient => _redisManager.GetRedisClient();
+
         static async Task Main(string[] args)
         {
+
             var config = new RedisClientConfig(TestInformation.Host,
                 TestInformation.Port,
                 TestInformation.Password) {Ssl = true};
-            
-            var redisManager = new RedisClientManager(config, 1);
-            
-            var tomLonghurstRedisClient = redisManager.GetRedisClient();
-            
-            await tomLonghurstRedisClient.StringSetAsync("SingleKey",
+
+            _redisManager = new RedisClientManager(config, 1);
+
+            await TomLonghurstRedisClient.StringSetAsync("SingleKey",
                 "123",
                 120,
                 AwaitOptions.AwaitCompletion);
@@ -31,20 +34,17 @@ namespace TestConsoleApp
             {
                 var task = Task.Run(async () =>
                 {
-                    for (var outer = 0; outer < 5; outer++)
+                    var tomLonghurstRedisClientStopwatch = Stopwatch.StartNew();
+
+                    for (var i = 0; i < 200; i++)
                     {
-                        var tomLonghurstRedisClientStopwatch = Stopwatch.StartNew();
-
-                        for (var i = 0; i < 200; i++)
-                        {
-                            var redisValue = await tomLonghurstRedisClient.StringGetAsync("SingleKey");
-                        }
-
-                        tomLonghurstRedisClientStopwatch.Stop();
-                        var tomLonghurstRedisClientStopwatchTimeTaken =
-                            tomLonghurstRedisClientStopwatch.ElapsedMilliseconds;
-                        Console.WriteLine($"Time Taken: {tomLonghurstRedisClientStopwatchTimeTaken} ms");
+                        var redisValue = await TomLonghurstRedisClient.StringGetAsync("SingleKey");
                     }
+
+                    tomLonghurstRedisClientStopwatch.Stop();
+                    var tomLonghurstRedisClientStopwatchTimeTaken =
+                        tomLonghurstRedisClientStopwatch.ElapsedMilliseconds;
+                    Console.WriteLine($"Time Taken: {tomLonghurstRedisClientStopwatchTimeTaken} ms");
                 });
 
                 tasks.Add(task);
