@@ -51,6 +51,7 @@ namespace TomLonghurst.RedisClient.Client
                 
                 return _isConnected;
             }
+            
             private set
             {
                 _isConnected = value;
@@ -90,7 +91,7 @@ namespace TomLonghurst.RedisClient.Client
             {
                 if (IsConnected)
                 {
-                    IsConnected = !(_socket.Poll(1000, SelectMode.SelectRead) && _socket.Available == 0);
+                    IsConnected = !(_socket.Poll(1, SelectMode.SelectRead) && _socket.Available == 0);
                 }
             }
             catch (Exception)

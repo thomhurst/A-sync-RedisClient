@@ -1,8 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace TomLonghurst.RedisClient.Pipes
 {
@@ -103,7 +103,7 @@ namespace TomLonghurst.RedisClient.Pipes
 
         private volatile bool _disposed;
 
-        private readonly Queue<WorkItem> _queue = new Queue<WorkItem>();
+        private readonly AsyncQueue<WorkItem> _queue = new AsyncQueue<WorkItem>();
         private void StartWorker(int id)
         {
             var thread = new Thread(ThreadRunWorkLoop)
@@ -125,24 +125,14 @@ namespace TomLonghurst.RedisClient.Pipes
             {
                 return; // nothing to do
             }
-
-            lock (_queue)
-            {
+            
                 if (!_disposed && _queue.Count <= WorkerCount)
                 {
                     _queue.Enqueue(new WorkItem(action, state));
-
-                    if (_availableThreads != 0)
-                    {
-                        // Wake up a thread to do some work
-                        Monitor.Pulse(_queue);
-                    }
-                    
                     return;
                 }
-            }
-            
-            // If condition above not met - We'll go to the Global ThreadPool
+
+                // If condition above not met - We'll go to the Global ThreadPool
             ThreadPool.Schedule(action, state);
         }
 
@@ -167,41 +157,17 @@ namespace TomLonghurst.RedisClient.Pipes
             }
         }
 
-        private void RunWorkLoop()
+        private async Task RunWorkLoop()
         {
             s_threadWorkerPoolId = Id;
             while (true)
             {
-                WorkItem next;
-                lock (_queue)
+                if (_queue.Count == 0 && _disposed)
                 {
-                    while (_queue.Count == 0)
-                    {
-                        if (_disposed)
-                        {
-                            break;
-                        }
-
-                        // Thread is paused and available to be woken up to do some work
-                        _availableThreads++;
-                        Monitor.Wait(_queue);
-                        _availableThreads--;
-                    }
-
-                    if (_queue.Count == 0)
-                    {
-                        if (_disposed)
-                        {
-                            // Only break once the queue has been emptied
-                            break;
-                        }
-
-                        continue;
-                    }
-
-                    next = _queue.Dequeue();
+                    return;
                 }
-
+                
+                var next = await _queue.DequeueAsync();
                 Execute(next.Action, next.State);
             }
         }
@@ -218,11 +184,6 @@ namespace TomLonghurst.RedisClient.Pipes
         public void Dispose()
         {
             _disposed = true;
-            lock (_queue)
-            {
-                // Resume all available and waiting threads so that they can exit/shut down
-                Monitor.PulseAll(_queue);
-            }
         }
     }
 }
