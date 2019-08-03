@@ -20,6 +20,10 @@ namespace TomLonghurst.RedisClient.Client
     {
         private static readonly Logger Log = new Logger();
 
+        internal virtual bool CanQueueToBacklog { get; set; } = true;
+        
+        private SemaphoreSlim _sendAndReceiveSemaphoreSlim = new SemaphoreSlim(1, 1);
+        
         private long _outStandingOperations;
 
         public long OutstandingOperations => Interlocked.Read(ref _outStandingOperations);
@@ -39,7 +43,7 @@ namespace TomLonghurst.RedisClient.Client
         public DateTime LastUsed { get; internal set; }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command,
+        internal ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command,
             IResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
@@ -51,15 +55,9 @@ namespace TomLonghurst.RedisClient.Client
 
             Interlocked.Increment(ref _outStandingOperations);
             
-            if (!isReconnectionAttempt)
+            if (!isReconnectionAttempt && CanQueueToBacklog)
             {
-                bool isBusy;
-                lock (IsBusyLock)
-                {
-                    isBusy = IsBusy;
-                }
-
-                if (isBusy)
+                if (IsBusy)
                 {
                     var taskCompletionSource = new TaskCompletionSource<T>();
 
@@ -74,8 +72,6 @@ namespace TomLonghurst.RedisClient.Client
                     
                     return new ValueTask<T>(taskCompletionSource.Task);
                 }
-
-                IsBusy = true;
             }
 
             return SendAndReceive_Impl(command, resultProcessor, cancellationToken, isReconnectionAttempt);
@@ -84,6 +80,8 @@ namespace TomLonghurst.RedisClient.Client
         private async ValueTask<T> SendAndReceive_Impl<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken, bool isReconnectionAttempt)
         {
+            IsBusy = true;
+
             Log.Debug($"Executing Command: {command}");
             LastCommand = command;
 
@@ -93,6 +91,8 @@ namespace TomLonghurst.RedisClient.Client
             {
                 if (!isReconnectionAttempt)
                 {
+                    await _sendAndReceiveSemaphoreSlim.WaitAsync(cancellationToken);
+                    
                     if (!IsConnected)
                     {
                         await TryConnectAsync(cancellationToken).ConfigureAwait(false);
@@ -122,10 +122,8 @@ namespace TomLonghurst.RedisClient.Client
                 Interlocked.Decrement(ref _outStandingOperations);
                 if (!isReconnectionAttempt)
                 {
-                    lock (IsBusyLock)
-                    {
-                        IsBusy = false;
-                    }
+                    IsBusy = false;
+                    _sendAndReceiveSemaphoreSlim.Release();
                 }
             }
         }

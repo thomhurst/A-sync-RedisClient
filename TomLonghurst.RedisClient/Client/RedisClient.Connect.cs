@@ -74,11 +74,11 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        private RedisClient(RedisClientConfig redisClientConfig) : this(redisClientConfig, ClientType.Main)
+        protected RedisClient(RedisClientConfig redisClientConfig) : this(redisClientConfig, ClientType.Main)
         {
         }
         
-        private RedisClient(RedisClientConfig redisClientConfig, ClientType clientType) : this(clientType)
+        protected RedisClient(RedisClientConfig redisClientConfig, ClientType clientType) : this(clientType)
         {
             ClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
 
@@ -125,9 +125,14 @@ namespace TomLonghurst.RedisClient.Client
         {
             var redisClient = new RedisClient(redisClientConfig, clientType);
             
-            if (clientType == ClientType.Main)
+            switch (clientType)
             {
-                redisClient.backlogRedisClientTask = ConnectAsync(redisClientConfig, CancellationToken.None, ClientType.Backlog);
+                case ClientType.Main:
+                    redisClient.backlogRedisClientTask = ConnectAsync(redisClientConfig, CancellationToken.None, ClientType.Backlog);
+                    break;
+                case ClientType.Backlog:
+                    redisClient.CanQueueToBacklog = false;
+                    break;
             }
             
             await redisClient.TryConnectAsync(cancellationToken);
@@ -269,6 +274,7 @@ namespace TomLonghurst.RedisClient.Client
         }
 
         private static Lazy<RedisPipeOptions> Options;
+        private bool _disposed;
 
         private static RedisPipeOptions GetPipeOptions()
         {
@@ -277,6 +283,7 @@ namespace TomLonghurst.RedisClient.Client
 
         public void Dispose()
         {
+            _disposed = true;
             DisposeNetwork();
             LastAction = "Disposing Client";
             _connectionChecker?.Dispose();
@@ -290,6 +297,13 @@ namespace TomLonghurst.RedisClient.Client
             _socket?.Close();
             _socket?.Dispose();
             _sslStream?.Dispose();
+            
+            if (!_disposed)
+            {
+#pragma warning disable 4014
+                TryConnectAsync(CancellationToken.None);
+#pragma warning restore 4014
+            }
         }
     }
 }

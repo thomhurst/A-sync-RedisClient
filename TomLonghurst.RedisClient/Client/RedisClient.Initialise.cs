@@ -17,7 +17,7 @@ namespace TomLonghurst.RedisClient.Client
             CreatePipeOptions();
         }
         
-        private RedisClient(ClientType clientType)
+        protected RedisClient(ClientType clientType)
         {
             _clientType = clientType;
             _weakReference = new WeakReference<RedisClient>(this);

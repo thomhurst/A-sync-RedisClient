@@ -28,13 +28,14 @@ namespace TomLonghurst.RedisClient.Client
 
         private Task<RedisClient> backlogRedisClientTask;
 
-        private void StartBacklogProcessor()
+        protected virtual Task StartBacklogProcessor()
         {
             _pipeScheduler.Schedule(_processBacklogAction, _weakReference);
+            return Task.CompletedTask;
         }
 
         private bool IsBacklogProcessorRunning;
-        private async Task ProcessBacklog()
+        internal async Task ProcessBacklog()
         {
             if (!IsBacklogProcessorRunning)
             {
