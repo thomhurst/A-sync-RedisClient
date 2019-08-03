@@ -35,23 +35,28 @@ namespace TomLonghurst.RedisClient.Models
             set => _redisClient.LastAction = value;
         }
 
-        private void SetMembers(Client.RedisClient redisClient, IDuplexPipe pipe, ReadResult readResult)
+        private void SetMembers(Client.RedisClient redisClient, IDuplexPipe pipe)
         {
             _redisClient = redisClient;
             Pipe = pipe;
-            ReadResult = readResult;
         }
 
-        internal ValueTask<T> Start(Client.RedisClient redisClient, IDuplexPipe pipe, ReadResult readResult)
+        internal async ValueTask<T> Start(Client.RedisClient redisClient, IDuplexPipe pipe)
         {
-            SetMembers(redisClient, pipe, readResult);
-            return Process();
+            SetMembers(redisClient, pipe);
+            
+            if (!Pipe.Input.TryRead(out ReadResult))
+            {
+                ReadResult = await Pipe.Input.ReadAsync().ConfigureAwait(false);
+            }
+            
+            return await Process();
         }
         
         private protected abstract ValueTask<T> Process();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected async ValueTask<Memory<byte>> ReadData(bool readToEnd = false)
+        protected async ValueTask<Memory<byte>> ReadData()
         {
             var buffer = ReadResult.Buffer;
 

@@ -102,12 +102,8 @@ namespace TomLonghurst.RedisClient.Client
                 await Write(command);
 
                 LastAction = "Reading Bytes Async";
-                if (!_pipe.Input.TryRead(out _readResult))
-                {
-                    _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
-                }
-                
-                return await resultProcessor.Start(this, _pipe, _readResult);
+
+                return await resultProcessor.Start(this, _pipe);
             }
             catch (Exception innerException)
             {

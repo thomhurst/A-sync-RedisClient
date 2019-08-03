@@ -51,13 +51,8 @@ namespace TomLonghurst.RedisClient.Models.Backlog
             {
                 RedisClient.LastUsed = DateTime.Now;
                 await RedisClient.Write(RedisCommand);
-                
-                if (!Pipe.Input.TryRead(out var readResult))
-                {
-                    readResult = await Pipe.Input.ReadAsync().ConfigureAwait(false);
-                }
 
-                var result = await ResultProcessor.Start(RedisClient, Pipe, readResult);
+                var result = await ResultProcessor.Start(RedisClient, Pipe);
             
                 TaskCompletionSource.TrySetResult(result);
             }
