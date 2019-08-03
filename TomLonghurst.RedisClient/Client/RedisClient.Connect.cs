@@ -82,7 +82,7 @@ namespace TomLonghurst.RedisClient.Client
         {
             ClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
 
-            _connectionChecker = new Timer(CheckConnection, null, 30000, 30000);
+            //_connectionChecker = new Timer(CheckConnection, null, 30000, 30000);
         }
 
         ~RedisClient()
@@ -92,19 +92,6 @@ namespace TomLonghurst.RedisClient.Client
         
         private void CheckConnection(object state)
         {
-            try
-            {
-                if (IsConnected)
-                {
-                    IsConnected = !(_socket.Poll(1, SelectMode.SelectRead) && _socket.Available == 0);
-                }
-            }
-            catch (Exception)
-            {
-                IsConnected = false;
-                DisposeNetwork();
-            }
-            
             if (!IsConnected)
             {
                 Task.Run(() => TryConnectAsync(CancellationToken.None));
