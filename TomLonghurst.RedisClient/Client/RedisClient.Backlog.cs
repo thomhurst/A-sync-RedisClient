@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.RedisClient.Models;
 using TomLonghurst.RedisClient.Models.Backlog;
@@ -18,7 +19,10 @@ namespace TomLonghurst.RedisClient.Client
             var wr = (WeakReference<RedisClient>)s;
             if (wr.TryGetTarget(out var redisClient))
             {
-                redisClient.ProcessBacklog();   
+                if (!redisClient.IsBacklogProcessorRunning)
+                {
+                    redisClient.ProcessBacklog();
+                }
             }
         };
 
@@ -29,18 +33,25 @@ namespace TomLonghurst.RedisClient.Client
             _pipeScheduler.Schedule(_processBacklogAction, _weakReference);
         }
 
+        private bool IsBacklogProcessorRunning;
         private async Task ProcessBacklog()
         {
-            if (_backlog.Count > 0)
+            if (!IsBacklogProcessorRunning)
             {
-                while (_backlog.Count > 0)
+                IsBacklogProcessorRunning = true;
+                if (_backlog.Count > 0)
                 {
-                    var backlogRedisClient = await backlogRedisClientTask;
-                    if (_backlog.TryDequeue(out var backlogItem))
+                    while (_backlog.Count > 0)
                     {
-                        await backlogRedisClient.WriteAndReceiveBacklog(backlogItem);
+                        var backlogRedisClient = await backlogRedisClientTask;
+                        if (_backlog.TryDequeue(out var backlogItem))
+                        {
+                            await backlogRedisClient.WriteAndReceiveBacklog(backlogItem);
+                        }
                     }
                 }
+
+                IsBacklogProcessorRunning = false;
             }
         }
 
