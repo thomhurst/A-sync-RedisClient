@@ -6,10 +6,12 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Sources;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Helpers;
 using TomLonghurst.RedisClient.Models;
+using TomLonghurst.RedisClient.Models.Backlog;
 using TomLonghurst.RedisClient.Models.Commands;
 
 namespace TomLonghurst.RedisClient.Client
@@ -17,8 +19,6 @@ namespace TomLonghurst.RedisClient.Client
     public partial class RedisClient : IDisposable
     {
         private static readonly Logger Log = new Logger();
-
-        private readonly SemaphoreSlim _sendSemaphoreSlim = new SemaphoreSlim(1, 1);
 
         private long _outStandingOperations;
 
@@ -29,12 +29,15 @@ namespace TomLonghurst.RedisClient.Client
         private IDuplexPipe _pipe;
         private ReadResult _readResult;
 
+        public object IsBusyLock = new object();
+        public bool IsBusy;
+
         internal string LastAction;
 
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command,
+        private ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command,
             IResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
@@ -46,14 +49,37 @@ namespace TomLonghurst.RedisClient.Client
 
             if (!isReconnectionAttempt)
             {
-                LastAction = "Waiting for Send/Receive lock to be free";
-                var wait = _sendSemaphoreSlim.WaitAsync(cancellationToken);
-                if (!wait.IsCompletedSuccessfully())
+                bool isBusy;
+                lock (IsBusyLock)
                 {
-                    await wait.ConfigureAwait(false);
+                    isBusy = IsBusy;
                 }
+
+                if (isBusy)
+                {
+                    var taskCompletionSource = new TaskCompletionSource<T>();
+
+                    var backlogQueueCount = _backlog.Count;
+
+                    _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor));
+
+                    if (backlogQueueCount == 0)
+                    {
+                        StartBacklogProcessor();
+                    }
+                    
+                    return new ValueTask<T>(taskCompletionSource.Task);
+                }
+
+                IsBusy = true;
             }
 
+            return SendAndReceive_Impl(command, resultProcessor, cancellationToken, isReconnectionAttempt);
+        }
+
+        private async ValueTask<T> SendAndReceive_Impl<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,
+            CancellationToken cancellationToken, bool isReconnectionAttempt)
+        {
             Log.Debug($"Executing Command: {command}");
             LastCommand = command;
 
@@ -72,10 +98,11 @@ namespace TomLonghurst.RedisClient.Client
                 await Write(command);
 
                 LastAction = "Reading Bytes Async";
-                if(!_pipe.Input.TryRead(out _readResult)) {
+                if (!_pipe.Input.TryRead(out _readResult))
+                {
                     _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
                 }
-
+                
                 return await resultProcessor.Start(this, _pipe, _readResult);
             }
             catch (Exception innerException)
@@ -95,13 +122,15 @@ namespace TomLonghurst.RedisClient.Client
                 Interlocked.Decrement(ref _outStandingOperations);
                 if (!isReconnectionAttempt)
                 {
-                    LastAction = "Releasing Send/Receive Lock";
-                    _sendSemaphoreSlim.Release();
+                    lock (IsBusyLock)
+                    {
+                        IsBusy = false;
+                    }
                 }
             }
         }
 
-        private ValueTask<FlushResult> Write(IRedisCommand command)
+        internal ValueTask<FlushResult> Write(IRedisCommand command)
         {
             var encodedCommandList = command.EncodedCommandList;
             

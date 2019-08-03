@@ -27,16 +27,16 @@ namespace TomLonghurst.RedisClient.Client
             _pipeScheduler.Schedule(_processBacklogAction, _weakReference);
         }
 
-        private void ProcessBacklog()
+        private async Task ProcessBacklog()
         {
             if (_backlog.Count > 0)
             {
-              var backlogRedisClient = ConnectAsync(ClientConfig);  
+              var backlogRedisClient = await ConnectAsync(ClientConfig);  
                 while (_backlog.Count > 0)
                 {
                     if (_backlog.TryDequeue(out var backlogItem))
                     {
-                        backlogRedisClient.WriteAndReceiveBacklog(backlogItem);
+                        await backlogRedisClient.WriteAndReceiveBacklog(backlogItem);
                     }
                 }
             }
@@ -44,8 +44,8 @@ namespace TomLonghurst.RedisClient.Client
 
         private async Task WriteAndReceiveBacklog(IBacklog backlogItem)
         {
-            await Write(backlogItem.RedisCommand);
-            
+            backlogItem.SetClientAndPipe(this, _pipe);
+            await backlogItem.WriteAndSetResult();
         }
     }
 }

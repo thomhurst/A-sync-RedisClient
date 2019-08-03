@@ -106,17 +106,15 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        internal static RedisClient ConnectAsync(RedisClientConfig redisClientConfig)
+        internal static Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig)
         {
             return ConnectAsync(redisClientConfig, CancellationToken.None);
         }
 
-        internal static RedisClient ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
+        internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
         {
             var redisClient = new RedisClient(redisClientConfig);
-#pragma warning disable 4014
-            redisClient.TryConnectAsync(cancellationToken);
-#pragma warning restore 4014
+            await redisClient.TryConnectAsync(cancellationToken);
             return redisClient;
         }
 
@@ -266,7 +264,6 @@ namespace TomLonghurst.RedisClient.Client
             DisposeNetwork();
             LastAction = "Disposing Client";
             _connectionChecker?.Dispose();
-            _sendSemaphoreSlim?.Dispose();
             _connectSemaphoreSlim?.Dispose();
         }
 
