@@ -7,10 +7,16 @@ namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient
     {
-        private RedisClient()
+        private static PipeThreadPoolScheduler _pipeScheduler;
+
+        static RedisClient()
         {
             CreatePipeOptions();
-
+        }
+        
+        private RedisClient()
+        {
+            _weakReference = new WeakReference<RedisClient>(this);
             CreateCommandClasses();
         }
 
@@ -20,7 +26,7 @@ namespace TomLonghurst.RedisClient.Client
             _serverCommands = new ServerCommands(this);
         }
 
-        private void CreatePipeOptions()
+        private static void CreatePipeOptions()
         {
             Options = new Lazy<RedisPipeOptions>(() =>
             {
@@ -32,13 +38,13 @@ namespace TomLonghurst.RedisClient.Client
                 const long receivePauseWriterThreshold = 1024 * 1024 * 1024;
                 const long receiveResumeWriterThreshold = receivePauseWriterThreshold / 4 * 3;
 
-                var pipeScheduler = PipeThreadPoolScheduler.Default;
+                _pipeScheduler = PipeThreadPoolScheduler.Default;
                 var defaultPipeOptions = PipeOptions.Default;
 
                 var receivePipeOptions = new PipeOptions(
                     defaultPipeOptions.Pool,
-                    pipeScheduler,
-                    pipeScheduler,
+                    _pipeScheduler,
+                    _pipeScheduler,
                     receivePauseWriterThreshold,
                     receiveResumeWriterThreshold,
                     defaultMinimumSegmentSize,
@@ -46,8 +52,8 @@ namespace TomLonghurst.RedisClient.Client
 
                 var sendPipeOptions = new PipeOptions(
                     defaultPipeOptions.Pool,
-                    pipeScheduler,
-                    pipeScheduler,
+                    _pipeScheduler,
+                    _pipeScheduler,
                     sendPauseWriterThreshold,
                     sendResumeWriterThreshold,
                     defaultMinimumSegmentSize,

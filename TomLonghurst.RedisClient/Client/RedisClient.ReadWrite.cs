@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Helpers;
+using TomLonghurst.RedisClient.Models;
 using TomLonghurst.RedisClient.Models.Commands;
 
 namespace TomLonghurst.RedisClient.Client
@@ -34,7 +35,7 @@ namespace TomLonghurst.RedisClient.Client
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command,
-            Func<ValueTask<T>> responseReader,
+            IResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
         {
@@ -75,7 +76,7 @@ namespace TomLonghurst.RedisClient.Client
                     _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
                 }
 
-                return await responseReader.Invoke();
+                return await resultProcessor.Start(this, _pipe, _readResult);
             }
             catch (Exception innerException)
             {
@@ -137,138 +138,6 @@ namespace TomLonghurst.RedisClient.Client
             return flushTask.IsCompletedSuccessfully
                 ? new ValueTask<FlushResult>(flushTask.Result)
                 : Awaited(flushTask);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask<Memory<byte>> ReadData(bool readToEnd = false)
-        {
-            var buffer = _readResult.Buffer;
-
-            if (buffer.IsEmpty && _readResult.IsCompleted)
-            {
-                throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
-            }
-
-            var line = await ReadLine();
-            
-            var firstChar = line.First();
-
-            if (string.IsNullOrEmpty(line))
-            {
-                throw new Exception("No data to process");
-            }
-
-            if (firstChar == '-')
-            {
-                throw new RedisFailedCommandException(line, LastCommand);
-            }
-
-            if (firstChar == '$')
-            {
-                if (line == "$-1")
-                {
-                    return null;
-                }
-                
-                LastAction = "Reading Data Synchronously in ReadData";
-                if (!_pipe.Input.TryRead(out _readResult))
-                {
-                    LastAction = "Reading Data Asynchronously in ReadData";
-                    _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
-                }
-
-                buffer = _readResult.Buffer;
-
-                if (long.TryParse(line.Substring(1), out var byteSizeOfData))
-                {
-                    var bytes = new byte[byteSizeOfData].AsMemory();
-                    
-                    buffer = buffer.Slice(0, Math.Min(byteSizeOfData, buffer.Length));
-                    
-                    var bytesReceived = buffer.Length;
-
-                    buffer.CopyTo(bytes.Slice(0, (int) bytesReceived).Span);
-
-                    _pipe.Input.AdvanceTo(buffer.End);
-                    
-                    while (bytesReceived < byteSizeOfData)
-                    {
-                        LastAction = "Advancing Buffer in ReadData Loop";
-
-                        if ((_readResult.IsCompleted || _readResult.IsCanceled) && _readResult.Buffer.IsEmpty)
-                        {
-                            break;
-                        }
-                        
-                        LastAction = "Reading Data Synchronously in ReadData Loop";
-                        if (!_pipe.Input.TryRead(out _readResult))
-                        {
-                            LastAction = "Reading Data Asynchronously in ReadData Loop";
-                            _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
-                        }
-                        
-                        buffer = _readResult.Buffer.Slice(0, Math.Min(_readResult.Buffer.Length, byteSizeOfData - bytesReceived));
-                        
-                        buffer
-                            .CopyTo(bytes.Slice((int) bytesReceived, (int) Math.Min(buffer.Length, byteSizeOfData - bytesReceived)).Span);
-                        
-                        bytesReceived += buffer.Length;
-                        
-                        _pipe.Input.AdvanceTo(buffer.End);
-                    }
-
-                    if (_readResult.IsCompleted && _readResult.Buffer.IsEmpty)
-                    {
-                        return bytes;
-                    }
-
-                    if (!_pipe.Input.TryRead(out _readResult))
-                    {
-                        LastAction = "Reading Data Asynchronously in ReadData Loop";
-                        _readResult = await _pipe.Input.ReadAsync().ConfigureAwait(false);
-                    }
-                    
-                    await _pipe.Input.AdvanceToLineTerminator(_readResult);
-
-                    return bytes;
-                }
-
-                throw new UnexpectedRedisResponseException("Invalid length");
-            }
-
-            throw new UnexpectedRedisResponseException($"Unexpected reply: {line}");
-        }
-
-        private async ValueTask<string> ReadLine()
-        {
-            LastAction = "Finding End of Line Position";
-            var endOfLinePosition = _readResult.Buffer.GetEndOfLinePosition();
-            if (endOfLinePosition == null)
-            {
-                LastAction = "Reading until End of Line found";
-                var readResultWithEndOfLine = await _pipe.Input.ReadUntilEndOfLineFound(_readResult);
-                _readResult = readResultWithEndOfLine.ReadResult;
-
-                LastAction = "Finding End of Line Position";
-                endOfLinePosition = readResultWithEndOfLine.EndOfLinePosition;
-            }
-
-            if (endOfLinePosition == null)
-            {
-                throw new Exception("Can't find EOL");
-            }
-
-            var buffer = _readResult.Buffer;
-
-            buffer = buffer.Slice(0, endOfLinePosition.Value);
-
-            // Reslice but removing the line terminators
-            var line = buffer.Slice(0, buffer.Length - 2).AsString();
-
-            LastAction = "Advancing Buffer to End of Line";
-            _pipe.Input.AdvanceTo(endOfLinePosition.Value);
-
-            return line;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
