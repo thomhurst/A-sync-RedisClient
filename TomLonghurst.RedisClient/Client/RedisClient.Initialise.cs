@@ -22,10 +22,6 @@ namespace TomLonghurst.RedisClient.Client
             _clientType = clientType;
             _weakReference = new WeakReference<RedisClient>(this);
             CreateCommandClasses();
-            if (clientType == ClientType.Main)
-            {
-                backlogRedisClientTask = ConnectAsync(ClientConfig, CancellationToken.None, ClientType.Backlog);
-            }
         }
 
         private void CreateCommandClasses()

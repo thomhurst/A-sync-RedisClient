@@ -124,6 +124,12 @@ namespace TomLonghurst.RedisClient.Client
         internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken, ClientType clientType)
         {
             var redisClient = new RedisClient(redisClientConfig, clientType);
+            
+            if (clientType == ClientType.Main)
+            {
+                redisClient.backlogRedisClientTask = ConnectAsync(redisClientConfig, CancellationToken.None, ClientType.Backlog);
+            }
+            
             await redisClient.TryConnectAsync(cancellationToken);
             return redisClient;
         }
