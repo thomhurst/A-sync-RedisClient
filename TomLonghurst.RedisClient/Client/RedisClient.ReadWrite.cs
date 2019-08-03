@@ -51,23 +51,34 @@ namespace TomLonghurst.RedisClient.Client
 
             Interlocked.Increment(ref _outStandingOperations);
             
-            if (isReconnectionAttempt)
+            if (!isReconnectionAttempt)
             {
-                return SendAndReceive_Impl(command, resultProcessor, cancellationToken, true);
-            }
-            
-            var taskCompletionSource = new TaskCompletionSource<T>();
+                bool isBusy;
+                lock (IsBusyLock)
+                {
+                    isBusy = IsBusy;
+                }
 
-            var backlogQueueCount = _backlog.Count;
+                if (isBusy)
+                {
+                    var taskCompletionSource = new TaskCompletionSource<T>();
 
-            _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor));
+                    var backlogQueueCount = _backlog.Count;
 
-            if (backlogQueueCount == 0)
-            {
-                StartBacklogProcessor();
-            }
+                    _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor));
+
+                    if (backlogQueueCount == 0)
+                    {
+                        StartBacklogProcessor();
+                    }
                     
-            return new ValueTask<T>(taskCompletionSource.Task);
+                    return new ValueTask<T>(taskCompletionSource.Task);
+                }
+
+                IsBusy = true;
+            }
+
+            return SendAndReceive_Impl(command, resultProcessor, cancellationToken, isReconnectionAttempt);
         }
 
         private async ValueTask<T> SendAndReceive_Impl<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,
