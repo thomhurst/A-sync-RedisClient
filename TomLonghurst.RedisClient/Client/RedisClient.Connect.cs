@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using TomLonghurst.RedisClient.Enums;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Models;
@@ -73,7 +74,11 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        private RedisClient(RedisClientConfig redisClientConfig) : this()
+        private RedisClient(RedisClientConfig redisClientConfig) : this(redisClientConfig, ClientType.Main)
+        {
+        }
+        
+        private RedisClient(RedisClientConfig redisClientConfig, ClientType clientType) : this(clientType)
         {
             ClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
 
@@ -111,9 +116,14 @@ namespace TomLonghurst.RedisClient.Client
             return ConnectAsync(redisClientConfig, CancellationToken.None);
         }
 
-        internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
+        internal static Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
         {
-            var redisClient = new RedisClient(redisClientConfig);
+            return ConnectAsync(redisClientConfig, cancellationToken, ClientType.Main);
+        }
+        
+        internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken, ClientType clientType)
+        {
+            var redisClient = new RedisClient(redisClientConfig, clientType);
             await redisClient.TryConnectAsync(cancellationToken);
             return redisClient;
         }

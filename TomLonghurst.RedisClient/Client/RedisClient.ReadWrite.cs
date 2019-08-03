@@ -36,45 +36,38 @@ namespace TomLonghurst.RedisClient.Client
 
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
+        public DateTime LastUsed { get; internal set; }
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command,
             IResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
         {
+            LastUsed = DateTime.Now;
+            
             LastAction = "Throwing Cancelled Exception due to Cancelled Token";
             cancellationToken.ThrowIfCancellationRequested();
 
             Interlocked.Increment(ref _outStandingOperations);
-
-            if (!isReconnectionAttempt)
+            
+            if (isReconnectionAttempt)
             {
-                bool isBusy;
-                lock (IsBusyLock)
-                {
-                    isBusy = IsBusy;
-                }
-
-                if (isBusy)
-                {
-                    var taskCompletionSource = new TaskCompletionSource<T>();
-
-                    var backlogQueueCount = _backlog.Count;
-
-                    _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor));
-
-                    if (backlogQueueCount == 0)
-                    {
-                        StartBacklogProcessor();
-                    }
-                    
-                    return new ValueTask<T>(taskCompletionSource.Task);
-                }
-
-                IsBusy = true;
+                return SendAndReceive_Impl(command, resultProcessor, cancellationToken, true);
             }
+            
+            var taskCompletionSource = new TaskCompletionSource<T>();
 
-            return SendAndReceive_Impl(command, resultProcessor, cancellationToken, isReconnectionAttempt);
+            var backlogQueueCount = _backlog.Count;
+
+            _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor));
+
+            if (backlogQueueCount == 0)
+            {
+                StartBacklogProcessor();
+            }
+                    
+            return new ValueTask<T>(taskCompletionSource.Task);
         }
 
         private async ValueTask<T> SendAndReceive_Impl<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,

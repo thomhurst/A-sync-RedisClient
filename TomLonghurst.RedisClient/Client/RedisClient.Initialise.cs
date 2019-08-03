@@ -1,5 +1,7 @@
 using System;
 using System.IO.Pipelines;
+using System.Threading;
+using TomLonghurst.RedisClient.Enums;
 using TomLonghurst.RedisClient.Models;
 using TomLonghurst.RedisClient.Pipes;
 
@@ -7,6 +9,7 @@ namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient
     {
+        private readonly ClientType _clientType;
         private static PipeThreadPoolScheduler _pipeScheduler;
 
         static RedisClient()
@@ -14,10 +17,15 @@ namespace TomLonghurst.RedisClient.Client
             CreatePipeOptions();
         }
         
-        private RedisClient()
+        private RedisClient(ClientType clientType)
         {
+            _clientType = clientType;
             _weakReference = new WeakReference<RedisClient>(this);
             CreateCommandClasses();
+            if (clientType == ClientType.Main)
+            {
+                backlogRedisClientTask = ConnectAsync(ClientConfig, CancellationToken.None, ClientType.Backlog);
+            }
         }
 
         private void CreateCommandClasses()

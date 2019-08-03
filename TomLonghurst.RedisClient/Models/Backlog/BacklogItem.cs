@@ -49,6 +49,7 @@ namespace TomLonghurst.RedisClient.Models.Backlog
             
             try
             {
+                RedisClient.LastUsed = DateTime.Now;
                 await RedisClient.Write(RedisCommand);
                 
                 if (!Pipe.Input.TryRead(out var readResult))
