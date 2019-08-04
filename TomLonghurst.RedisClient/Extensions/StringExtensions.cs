@@ -9,7 +9,7 @@ namespace TomLonghurst.RedisClient.Extensions
 {
     internal static class StringExtensions
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static unsafe byte[] ToUtf8Bytes(this string value)
         {
             var encodedLength = Encoding.UTF8.GetByteCount(value);
@@ -26,7 +26,7 @@ namespace TomLonghurst.RedisClient.Extensions
             return byteArray;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static unsafe byte[] ToUtf8BytesWithTerminator(this string value)
         {
             var encodedLength = Encoding.UTF8.GetByteCount(value);
@@ -46,7 +46,7 @@ namespace TomLonghurst.RedisClient.Extensions
             return byteArray;
         }
         
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static unsafe int AsUtf8BytesSpan(this string value, out Span<byte> bytesSpan)
         {
             var charsSpan = value.AsSpan();
@@ -61,7 +61,7 @@ namespace TomLonghurst.RedisClient.Extensions
             }
         }
         
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static unsafe int AsUtf8BytesSpanWithTerminator(this string value, out Span<byte> bytesSpan)
         {
             var charsSpan = value.AsSpan();
@@ -83,7 +83,7 @@ namespace TomLonghurst.RedisClient.Extensions
             return encodedLength + 2;
         }
         
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static IEnumerable<string> Split(this string value, string delimiter)
         {
             return value.Split(new[] {delimiter}, StringSplitOptions.RemoveEmptyEntries);

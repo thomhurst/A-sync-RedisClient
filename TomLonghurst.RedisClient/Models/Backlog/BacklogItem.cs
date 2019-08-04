@@ -6,33 +6,6 @@ using TomLonghurst.RedisClient.Models.Commands;
 
 namespace TomLonghurst.RedisClient.Models.Backlog
 {
-    public class BacklogItem : IBacklogItem
-    {
-        public Client.RedisClient RedisClient { get; }
-        public IDuplexPipe Pipe { get; }
-        public IRedisCommand RedisCommand { get; }
-        public CancellationToken CancellationToken { get; }
-
-        public Task WriteAndSetResult()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SetClientAndPipe(Client.RedisClient redisClient, IDuplexPipe pipe)
-        {
-            throw new NotImplementedException();
-        }
-
-        public TaskCompletionSource<bool> TaskCompletionSource { get; }
-
-        public BacklogItem(IRedisCommand redisCommand, CancellationToken cancellationToken, TaskCompletionSource<bool> taskCompletionSource)
-        {
-            RedisCommand = redisCommand;
-            CancellationToken = cancellationToken;
-            TaskCompletionSource = taskCompletionSource;
-        }
-    }
-
     public class BacklogItem<T> : IBacklogItem<T>
     {
         public Client.RedisClient RedisClient { get; set; }
@@ -46,13 +19,18 @@ namespace TomLonghurst.RedisClient.Models.Backlog
                 TaskCompletionSource.TrySetCanceled();
                 return;
             }
-            
+
             try
             {
                 RedisClient.LastUsed = DateTime.Now;
 
-                var result = await RedisClient.SendAndReceiveAsync(RedisCommand, ResultProcessor, CancellationToken);
+                var result =
+                    await RedisClient.SendAndReceive_Impl(RedisCommand, ResultProcessor, CancellationToken, false);
                 TaskCompletionSource.TrySetResult(result);
+            }
+            catch (OperationCanceledException)
+            {
+                TaskCompletionSource.TrySetCanceled();
             }
             catch (Exception e)
             {

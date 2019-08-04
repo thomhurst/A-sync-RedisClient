@@ -103,7 +103,7 @@ namespace TomLonghurst.RedisClient.Pipes
 
         private volatile bool _disposed;
 
-        private readonly AsyncQueue<WorkItem> _queue = new AsyncQueue<WorkItem>();
+        private readonly BlockingQueue<WorkItem> _queue = new BlockingQueue<WorkItem>();
         private void StartWorker(int id)
         {
             var thread = new Thread(ThreadRunWorkLoop)
@@ -126,13 +126,13 @@ namespace TomLonghurst.RedisClient.Pipes
                 return; // nothing to do
             }
             
-                if (!_disposed && _queue.Count <= WorkerCount)
-                {
-                    _queue.Enqueue(new WorkItem(action, state));
-                    return;
-                }
+            if (!_disposed && _queue.Count <= WorkerCount)
+            {
+                _queue.Enqueue(new WorkItem(action, state));
+                return;
+            }
 
-                // If condition above not met - We'll go to the Global ThreadPool
+            // If condition above not met - We'll go to the Global ThreadPool
             ThreadPool.Schedule(action, state);
         }
 
@@ -144,7 +144,7 @@ namespace TomLonghurst.RedisClient.Pipes
         /// </summary>
         public int AvailableCount => Thread.VolatileRead(ref _availableThreads);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Execute(Action<object> action, object state)
         {
             try
@@ -157,7 +157,7 @@ namespace TomLonghurst.RedisClient.Pipes
             }
         }
 
-        private async Task RunWorkLoop()
+        private void RunWorkLoop()
         {
             s_threadWorkerPoolId = Id;
             while (true)
@@ -167,7 +167,7 @@ namespace TomLonghurst.RedisClient.Pipes
                     return;
                 }
                 
-                var next = await _queue.DequeueAsync();
+                var next = _queue.Dequeue();
                 Execute(next.Action, next.State);
             }
         }
@@ -184,6 +184,7 @@ namespace TomLonghurst.RedisClient.Pipes
         public void Dispose()
         {
             _disposed = true;
+            _queue.Dispose();
         }
     }
 }

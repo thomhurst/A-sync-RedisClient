@@ -12,7 +12,7 @@ namespace TomLonghurst.RedisClient.Client
     {
         private WeakReference<RedisClient> _weakReference;
 
-        private readonly ConcurrentQueue<IBacklog> _backlog = new ConcurrentQueue<IBacklog>();
+        internal readonly ConcurrentQueue<IBacklog> _backlog = new ConcurrentQueue<IBacklog>();
         
         private static readonly Action<object> _processBacklogAction = s =>
         {
@@ -25,8 +25,6 @@ namespace TomLonghurst.RedisClient.Client
                 }
             }
         };
-
-        private Task<RedisClient> backlogRedisClientTask;
 
         protected virtual Task StartBacklogProcessor()
         {
@@ -44,10 +42,9 @@ namespace TomLonghurst.RedisClient.Client
                 {
                     while (_backlog.Count > 0)
                     {
-                        var backlogRedisClient = await backlogRedisClientTask;
                         if (_backlog.TryDequeue(out var backlogItem))
                         {
-                            await backlogRedisClient.WriteAndReceiveBacklog(backlogItem);
+                            await WriteAndReceiveBacklog(backlogItem);
                         }
                     }
                 }

@@ -42,7 +42,7 @@ namespace TomLonghurst.RedisClient.Client
 
         public DateTime LastUsed { get; internal set; }
         
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command,
             IResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken,
@@ -54,30 +54,33 @@ namespace TomLonghurst.RedisClient.Client
             cancellationToken.ThrowIfCancellationRequested();
 
             Interlocked.Increment(ref _outStandingOperations);
-            
-            if (!isReconnectionAttempt && CanQueueToBacklog)
+
+            if (!isReconnectionAttempt && CanQueueToBacklog && IsBusy)
             {
-                if (IsBusy)
-                {
-                    var taskCompletionSource = new TaskCompletionSource<T>();
-
-                    var backlogQueueCount = _backlog.Count;
-
-                    _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor));
-
-                    if (backlogQueueCount == 0)
-                    {
-                        StartBacklogProcessor();
-                    }
-                    
-                    return new ValueTask<T>(taskCompletionSource.Task);
-                }
+                return QueueToBacklog(command, resultProcessor, cancellationToken);
             }
 
             return SendAndReceive_Impl(command, resultProcessor, cancellationToken, isReconnectionAttempt);
         }
 
-        private async ValueTask<T> SendAndReceive_Impl<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,
+        private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,
+            CancellationToken cancellationToken)
+        {
+            var taskCompletionSource = new TaskCompletionSource<T>();
+
+            var backlogQueueCount = _backlog.Count;
+
+            _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor));
+
+            if (backlogQueueCount == 0)
+            {
+                StartBacklogProcessor();
+            }
+
+            return new ValueTask<T>(taskCompletionSource.Task);
+        }
+
+        internal async ValueTask<T> SendAndReceive_Impl<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken, bool isReconnectionAttempt)
         {
             IsBusy = true;
@@ -122,9 +125,10 @@ namespace TomLonghurst.RedisClient.Client
                 Interlocked.Decrement(ref _outStandingOperations);
                 if (!isReconnectionAttempt)
                 {
-                    IsBusy = false;
                     _sendAndReceiveSemaphoreSlim.Release();
                 }
+                
+                IsBusy = false;
             }
         }
 
@@ -167,7 +171,7 @@ namespace TomLonghurst.RedisClient.Client
                 : Awaited(flushTask);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal async ValueTask<T> RunWithTimeout<T>(Func<CancellationToken, ValueTask<T>> action,
             CancellationToken originalCancellationToken)
         {
@@ -201,7 +205,7 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async ValueTask RunWithTimeout(Func<CancellationToken, ValueTask> action,
             CancellationToken originalCancellationToken)
         {

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Net.WebSockets;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
@@ -74,14 +75,9 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        protected RedisClient(RedisClientConfig redisClientConfig) : this(redisClientConfig, ClientType.Main)
-        {
-        }
-        
-        protected RedisClient(RedisClientConfig redisClientConfig, ClientType clientType) : this(clientType)
+        protected RedisClient(RedisClientConfig redisClientConfig) : this()
         {
             ClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
-
             //_connectionChecker = new Timer(CheckConnection, null, 30000, 30000);
         }
 
@@ -103,25 +99,9 @@ namespace TomLonghurst.RedisClient.Client
             return ConnectAsync(redisClientConfig, CancellationToken.None);
         }
 
-        internal static Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
+        internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
         {
-            return ConnectAsync(redisClientConfig, cancellationToken, ClientType.Main);
-        }
-        
-        internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken, ClientType clientType)
-        {
-            var redisClient = new RedisClient(redisClientConfig, clientType);
-            
-            switch (clientType)
-            {
-                case ClientType.Main:
-                    redisClient.backlogRedisClientTask = ConnectAsync(redisClientConfig, CancellationToken.None, ClientType.Backlog);
-                    break;
-                case ClientType.Backlog:
-                    redisClient.CanQueueToBacklog = false;
-                    break;
-            }
-            
+            var redisClient = new RedisClient(redisClientConfig);
             await redisClient.TryConnectAsync(cancellationToken);
             return redisClient;
         }
@@ -178,6 +158,9 @@ namespace TomLonghurst.RedisClient.Client
                     SendTimeout = ClientConfig.SendTimeoutMillis,
                     ReceiveTimeout = ClientConfig.ReceiveTimeoutMillis
                 };
+                
+                OptimiseSocket();
+                
                 if (IPAddress.TryParse(ClientConfig.Host, out var ip))
                 {
                     await _socket.ConnectAsync(ip, ClientConfig.Port).ConfigureAwait(false);
@@ -189,7 +172,7 @@ namespace TomLonghurst.RedisClient.Client
                         addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork),
                         ClientConfig.Port).ConfigureAwait(false);
                 }
-
+                
 
                 if (!_socket.Connected)
                 {
@@ -199,8 +182,6 @@ namespace TomLonghurst.RedisClient.Client
                     _socket = null;
                     return;
                 }
-
-                _socket.NoDelay = true;
 
                 Log.Debug("Socket Connected");
 
@@ -258,6 +239,16 @@ namespace TomLonghurst.RedisClient.Client
             {
                 _connectSemaphoreSlim.Release();
             }
+        }
+
+        private void OptimiseSocket()
+        {
+            if (_socket.AddressFamily == AddressFamily.Unix)
+            {
+                return;
+            }
+
+            try { _socket.NoDelay = true; } catch { }
         }
 
         private static Lazy<RedisPipeOptions> Options;

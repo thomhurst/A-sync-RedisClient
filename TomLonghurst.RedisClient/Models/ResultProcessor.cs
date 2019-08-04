@@ -55,7 +55,7 @@ namespace TomLonghurst.RedisClient.Models
         
         private protected abstract ValueTask<T> Process();
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected async ValueTask<Memory<byte>> ReadData()
         {
             var buffer = ReadResult.Buffer;

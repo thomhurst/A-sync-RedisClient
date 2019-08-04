@@ -12,7 +12,7 @@ namespace TestConsoleApp
     class Program
     {
         private static RedisClientManager _redisManager;
-        private static RedisClient TomLonghurstRedisClient => _redisManager.GetRedisClient();
+        private static Task<RedisClient> TomLonghurstRedisClient => _redisManager.GetRedisClient();
 
         static async Task Main(string[] args)
         {
@@ -23,7 +23,7 @@ namespace TestConsoleApp
 
             _redisManager = new RedisClientManager(config, 1);
 
-            await TomLonghurstRedisClient.StringSetAsync("SingleKey",
+            await (await TomLonghurstRedisClient).StringSetAsync("SingleKey",
                 "123",
                 120,
                 AwaitOptions.AwaitCompletion);
@@ -38,7 +38,7 @@ namespace TestConsoleApp
 
                     for (var i = 0; i < 200; i++)
                     {
-                        var redisValue = await TomLonghurstRedisClient.StringGetAsync("SingleKey");
+                        var redisValue = await (await TomLonghurstRedisClient).StringGetAsync("SingleKey");
                     }
 
                     tomLonghurstRedisClientStopwatch.Stop();

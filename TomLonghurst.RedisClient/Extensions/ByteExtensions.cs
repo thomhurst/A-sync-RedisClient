@@ -8,13 +8,13 @@ namespace TomLonghurst.RedisClient.Extensions
 {
     internal static class ByteExtensions
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static string FromUtf8(this byte[] bytes)
         {
             return bytes == null ? null : Encoding.UTF8.GetString(bytes);
         }
         
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static IEnumerable<StringRedisValue> ToRedisValues(this IEnumerable<byte[]> bytesArray)
         {
             return bytesArray.Select(bytes => new StringRedisValue(bytes.FromUtf8()));

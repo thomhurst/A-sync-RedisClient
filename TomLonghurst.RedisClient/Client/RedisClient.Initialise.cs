@@ -9,7 +9,6 @@ namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient
     {
-        private readonly ClientType _clientType;
         private static PipeThreadPoolScheduler _pipeScheduler;
 
         static RedisClient()
@@ -17,9 +16,8 @@ namespace TomLonghurst.RedisClient.Client
             CreatePipeOptions();
         }
         
-        protected RedisClient(ClientType clientType)
+        protected RedisClient()
         {
-            _clientType = clientType;
             _weakReference = new WeakReference<RedisClient>(this);
             CreateCommandClasses();
         }

@@ -13,6 +13,7 @@ namespace TomLonghurst.RedisClient
         public int Count => _innerQueue.Count;
 
         private int _availableToDequeue;
+        private bool _disposed;
 
         public BlockingQueue()
         {
@@ -22,10 +23,13 @@ namespace TomLonghurst.RedisClient
         public void Enqueue(T item)
         {
             _innerQueue.Enqueue(item);
-            
-            if (_availableToDequeue != 0)
+
+            lock (this)
             {
-                Monitor.Pulse(this);
+                if (_availableToDequeue != 0)
+                {
+                    Monitor.Pulse(this);
+                }
             }
         }
 
@@ -34,13 +38,16 @@ namespace TomLonghurst.RedisClient
             var n = 0;
             foreach (var item in source)
             {
-                _innerQueue.Enqueue(item);
-                
-                if (_availableToDequeue != 0)
+                lock (this)
                 {
-                    Monitor.Pulse(this);
+                    _innerQueue.Enqueue(item);
+
+                    if (_availableToDequeue != 0)
+                    {
+                        Monitor.Pulse(this);
+                    }
                 }
-                
+
                 n++;
             }
         }
@@ -50,22 +57,32 @@ namespace TomLonghurst.RedisClient
             // Used to avoid returning null
             while (true)
             {
-                while (Count == 0)
+                lock (this)
                 {
-                    _availableToDequeue++;
-                    Monitor.Wait(this);
-                    _availableToDequeue--;
-                }
+                    while (Count == 0)
+                    {
+                        if (_disposed)
+                        {
+                            return default;
+                        }
+                        
+                        _availableToDequeue++;
+                        Monitor.Wait(this);
+                        _availableToDequeue--;
+                    }
 
-                if (_innerQueue.TryDequeue(out var item))
-                {
-                    return item;
+                    if (_innerQueue.TryDequeue(out var item))
+                    {
+                        return item;
+                    }
                 }
             }
         }
 
         public void Dispose()
         {
+            _disposed = true;
+            
             lock (this)
             {
                 Monitor.PulseAll(this);
