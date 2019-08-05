@@ -53,11 +53,11 @@ namespace TomLonghurst.RedisClient.Pipes
                 {
                     throw new InvalidOperationException("Cannot create a read pipe over a non-readable stream");
                 }
-
-                _readPipe = new Pipe(receivePipeOptions);
-
+                
                 receivePipeOptions.ReaderScheduler.Schedule(
-                    async obj => await ((StreamPipe) obj).CopyFromStreamToReadPipe(), this);
+                    async obj => await ((StreamPipe) obj).CopyFromStreamToReadPipe().ConfigureAwait(false), this);
+                
+                _readPipe = new Pipe(receivePipeOptions);
             }
 
 
@@ -67,11 +67,11 @@ namespace TomLonghurst.RedisClient.Pipes
                 {
                     throw new InvalidOperationException("Cannot create a write pipe over a non-writable stream");
                 }
-
-                _writePipe = new Pipe(sendPipeOptions);
                 
                 sendPipeOptions.WriterScheduler.Schedule(
-                    async obj => await ((StreamPipe) obj).CopyFromWritePipeToStream(), this);
+                    async obj => await ((StreamPipe) obj).CopyFromWritePipeToStream().ConfigureAwait(false), this);
+                
+                _writePipe = new Pipe(sendPipeOptions);
             }
         }
 

@@ -55,11 +55,6 @@ namespace TomLonghurst.RedisClient.Models.Commands
         {
             return new RedisCommand(redisEncodables);
         }
-        
-//        public static RedisCommand From(IRedisEncodable redisEncodable, params IRedisEncodable[] redisEncodables)
-//        {
-//            return new RedisCommand(new List<IRedisEncodable> { redisEncodable }.Concat(redisEncodables));
-//        }
 
         private RedisCommand(IRedisEncodable redisEncodable)
         {

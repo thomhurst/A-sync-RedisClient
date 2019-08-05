@@ -151,9 +151,9 @@ namespace TomLonghurst.RedisClient.Pipes
             {
                 action(state);
             }
-            catch (Exception ex)
+            catch
             {
-                
+                // Action Failed
             }
         }
 

@@ -4,6 +4,7 @@ using System.IO.Pipelines;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using TomLonghurst.RedisClient.Exceptions;
 
 namespace TomLonghurst.RedisClient.Extensions
 {
@@ -74,7 +75,7 @@ namespace TomLonghurst.RedisClient.Extensions
 
             if (endOfLinePosition == null)
             {
-                throw new Exception("Can't find EOL");
+                throw new RedisDataException("Can't find EOL");
             }
 
             if (readResult.Buffer.Start.GetInteger() != endOfLinePosition.Value.GetInteger())

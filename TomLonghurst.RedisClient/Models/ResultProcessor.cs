@@ -71,7 +71,7 @@ namespace TomLonghurst.RedisClient.Models
 
             if (string.IsNullOrEmpty(line))
             {
-                throw new Exception("No data to process");
+                throw new RedisDataException("No data to process");
             }
 
             if (firstChar == '-')
@@ -173,7 +173,7 @@ namespace TomLonghurst.RedisClient.Models
 
             if (endOfLinePosition == null)
             {
-                throw new Exception("Can't find EOL");
+                throw new RedisDataException("Can't find EOL");
             }
 
             var buffer = ReadResult.Buffer;

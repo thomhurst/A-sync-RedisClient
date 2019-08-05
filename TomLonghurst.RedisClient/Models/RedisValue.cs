@@ -19,9 +19,9 @@ namespace TomLonghurst.RedisClient.Models
 
         internal StringRedisValue(string value) : base(value)
         {
-            if (value?.Contains(StringConstants.ENCODED_NEW_LINE) == true)
+            if (value?.Contains(StringConstants.EncodedNewLine) == true)
             {
-                Value = value.Replace(StringConstants.ENCODED_NEW_LINE, StringConstants.NEW_LINE);
+                Value = value.Replace(StringConstants.EncodedNewLine, StringConstants.NewLine);
             }
             else
             {

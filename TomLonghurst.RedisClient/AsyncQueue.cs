@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
@@ -5,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TomLonghurst.RedisClient
 {
-    public class AsyncQueue<T>
+    public class AsyncQueue<T> : IDisposable
     {
         private readonly SemaphoreSlim _semaphoreSlim;
         private readonly ConcurrentQueue<T> _innerQueue;
@@ -41,13 +42,23 @@ namespace TomLonghurst.RedisClient
             // Used to avoid returning null
             while (true)
             {
-                await _semaphoreSlim.WaitAsync(cancellationToken);
+                await _semaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
 
                 if (_innerQueue.TryDequeue(out var item))
                 {
                     return item;
                 }
             }
+        }
+
+        ~AsyncQueue()
+        {
+            Dispose();
+        }
+        
+        public void Dispose()
+        {
+            _semaphoreSlim?.Dispose();
         }
     }
 }

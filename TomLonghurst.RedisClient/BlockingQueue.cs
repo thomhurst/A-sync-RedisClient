@@ -8,6 +8,7 @@ namespace TomLonghurst.RedisClient
 {
     public class BlockingQueue<T> : IDisposable
     {
+        private readonly object _locker = new object();
         private readonly ConcurrentQueue<T> _innerQueue;
 
         public int Count => _innerQueue.Count;
@@ -24,11 +25,11 @@ namespace TomLonghurst.RedisClient
         {
             _innerQueue.Enqueue(item);
 
-            lock (this)
+            lock (_locker)
             {
                 if (_availableToDequeue != 0)
                 {
-                    Monitor.Pulse(this);
+                    Monitor.Pulse(_locker);
                 }
             }
         }
@@ -38,13 +39,13 @@ namespace TomLonghurst.RedisClient
             var n = 0;
             foreach (var item in source)
             {
-                lock (this)
+                lock (_locker)
                 {
                     _innerQueue.Enqueue(item);
 
                     if (_availableToDequeue != 0)
                     {
-                        Monitor.Pulse(this);
+                        Monitor.Pulse(_locker);
                     }
                 }
 
@@ -57,7 +58,7 @@ namespace TomLonghurst.RedisClient
             // Used to avoid returning null
             while (true)
             {
-                lock (this)
+                lock (_locker)
                 {
                     while (Count == 0)
                     {
@@ -67,7 +68,7 @@ namespace TomLonghurst.RedisClient
                         }
                         
                         _availableToDequeue++;
-                        Monitor.Wait(this);
+                        Monitor.Wait(_locker);
                         _availableToDequeue--;
                     }
 
@@ -83,9 +84,9 @@ namespace TomLonghurst.RedisClient
         {
             _disposed = true;
             
-            lock (this)
+            lock (_locker)
             {
-                Monitor.PulseAll(this);
+                Monitor.PulseAll(_locker);
             }
         }
     }

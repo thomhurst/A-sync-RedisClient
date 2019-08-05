@@ -10,7 +10,7 @@ namespace TomLonghurst.RedisClient.Extensions
         public static async Task<IList<T>> DequeueAll<T>(this ConcurrentQueue<T> queue, SemaphoreSlim sendSemaphoreSlim,
             CancellationToken cancellationToken)
         {
-            await sendSemaphoreSlim.WaitAsync(cancellationToken);
+            await sendSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
 
             var list = new List<T>();
 

@@ -44,7 +44,7 @@ namespace TomLonghurst.RedisClient.Client
                     {
                         if (_backlog.TryDequeue(out var backlogItem))
                         {
-                            await WriteAndReceiveBacklog(backlogItem);
+                            await WriteAndReceiveBacklog(backlogItem).ConfigureAwait(false);
                         }
                     }
                 }

@@ -94,7 +94,7 @@ namespace TomLonghurst.RedisClient.Client
             {
                 if (!isReconnectionAttempt)
                 {
-                    await _sendAndReceiveSemaphoreSlim.WaitAsync(cancellationToken);
+                    await _sendAndReceiveSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
                     
                     if (!IsConnected)
                     {
