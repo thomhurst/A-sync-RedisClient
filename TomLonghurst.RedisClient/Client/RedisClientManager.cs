@@ -7,7 +7,8 @@ namespace TomLonghurst.RedisClient.Client
 {
     public class RedisClientManager
     {
-        private readonly List<Lazy<Task<RedisClient>>> _lazyRedisClients = new List<Lazy<Task<RedisClient>>>();
+        public RedisClientConfig ClientConfig { get; }
+        private readonly List<Task<RedisClient>> _redisClients = new List<Task<RedisClient>>();
 
         public RedisClientManager(RedisClientConfig clientConfig, int redisClientPoolSize)
         {
@@ -16,35 +17,42 @@ namespace TomLonghurst.RedisClient.Client
                 throw new ArgumentOutOfRangeException(nameof(redisClientPoolSize), "Pool size must be 1 or more");
             }
 
+            ClientConfig = clientConfig;
+
             for (var i = 0; i < redisClientPoolSize; i++)
             {
-                _lazyRedisClients.Add(new Lazy<Task<RedisClient>>(() => RedisClient.ConnectAsync(clientConfig)));
+                _redisClients.Add(RedisClient.ConnectAsync(clientConfig));
             }
         }
 
-        public async Task<RedisClient> GetRedisClientAsync()
+        public async Task<RedisClient> GetRedisClient()
         {
-            if (_lazyRedisClients.Count == 1)
+            if (_redisClients.Count == 1)
             {
-                return await _lazyRedisClients.First().Value;
+                var client = await _redisClients.First();
+
+                if (client.OnConnectionFailed == null)
+                {
+                    client.OnConnectionFailed = OnConnectionFailed;
+                }
+
+                if (client.OnConnectionEstablished == null)
+                {
+                    client.OnConnectionEstablished = OnConnectionEstablished;
+                }
+
+                return client;
             }
+
+            var redisClientsLoaded = _redisClients.Where(x => x.IsCompleted).ToList();
+
+            if (redisClientsLoaded.Count != _redisClients.Count)
+            {
+                return await await Task.WhenAny(_redisClients);
+            }
+
+            var clients = _redisClients.Select(x => x.Result);
             
-            var lazyClientNotYetLoaded = _lazyRedisClients.FirstOrDefault(lazy => !lazy.IsValueCreated);
-
-            if(lazyClientNotYetLoaded != null)
-            {
-                return await lazyClientNotYetLoaded.Value;
-            }
-
-            var clientTasks = _lazyRedisClients.Select(lazyClient => lazyClient.Value).ToList();
-
-            if (clientTasks.Any(task => !task.IsCompleted))
-            {
-                return await await Task.WhenAny(clientTasks);
-            }
-
-            var clients = await Task.WhenAll(clientTasks);
-
             var connectedClientWithLeastOutstandingOperations = clients.OrderBy(client => client.OutstandingOperations).FirstOrDefault(client => client.IsConnected);
 
             if(connectedClientWithLeastOutstandingOperations != null)
@@ -55,9 +63,13 @@ namespace TomLonghurst.RedisClient.Client
             return clients.OrderBy(client => client.OutstandingOperations).First();
         }
 
-        public async Task<IEnumerable<RedisClient>> GetAllRedisClientsAsync()
+        public List<Task<RedisClient>> GetAllRedisClients()
         {
-            return await Task.WhenAll(_lazyRedisClients.Select(lazyRedisClient => lazyRedisClient.Value));
+            return _redisClients;
         }
+
+        public Action<RedisClient> OnConnectionEstablished { get; set; }
+
+        public Action<RedisClient> OnConnectionFailed { get; set; }
     }
 }

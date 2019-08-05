@@ -7,7 +7,7 @@ namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient : IDisposable
     {
-        private readonly ServerCommands _serverCommands;
+        private ServerCommands _serverCommands;
         public ServerCommands Server => _serverCommands;
         public class ServerCommands
         {
@@ -18,29 +18,29 @@ namespace TomLonghurst.RedisClient.Client
                 _redisClient = redisClient;
             }
             
-            public async ValueTask<string> Info()
+            public ValueTask<string> Info()
             {
-                return await Info(CancellationToken.None);
+                return Info(CancellationToken.None);
             }
         
             public async ValueTask<string> Info(CancellationToken cancellationToken)
             {
-                return await _redisClient.RunWithTimeout(async token =>
+                return await  _redisClient.RunWithTimeout(async token =>
                 {
-                    return await _redisClient.SendAndReceiveAsync(Commands.Info, _redisClient.ExpectData, CancellationToken.None, true);
+                    return await _redisClient.SendAndReceiveAsync(Commands.Info, _redisClient.DataResultProcessor, CancellationToken.None);
                 }, cancellationToken);
             }
 
-            public async Task<int> DBSize()
+            public Task<int> DBSize()
             {
-                return await DBSize(CancellationToken.None);
+                return DBSize(CancellationToken.None);
             }
 
             public async Task<int> DBSize(CancellationToken cancellationToken)
             {
                 return await _redisClient.RunWithTimeout(async token =>
                 {
-                    return await _redisClient.SendAndReceiveAsync(Commands.DbSize, _redisClient.ExpectInteger, CancellationToken.None, true);
+                    return await _redisClient.SendAndReceiveAsync(Commands.DbSize, _redisClient.IntegerResultProcessor, CancellationToken.None);
                 }, cancellationToken);
             }
         }

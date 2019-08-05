@@ -1,13 +1,18 @@
 ﻿using System;
+using System.Buffers;
+using System.IO.Pipelines;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Sources;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Helpers;
+using TomLonghurst.RedisClient.Models;
+using TomLonghurst.RedisClient.Models.Backlog;
+using TomLonghurst.RedisClient.Models.Commands;
 
 namespace TomLonghurst.RedisClient.Client
 {
@@ -15,36 +20,73 @@ namespace TomLonghurst.RedisClient.Client
     {
         private static readonly Logger Log = new Logger();
 
-        private readonly SemaphoreSlim _sendSemaphoreSlim = new SemaphoreSlim(1, 1);
-
+        internal virtual bool CanQueueToBacklog { get; set; } = true;
+        
+        private SemaphoreSlim _sendAndReceiveSemaphoreSlim = new SemaphoreSlim(1, 1);
+        
         private long _outStandingOperations;
 
         public long OutstandingOperations => Interlocked.Read(ref _outStandingOperations);
 
         private long _operationsPerformed;
 
+        private IDuplexPipe _pipe;
+        private ReadResult _readResult;
+
+        public object IsBusyLock = new object();
+        public bool IsBusy;
+
+        internal string LastAction;
+
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask<T> SendAndReceiveAsync<T>(string command,
-            Func<T> responseReader,
+        public DateTime LastUsed { get; internal set; }
+        
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command,
+            IResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
         {
+            LastUsed = DateTime.Now;
+            
+            LastAction = "Throwing Cancelled Exception due to Cancelled Token";
             cancellationToken.ThrowIfCancellationRequested();
 
             Interlocked.Increment(ref _outStandingOperations);
 
-
-            if (!isReconnectionAttempt)
+            if (!isReconnectionAttempt && CanQueueToBacklog && IsBusy)
             {
-                await _sendSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
+                return QueueToBacklog(command, resultProcessor, cancellationToken);
             }
-            
+
+            return SendAndReceive_Impl(command, resultProcessor, cancellationToken, isReconnectionAttempt);
+        }
+
+        private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,
+            CancellationToken cancellationToken)
+        {
+            var taskCompletionSource = new TaskCompletionSource<T>();
+
+            var backlogQueueCount = _backlog.Count;
+
+            _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor));
+
+            if (backlogQueueCount == 0)
+            {
+                StartBacklogProcessor();
+            }
+
+            return new ValueTask<T>(taskCompletionSource.Task);
+        }
+
+        internal async ValueTask<T> SendAndReceive_Impl<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,
+            CancellationToken cancellationToken, bool isReconnectionAttempt)
+        {
+            IsBusy = true;
+
             Log.Debug($"Executing Command: {command}");
-            _lastCommand = command;
-            var encodedCommand = command.ToRedisProtocol();
-            var bytes = encodedCommand.ToUtf8Bytes();
+            LastCommand = command;
 
             Interlocked.Increment(ref _operationsPerformed);
 
@@ -52,27 +94,28 @@ namespace TomLonghurst.RedisClient.Client
             {
                 if (!isReconnectionAttempt)
                 {
-                    await TryConnectAsync(cancellationToken).ConfigureAwait(false);
+                    await _sendAndReceiveSemaphoreSlim.WaitAsync(cancellationToken);
+                    
+                    if (!IsConnected)
+                    {
+                        await TryConnectAsync(cancellationToken).ConfigureAwait(false);
+                    }
                 }
 
-                if (_redisClientConfig.Ssl)
-                {
-                    _sslStream.Write(bytes, 0, bytes.Length);
-                }
-                else
-                {
-                    _socket.Send(bytes);
-                }
+                await Write(command);
 
-                return responseReader.Invoke();
+                LastAction = "Reading Bytes Async";
+
+                return await resultProcessor.Start(this, _pipe);
             }
             catch (Exception innerException)
             {
-                if (innerException.IsSameOrSubclassOf(typeof(RedisException)) || innerException.IsSameOrSubclassOf(typeof(OperationCanceledException)))
+                if (innerException.IsSameOrSubclassOf(typeof(RedisException)) ||
+                    innerException.IsSameOrSubclassOf(typeof(OperationCanceledException)))
                 {
                     throw;
                 }
-                
+
                 DisposeNetwork();
                 IsConnected = false;
                 throw new RedisConnectionException(innerException);
@@ -82,98 +125,60 @@ namespace TomLonghurst.RedisClient.Client
                 Interlocked.Decrement(ref _outStandingOperations);
                 if (!isReconnectionAttempt)
                 {
-                    _sendSemaphoreSlim.Release();
+                    _sendAndReceiveSemaphoreSlim.Release();
                 }
+                
+                IsBusy = false;
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private byte[] ReadData()
+        internal ValueTask<FlushResult> Write(IRedisCommand command)
         {
-            var line = ReadLine();
-
-            if (string.IsNullOrWhiteSpace(line))
+            var encodedCommandList = command.EncodedCommandList;
+            
+            LastAction = "Writing Bytes";
+            var pipeWriter = _pipe.Output;
+#if NETCORE
+            
+            foreach (var encodedCommand in encodedCommandList)
             {
-                throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
+                var bytesSpan = pipeWriter.GetSpan(encodedCommand.Length);
+                encodedCommand.CopyTo(bytesSpan);
+                pipeWriter.Advance(encodedCommand.Length);
             }
 
-            var firstChar = line.First();
-
-            if (firstChar == '-')
-            {
-                throw new RedisFailedCommandException(line, _lastCommand);
-            }
-
-            if (firstChar == '$')
-            {
-                if (line == "$-1")
-                {
-                    return null;
-                }
-
-                if (int.TryParse(line.Substring(1), out var byteSizeOfData))
-                {
-                    var byteBuffer = new byte [byteSizeOfData];
-
-                    var bytesRead = 0;
-                    do
-                    {
-                        var read = _bufferedStream.Read(byteBuffer, bytesRead, byteSizeOfData - bytesRead);
-
-                        if (read < 1)
-                        {
-                            throw new UnexpectedRedisResponseException(
-                                $"Invalid termination mid stream: {byteBuffer.FromUtf8()}");
-                        }
-
-                        bytesRead += read;
-                    } while (bytesRead < byteSizeOfData);
-
-                    if (_bufferedStream.ReadByte() != '\r' || _bufferedStream.ReadByte() != '\n')
-                    {
-                        throw new UnexpectedRedisResponseException($"Invalid termination: {byteBuffer.FromUtf8()}");
-                    }
-
-                    return byteBuffer;
-                }
-
-                throw new UnexpectedRedisResponseException("Invalid length");
-            }
-
-            throw new UnexpectedRedisResponseException($"Unexpected reply: {line}");
+            return Flush();
+#else
+            return pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray().AsMemory());
+#endif
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string ReadLine()
+        private ValueTask<FlushResult> Flush()
         {
-            var stringBuilder = new StringBuilder();
-            int c;
+            bool GetResult(FlushResult flush)
+                // tell the calling code whether any more messages
+                // should be written
+                => !(flush.IsCanceled || flush.IsCompleted);
 
-            while ((c = _bufferedStream.ReadByte()) != -1)
-            {
-                if (c == '\r')
-                {
-                    continue;
-                }
+            async ValueTask<FlushResult> Awaited(ValueTask<FlushResult> incomplete)
+                => await incomplete;
 
-                if (c == '\n')
-                {
-                    break;
-                }
+            // apply back-pressure etc
+            var flushTask = _pipe.Output.FlushAsync();
 
-                stringBuilder.Append((char) c);
-            }
-
-            return stringBuilder.ToString();
+            return flushTask.IsCompletedSuccessfully
+                ? new ValueTask<FlushResult>(flushTask.Result)
+                : Awaited(flushTask);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal async ValueTask<T> RunWithTimeout<T>(Func<CancellationToken, ValueTask<T>> action,
             CancellationToken originalCancellationToken)
         {
             originalCancellationToken.ThrowIfCancellationRequested();
+            
             var cancellationTokenWithTimeout =
-                CancellationTokenHelper.CancellationTokenWithTimeout(_redisClientConfig.Timeout,
+                CancellationTokenHelper.CancellationTokenWithTimeout(ClientConfig.Timeout,
                     originalCancellationToken);
 
             try
@@ -184,20 +189,30 @@ namespace TomLonghurst.RedisClient.Client
             {
                 throw TimeoutOrCancelledException(operationCanceledException, originalCancellationToken);
             }
+            catch (SocketException socketException)
+            {
+                if (socketException.InnerException?.GetType().IsAssignableFrom(typeof(OperationCanceledException)) ==
+                    true)
+                {
+                    throw TimeoutOrCancelledException(socketException.InnerException, originalCancellationToken);
+                }
+
+                throw;
+            }
             finally
             {
                 cancellationTokenWithTimeout.Dispose();
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async ValueTask RunWithTimeout(Func<CancellationToken, ValueTask> action,
             CancellationToken originalCancellationToken)
         {
             originalCancellationToken.ThrowIfCancellationRequested();
 
             var cancellationTokenWithTimeout =
-                CancellationTokenHelper.CancellationTokenWithTimeout(_redisClientConfig.Timeout,
+                CancellationTokenHelper.CancellationTokenWithTimeout(ClientConfig.Timeout,
                     originalCancellationToken);
 
             try

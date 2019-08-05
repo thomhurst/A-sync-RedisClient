@@ -12,14 +12,21 @@ namespace TomLonghurst.RedisClient.Models
             Value = value;
         }
     }
-    
+
     public class StringRedisValue : RedisValue<string>
     {
         public override bool HasValue => !string.IsNullOrEmpty(Value);
 
         internal StringRedisValue(string value) : base(value)
         {
-            Value = value?.Replace(StringConstants.ENCODED_NEW_LINE, StringConstants.NEW_LINE);
+            if (value?.Contains(StringConstants.ENCODED_NEW_LINE) == true)
+            {
+                Value = value.Replace(StringConstants.ENCODED_NEW_LINE, StringConstants.NEW_LINE);
+            }
+            else
+            {
+                Value = value;
+            }
         }
     }
 }

@@ -7,7 +7,7 @@ namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient : IDisposable
     {
-        private readonly ClusterCommands _clusterCommands;
+        private ClusterCommands _clusterCommands;
         public ClusterCommands Cluster => _clusterCommands;
         public class ClusterCommands
         {
@@ -18,16 +18,16 @@ namespace TomLonghurst.RedisClient.Client
                 _redisClient = redisClient;
             }
 
-            public async Task<string> ClusterInfoAsync()
+            public Task<string> ClusterInfoAsync()
             {
-                return await ClusterInfoAsync(CancellationToken.None).ConfigureAwait(false);
+                return ClusterInfoAsync(CancellationToken.None);
             }
         
             public async Task<string> ClusterInfoAsync(CancellationToken cancellationToken)
             {
                 return await _redisClient.RunWithTimeout(async token =>
                 {
-                    return await _redisClient.SendAndReceiveAsync(Commands.ClusterInfo, _redisClient.ExpectData, token);
+                    return await _redisClient.SendAndReceiveAsync(Commands.ClusterInfo, _redisClient.DataResultProcessor, token);
                 }, cancellationToken).ConfigureAwait(false);
             }
         }

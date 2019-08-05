@@ -4,10 +4,15 @@ using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Net.WebSockets;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using TomLonghurst.RedisClient.Enums;
 using TomLonghurst.RedisClient.Exceptions;
+using TomLonghurst.RedisClient.Extensions;
+using TomLonghurst.RedisClient.Models;
+using TomLonghurst.RedisClient.Pipes;
 
 namespace TomLonghurst.RedisClient.Client
 {
@@ -22,20 +27,20 @@ namespace TomLonghurst.RedisClient.Client
 
         private readonly SemaphoreSlim _connectSemaphoreSlim = new SemaphoreSlim(1, 1);
 
-        private readonly RedisClientConfig _redisClientConfig;
-        
+        public RedisClientConfig ClientConfig { get; }
+
         private readonly Timer _connectionChecker;
         
         private RedisSocket _socket;
 
         public Socket Socket => _socket;
-
-        private BufferedStream _bufferedStream;
-        private SslStream _sslStream;
         
-        private const int BufferSize = 16 * 1024;
+        private SslStream _sslStream;
 
         private bool _isConnected;
+        
+        internal Action<RedisClient> OnConnectionEstablished { get; set; }
+        internal Action<RedisClient> OnConnectionFailed { get; set; }
 
         public bool IsConnected
         {
@@ -48,14 +53,32 @@ namespace TomLonghurst.RedisClient.Client
                 
                 return _isConnected;
             }
-            private set => _isConnected = value;
+            
+            private set
+            {
+                _isConnected = value;
+                
+                if (!value)
+                {
+                    if (OnConnectionFailed != null)
+                    {
+                        Task.Run(() => OnConnectionFailed.Invoke(this));
+                    }
+                }
+                else
+                {
+                    if (OnConnectionEstablished != null)
+                    {
+                        Task.Run(() => OnConnectionEstablished.Invoke(this));
+                    }
+                }
+            }
         }
 
-        private RedisClient(RedisClientConfig redisClientConfig) : this()
+        protected RedisClient(RedisClientConfig redisClientConfig) : this()
         {
-            _redisClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
-
-            _connectionChecker = new Timer(CheckConnection, null, 30000, 30000);
+            ClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
+            //_connectionChecker = new Timer(CheckConnection, null, 30000, 30000);
         }
 
         ~RedisClient()
@@ -65,24 +88,9 @@ namespace TomLonghurst.RedisClient.Client
         
         private void CheckConnection(object state)
         {
-            try
-            {
-                if (IsConnected)
-                {
-                    IsConnected = !(_socket.Poll(1000, SelectMode.SelectRead) && _socket.Available == 0);
-                }
-            }
-            catch (Exception)
-            {
-                IsConnected = false;
-                DisposeNetwork();
-            }
-            
             if (!IsConnected)
             {
-#pragma warning disable 4014
-                TryConnectAsync(CancellationToken.None);
-#pragma warning restore 4014
+                Task.Run(() => TryConnectAsync(CancellationToken.None));
             }
         }
 
@@ -109,6 +117,7 @@ namespace TomLonghurst.RedisClient.Client
             {
                 await RunWithTimeout(async token =>
                 {
+                    LastAction = "Reconnecting";
                     await ConnectAsync(token);
                 }, cancellationToken);
             }
@@ -127,7 +136,12 @@ namespace TomLonghurst.RedisClient.Client
                 return;
             }
 
-            await _connectSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
+            LastAction = "Waiting for Connecting lock to be free";
+            var wait = _connectSemaphoreSlim.WaitAsync(cancellationToken);
+            if (!wait.IsCompletedSuccessfully())
+            {
+                await wait.ConfigureAwait(false);
+            }
 
             try
             {
@@ -136,25 +150,29 @@ namespace TomLonghurst.RedisClient.Client
                     return;
                 }
 
+                LastAction = "Connecting";
                 Interlocked.Increment(ref _reconnectAttempts);
 
                 _socket = new RedisSocket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
                 {
-                    SendTimeout = _redisClientConfig.SendTimeout,
-                    ReceiveTimeout = _redisClientConfig.ReceiveTimeout
+                    SendTimeout = ClientConfig.SendTimeoutMillis,
+                    ReceiveTimeout = ClientConfig.ReceiveTimeoutMillis
                 };
-                if (IPAddress.TryParse(_redisClientConfig.Host, out var ip))
+                
+                OptimiseSocket();
+                
+                if (IPAddress.TryParse(ClientConfig.Host, out var ip))
                 {
-                    await _socket.ConnectAsync(ip, _redisClientConfig.Port);
+                    await _socket.ConnectAsync(ip, ClientConfig.Port).ConfigureAwait(false);
                 }
                 else
                 {
-                    var addresses = await Dns.GetHostAddressesAsync(_redisClientConfig.Host);
+                    var addresses = await Dns.GetHostAddressesAsync(ClientConfig.Host);
                     await _socket.ConnectAsync(
                         addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork),
-                        _redisClientConfig.Port);
+                        ClientConfig.Port).ConfigureAwait(false);
                 }
-
+                
 
                 if (!_socket.Connected)
                 {
@@ -165,47 +183,55 @@ namespace TomLonghurst.RedisClient.Client
                     return;
                 }
 
-                _socket.NoDelay = true;
-
                 Log.Debug("Socket Connected");
 
                 Stream networkStream = new NetworkStream(_socket);
+                
+                var redisPipeOptions = GetPipeOptions();
 
-                if (_redisClientConfig.Ssl)
+                if (ClientConfig.Ssl)
                 {
                     _sslStream = new SslStream(networkStream,
                         false,
-                        _redisClientConfig.CertificateValidationCallback,
-                        _redisClientConfig.CertificateSelectionCallback,
+                        ClientConfig.CertificateValidationCallback,
+                        ClientConfig.CertificateSelectionCallback,
                         EncryptionPolicy.RequireEncryption);
 
-                    await _sslStream.AuthenticateAsClientAsync(_redisClientConfig.Host);
+                    LastAction = "Authenticating SSL Stream as Client";
+                    await _sslStream.AuthenticateAsClientAsync(ClientConfig.Host).ConfigureAwait(false);
 
                     if (!_sslStream.IsEncrypted)
                     {
                         Dispose();
-                        throw new SecurityException($"Could not establish an encrypted connection to Redis - {_redisClientConfig.Host}");
+                        throw new SecurityException($"Could not establish an encrypted connection to Redis - {ClientConfig.Host}");
                     }
 
-                    networkStream = _sslStream;
+                    LastAction = "Creating SSL Stream Pipe";
+                    _pipe = StreamPipe.GetDuplexPipe(_sslStream, redisPipeOptions.SendOptions, redisPipeOptions.ReceiveOptions);
                 }
-
-                _bufferedStream = new BufferedStream(networkStream, BufferSize);
+                else
+                {
+                    LastAction = "Creating Socket Pipe";
+                    _pipe = SocketPipe.GetDuplexPipe(_socket, redisPipeOptions.SendOptions, redisPipeOptions.ReceiveOptions);
+                }
 
                 IsConnected = true;
                 
-                if (!string.IsNullOrEmpty(_redisClientConfig.Password))
+                if (!string.IsNullOrEmpty(ClientConfig.Password))
                 {
+                    LastAction = "Authorizing";
                     await Authorize(cancellationToken);
                 }
 
-                if (_redisClientConfig.Db != 0)
+                if (ClientConfig.Db != 0)
                 {
+                    LastAction = "Selecting Database";
                     await SelectDb(cancellationToken);
                 }
 
-                if (_redisClientConfig.ClientName != null)
+                if (ClientConfig.ClientName != null)
                 {
+                    LastAction = "Setting Client Name";
                     await SetClientNameAsync(cancellationToken);
                 }
             }
@@ -215,20 +241,47 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
+        private void OptimiseSocket()
+        {
+            if (_socket.AddressFamily == AddressFamily.Unix)
+            {
+                return;
+            }
+
+            try { _socket.NoDelay = true; } catch { }
+        }
+
+        private static Lazy<RedisPipeOptions> Options;
+        private bool _disposed;
+
+        private static RedisPipeOptions GetPipeOptions()
+        {
+            return Options.Value;
+        }
+
         public void Dispose()
         {
+            _disposed = true;
             DisposeNetwork();
+            LastAction = "Disposing Client";
             _connectionChecker?.Dispose();
-            _sendSemaphoreSlim?.Dispose();
             _connectSemaphoreSlim?.Dispose();
         }
 
         private void DisposeNetwork()
         {
+            IsConnected = false;
+            LastAction = "Disposing Network";
             _socket?.Close();
             _socket?.Dispose();
-            _bufferedStream?.Dispose();
             _sslStream?.Dispose();
+            
+            if (!_disposed)
+            {
+#pragma warning disable 4014
+                TryConnectAsync(CancellationToken.None);
+#pragma warning restore 4014
+            }
         }
     }
 }

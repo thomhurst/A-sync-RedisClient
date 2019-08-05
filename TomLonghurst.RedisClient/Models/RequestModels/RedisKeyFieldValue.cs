@@ -1,5 +1,3 @@
-using TomLonghurst.RedisClient.Constants;
-
 namespace TomLonghurst.RedisClient.Models.RequestModels
 {
     public class RedisKeyFieldValue
@@ -12,7 +10,7 @@ namespace TomLonghurst.RedisClient.Models.RequestModels
         {
             Key = key;
             Field = field;
-            Value = $"{StringConstants.VALUE_DELIMITER} {value.Replace(StringConstants.NEW_LINE, StringConstants.ENCODED_NEW_LINE)}";
+            Value = value;
         }
     }
 }
