@@ -320,14 +320,21 @@ namespace RedisClientTest
         [Repeat(2)]
         public async Task Pipelining_Multiple_Sets()
         {
+            var tomLonghurstRedisClient = await TomLonghurstRedisClient;
+            
             var keys = new[]
             {
                 "Pipeline1", "Pipeline2", "Pipeline3", "Pipeline4", "Pipeline5", "Pipeline6", "Pipeline7", "Pipeline8"
             };
-            var results = keys.Select(async key =>
-                await (await TomLonghurstRedisClient).StringSetAsync(key, "123", 30, AwaitOptions.FireAndForget));
+            var results = keys.Select(async key => tomLonghurstRedisClient.StringSetAsync(key, "123", 30, AwaitOptions.FireAndForget));
             
             await Task.WhenAll(results);
+
+            foreach (var key in keys)
+            {
+                var value = await tomLonghurstRedisClient.StringGetAsync(key);
+                Assert.That(value.Value, Is.EqualTo("123"));
+            }
         }
         
         [TestCase(AwaitOptions.AwaitCompletion)]
