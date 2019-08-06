@@ -79,6 +79,44 @@ namespace TomLonghurst.RedisClient
                 }
             }
         }
+        
+        public List<T> DequeueAll()
+        {
+            // Used to avoid returning null
+            while (true)
+            {
+                lock (_locker)
+                {
+                    while (Count == 0)
+                    {
+                        if (_disposed)
+                        {
+                            return default;
+                        }
+                        
+                        _availableToDequeue++;
+                        Monitor.Wait(_locker);
+                        _availableToDequeue--;
+                    }
+                    
+                    var list = new List<T>();
+                    
+                    var hasItem = true;
+                    while (hasItem)
+                    {
+                        hasItem = _innerQueue.TryDequeue(out var item);
+                        if (hasItem)
+                        {
+                            list.Add(item);
+                        }
+                        else
+                        {
+                            return list;
+                        }
+                    }
+                }
+            }
+        }
 
         public void Dispose()
         {

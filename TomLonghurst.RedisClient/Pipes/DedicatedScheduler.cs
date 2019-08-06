@@ -10,18 +10,14 @@ namespace TomLonghurst.RedisClient.Pipes
     /// An implementation of a pipe-scheduler that uses a dedicated pool of threads, deferring to
     /// the thread-pool if that becomes too backlogged
     /// </summary>
-    public sealed class PipeThreadPoolScheduler : PipeScheduler, IDisposable
+    public sealed class DedicatedScheduler : PipeScheduler, IDisposable
     {
         /// <summary>
         /// Reusable shared scheduler instance
         /// </summary>
-        public static PipeThreadPoolScheduler Default => StaticContext.SharedScheduler;
+        public static DedicatedScheduler Shared => LazySharedScheduler.Value;
 
-        private static class StaticContext
-        {
-            // Only Instantiated When First Accessed
-            internal static readonly PipeThreadPoolScheduler SharedScheduler = new PipeThreadPoolScheduler("SharedPipeThreadPoolScheduler", 10);
-        }
+        internal static readonly Lazy<DedicatedScheduler> LazySharedScheduler = new Lazy<DedicatedScheduler>(() => new DedicatedScheduler("SharedPipeThreadPoolScheduler", 10));
 
         [ThreadStatic]
         private static int s_threadWorkerPoolId;
@@ -31,7 +27,7 @@ namespace TomLonghurst.RedisClient.Pipes
         /// Indicates whether the current thread is a worker, optionally for the specific pool
         /// (otherwise for any pool)
         /// </summary>
-        public static bool IsWorker(PipeThreadPoolScheduler pool = null)
+        public static bool IsWorker(DedicatedScheduler pool = null)
             => pool == null ? s_threadWorkerPoolId != 0 : s_threadWorkerPoolId == pool.Id;
 
         private int Id { get; }
@@ -53,7 +49,7 @@ namespace TomLonghurst.RedisClient.Pipes
         /// <summary>
         /// Create a new dedicated thread-pool
         /// </summary>
-        public PipeThreadPoolScheduler(string name = null, int workerCount = 2)
+        public DedicatedScheduler(string name = null, int workerCount = 2)
         {
             if (workerCount <= 0)
             {
@@ -108,7 +104,7 @@ namespace TomLonghurst.RedisClient.Pipes
         {
             var thread = new Thread(ThreadRunWorkLoop)
             {
-                Name = $"{nameof(PipeThreadPoolScheduler)}:{id}",
+                Name = $"{nameof(DedicatedScheduler)}:{id}",
                 Priority = ThreadPriority.Normal,
                 IsBackground = true
             };
@@ -136,7 +132,7 @@ namespace TomLonghurst.RedisClient.Pipes
             ThreadPool.Schedule(action, state);
         }
 
-        private static readonly ParameterizedThreadStart ThreadRunWorkLoop = state => ((PipeThreadPoolScheduler)state).RunWorkLoop();
+        private static readonly ParameterizedThreadStart ThreadRunWorkLoop = state => ((DedicatedScheduler)state).RunWorkLoop();
 
         private int _availableThreads;
         /// <summary>
@@ -172,7 +168,7 @@ namespace TomLonghurst.RedisClient.Pipes
             }
         }
 
-        ~PipeThreadPoolScheduler()
+        ~DedicatedScheduler()
         {
             Dispose();
         }

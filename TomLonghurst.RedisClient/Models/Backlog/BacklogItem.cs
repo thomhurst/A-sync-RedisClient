@@ -25,7 +25,7 @@ namespace TomLonghurst.RedisClient.Models.Backlog
                 RedisClient.LastUsed = DateTime.Now;
 
                 var result =
-                    await RedisClient.SendAndReceive_Impl(RedisCommand, ResultProcessor, CancellationToken, false);
+                    await RedisClient.SendAndReceiveAsync(RedisCommand, ResultProcessor, CancellationToken, false);
                 TaskCompletionSource.TrySetResult(result);
             }
             catch (OperationCanceledException)
@@ -38,21 +38,30 @@ namespace TomLonghurst.RedisClient.Models.Backlog
             }
         }
 
-        public void SetClientAndPipe(Client.RedisClient redisClient, IDuplexPipe pipe)
+        public async Task SetResult()
         {
-            RedisClient = redisClient;
-            Pipe = pipe;
+            try
+            {
+                var result = await ResultProcessor.Start(RedisClient, Pipe);
+                TaskCompletionSource.TrySetResult(result);
+            }
+            catch (Exception e)
+            {
+                TaskCompletionSource.TrySetException(e);
+            }
         }
 
         public TaskCompletionSource<T> TaskCompletionSource { get; }
         public IResultProcessor<T> ResultProcessor { get; }
 
-        public BacklogItem(IRedisCommand redisCommand, CancellationToken cancellationToken, TaskCompletionSource<T> taskCompletionSource, IResultProcessor<T> resultProcessor)
+        public BacklogItem(IRedisCommand redisCommand, CancellationToken cancellationToken, TaskCompletionSource<T> taskCompletionSource, IResultProcessor<T> resultProcessor, Client.RedisClient redisClient, IDuplexPipe pipe)
         {
             RedisCommand = redisCommand;
             CancellationToken = cancellationToken;
             TaskCompletionSource = taskCompletionSource;
             ResultProcessor = resultProcessor;
+            RedisClient = redisClient;
+            Pipe = pipe;
         }
     }
 }

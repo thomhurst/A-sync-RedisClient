@@ -42,6 +42,8 @@ namespace TomLonghurst.RedisClient
             // Used to avoid returning null
             while (true)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+             
                 await _semaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
 
                 if (_innerQueue.TryDequeue(out var item))

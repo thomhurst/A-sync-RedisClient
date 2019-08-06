@@ -115,5 +115,22 @@ namespace TomLonghurst.RedisClient.Extensions
                 return enumerable.First();
             }
         }
+        
+        internal static IRedisCommand ToPipelinedCommand(this IEnumerable<IRedisCommand> commands)
+        {
+            var enumerable = commands.ToList();
+            if (enumerable.Count > 1)
+            {
+                var fireAndForgetCommands = new List<IRedisCommand>();
+                
+                fireAndForgetCommands.AddRange(enumerable);
+
+                return MultiRedisCommand.From(fireAndForgetCommands);
+            }
+            else
+            {
+                return enumerable.First();
+            }
+        }
     }
 }

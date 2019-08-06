@@ -43,7 +43,7 @@ namespace TomLonghurst.RedisClient.Client
         public DateTime LastUsed { get; internal set; }
         
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command,
+        internal ValueTask<T> SendOrQueueAsync<T>(IRedisCommand command,
             IResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
@@ -54,13 +54,13 @@ namespace TomLonghurst.RedisClient.Client
             cancellationToken.ThrowIfCancellationRequested();
 
             Interlocked.Increment(ref _outStandingOperations);
-
+            
             if (!isReconnectionAttempt && CanQueueToBacklog && IsBusy)
             {
                 return QueueToBacklog(command, resultProcessor, cancellationToken);
             }
 
-            return SendAndReceive_Impl(command, resultProcessor, cancellationToken, isReconnectionAttempt);
+            return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
         }
 
         private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,
@@ -68,23 +68,16 @@ namespace TomLonghurst.RedisClient.Client
         {
             var taskCompletionSource = new TaskCompletionSource<T>();
 
-            var backlogQueueCount = _backlog.Count;
-
-            _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor));
-
-            if (backlogQueueCount == 0)
-            {
-                StartBacklogProcessor();
-            }
+            _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor, this, _pipe));
 
             return new ValueTask<T>(taskCompletionSource.Task);
         }
 
-        internal async ValueTask<T> SendAndReceive_Impl<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,
+        internal async ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken, bool isReconnectionAttempt)
         {
             IsBusy = true;
-
+            
             Log.Debug($"Executing Command: {command}");
             LastCommand = command;
 

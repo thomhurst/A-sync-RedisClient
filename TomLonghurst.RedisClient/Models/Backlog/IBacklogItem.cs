@@ -14,7 +14,7 @@ namespace TomLonghurst.RedisClient.Models.Backlog
         IRedisCommand RedisCommand { get; }
         CancellationToken CancellationToken { get; }
         Task WriteAndSetResult();
-        void SetClientAndPipe(Client.RedisClient redisClient, IDuplexPipe pipe);
+        Task SetResult();
     }
     public interface IBacklogItem : IBacklog
     {
