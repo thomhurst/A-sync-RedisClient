@@ -129,16 +129,54 @@ namespace TomLonghurst.RedisClient.Extensions
 
         internal static SequencePosition? GetEndOfLinePosition(this ReadOnlySequence<byte> buffer)
         {
-            var endOfLine = buffer.PositionOf((byte) '\n');
-
-            if (endOfLine == null)
+            if (buffer.IsEmpty)
             {
                 return null;
             }
-            
-            return buffer.GetPosition(1, endOfLine.Value);
+
+            if (buffer.IsSingleSegment)
+            {
+                var first = buffer.First.Span;
+                return GetEndOfLinePositionSingleSegment(first, buffer);
+            }
+
+            return GetEndOfLinePositionMultipleSegments(buffer);
         }
-        
+
+        private static SequencePosition? GetEndOfLinePositionMultipleSegments(in ReadOnlySequence<byte> buffer)
+        {
+            var index = 0;
+            
+            foreach (var segment in buffer)
+            {
+                var span = segment.Span;
+                foreach (var b in span)
+                {
+                    if (b == '\n')
+                    {
+                        return buffer.GetPosition(index + 1);
+                    }
+
+                    index++;
+                }
+            }
+
+            return null;
+        }
+
+        internal static SequencePosition? GetEndOfLinePositionSingleSegment(ReadOnlySpan<byte> segment, ReadOnlySequence<byte> buffer)
+        {
+            for (var i = 0; i < segment.Length; i++)
+            {
+                if (segment[i] == '\n')
+                {
+                    return buffer.GetPosition(i + 1);
+                }
+            }
+
+            return null;
+        }
+
         internal static ArraySegment<byte> GetArraySegment(this Memory<byte> buffer) => GetArraySegment((ReadOnlyMemory<byte>)buffer);
 
         internal static ArraySegment<byte> GetArraySegment(this ReadOnlyMemory<byte> buffer)
