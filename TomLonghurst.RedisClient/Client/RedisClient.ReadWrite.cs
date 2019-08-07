@@ -151,7 +151,7 @@ namespace TomLonghurst.RedisClient.Client
 
             if (!task.IsCompleted)
             {
-                WriteSlowAsync(task);
+                return WriteSlowAsync(task);
             }
 #endif
 
