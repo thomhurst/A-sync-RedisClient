@@ -125,14 +125,14 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        internal ValueTask<FlushResult> Write(IRedisCommand command)
+        internal ValueTask Write(IRedisCommand command)
         {
             var encodedCommandList = command.EncodedCommandList;
-            
+
             LastAction = "Writing Bytes";
             var pipeWriter = _pipe.Output;
+
 #if NETCORE
-            
             foreach (var encodedCommand in encodedCommandList)
             {
                 var bytesSpan = pipeWriter.GetSpan(encodedCommand.Length);
@@ -140,28 +140,32 @@ namespace TomLonghurst.RedisClient.Client
                 pipeWriter.Advance(encodedCommand.Length);
             }
 
-            return Flush();
+            var task = pipeWriter.FlushAsync();
+            if (!task.IsCompleted)
+            {
+                return WriteSlowAsync(task);
+            }
 #else
-            return pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray().AsMemory());
+            var task = pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray().AsMemory());
+
+            if (!task.IsCompleted)
+            {
+                WriteSlowAsync(task);
+            }
 #endif
-        }
 
-        private ValueTask<FlushResult> Flush()
-        {
-            bool GetResult(FlushResult flush)
-                // tell the calling code whether any more messages
-                // should be written
-                => !(flush.IsCanceled || flush.IsCompleted);
+            return default;
+            
+            async ValueTask WriteSlowAsync(ValueTask<FlushResult> flushTask)
+            {
+                var flushResult = await flushTask;
 
-            async ValueTask<FlushResult> Awaited(ValueTask<FlushResult> incomplete)
-                => await incomplete;
-
-            // apply back-pressure etc
-            var flushTask = _pipe.Output.FlushAsync();
-
-            return flushTask.IsCompletedSuccessfully
-                ? new ValueTask<FlushResult>(flushTask.Result)
-                : Awaited(flushTask);
+                // Cancellation can be triggered by PipeWriter.CancelPendingFlush
+                if (flushResult.IsCanceled)
+                {
+                    throw new OperationCanceledException();
+                }
+            }
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]

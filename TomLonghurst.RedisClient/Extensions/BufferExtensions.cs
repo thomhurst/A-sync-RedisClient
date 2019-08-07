@@ -134,13 +134,7 @@ namespace TomLonghurst.RedisClient.Extensions
                 return null;
             }
 
-            if (buffer.IsSingleSegment)
-            {
-                var first = buffer.First.Span;
-                return GetEndOfLinePositionSingleSegment(first, buffer);
-            }
-
-            return GetEndOfLinePositionMultipleSegments(buffer);
+            return buffer.IsSingleSegment ? GetEndOfLinePositionSingleSegment(buffer) : GetEndOfLinePositionMultipleSegments(buffer);
         }
 
         private static SequencePosition? GetEndOfLinePositionMultipleSegments(in ReadOnlySequence<byte> buffer)
@@ -164,8 +158,9 @@ namespace TomLonghurst.RedisClient.Extensions
             return null;
         }
 
-        internal static SequencePosition? GetEndOfLinePositionSingleSegment(ReadOnlySpan<byte> segment, ReadOnlySequence<byte> buffer)
+        private static SequencePosition? GetEndOfLinePositionSingleSegment(ReadOnlySequence<byte> buffer)
         {
+            var segment = buffer.First.Span;
             for (var i = 0; i < segment.Length; i++)
             {
                 if (segment[i] == '\n')
