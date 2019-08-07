@@ -31,7 +31,6 @@ namespace TomLonghurst.RedisClient.Client
         private long _operationsPerformed;
 
         private IDuplexPipe _pipe;
-        private ReadResult _readResult;
 
         public object IsBusyLock = new object();
         public bool IsBusy;

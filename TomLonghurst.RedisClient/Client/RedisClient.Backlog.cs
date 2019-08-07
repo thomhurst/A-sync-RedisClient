@@ -16,12 +16,12 @@ namespace TomLonghurst.RedisClient.Client
 
         internal readonly BlockingQueue<IBacklog> _backlog = new BlockingQueue<IBacklog>();
 
-        private readonly Action<object> _processBacklogAction = obj =>
+        private readonly Action<object> _processBacklogAction = async obj =>
         {
             var wr = (WeakReference<RedisClient>) obj;
             if (wr.TryGetTarget(out var redisClient))
             {
-                redisClient.ProcessBacklog();
+                await redisClient.ProcessBacklog();
             }
         };
 

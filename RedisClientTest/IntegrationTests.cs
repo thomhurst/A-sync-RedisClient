@@ -326,7 +326,7 @@ namespace RedisClientTest
             {
                 "Pipeline1", "Pipeline2", "Pipeline3", "Pipeline4", "Pipeline5", "Pipeline6", "Pipeline7", "Pipeline8"
             };
-            var results = keys.Select(async key => tomLonghurstRedisClient.StringSetAsync(key, "123", 30, AwaitOptions.FireAndForget));
+            var results = keys.Select(key => tomLonghurstRedisClient.StringSetAsync(key, "123", 30, AwaitOptions.FireAndForget));
             
             await Task.WhenAll(results);
 

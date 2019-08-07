@@ -30,8 +30,6 @@ namespace TomLonghurst.RedisClient.Client
 
         public RedisClientConfig ClientConfig { get; }
 
-        private readonly Timer _connectionChecker;
-        
         private RedisSocket _socket;
 
         public Socket Socket => _socket;
@@ -297,8 +295,8 @@ namespace TomLonghurst.RedisClient.Client
             _disposed = true;
             DisposeNetwork();
             LastAction = "Disposing Client";
-            _connectionChecker?.Dispose();
             _connectSemaphoreSlim?.Dispose();
+            _backlog.Dispose();
         }
 
         private void DisposeNetwork()
