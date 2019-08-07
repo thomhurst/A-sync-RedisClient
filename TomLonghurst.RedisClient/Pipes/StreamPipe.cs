@@ -94,7 +94,7 @@ namespace TomLonghurst.RedisClient.Pipes
                     {
                         var memory = writer.GetMemory(512);
 #if NETCORE
-                    var bytesRead = await _innerStream.ReadAsync(memory);
+                        var bytesRead = await _innerStream.ReadAsync(memory);
 #else
                         var arr = memory.GetArraySegment();
 
@@ -200,27 +200,40 @@ namespace TomLonghurst.RedisClient.Pipes
         private Task WriteSingle(ReadOnlySequence<byte> buffer)
         {
 #if NETCORE
-            var valueTask = _innerStream.WriteAsync(buffer.First);
-            return valueTask.IsCompletedSuccessfully ? Task.CompletedTask : valueTask.AsTask();
+            _innerStream.Write(buffer.First.Span);
+            return Task.CompletedTask;
 #else
             var arr = buffer.First.GetArraySegment();
             return _innerStream.WriteAsync(arr.Array, arr.Offset, arr.Count);
 #endif
         }
+        
+        
+#if NETCORE
+        private Task WriteMultiple(ReadOnlySequence<byte> buffer)
+        {
+            foreach (var segment in buffer)
+            {
 
+                _innerStream.Write(segment.Span);
+            }
+            
+            return Task.CompletedTask;
+        }
+#endif
+        
+   
+#if NETSTANDARD
         private async Task WriteMultiple(ReadOnlySequence<byte> buffer)
         {
             foreach (var segment in buffer)
             {
-#if NETCORE
-                await _innerStream.WriteAsync(segment);
-#else
                 var arraySegment = segment.GetArraySegment();
                 await _innerStream
                     .WriteAsync(arraySegment.Array, arraySegment.Offset, arraySegment.Count)
                     .ConfigureAwait(false);
-#endif
             }
         }
+#endif
     }
 }

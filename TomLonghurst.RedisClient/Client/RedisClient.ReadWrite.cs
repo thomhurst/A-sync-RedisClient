@@ -135,9 +135,10 @@ namespace TomLonghurst.RedisClient.Client
 #if NETCORE
             foreach (var encodedCommand in encodedCommandList)
             {
-                var bytesSpan = pipeWriter.GetSpan(encodedCommand.Length);
-                encodedCommand.CopyTo(bytesSpan);
-                pipeWriter.Advance(encodedCommand.Length);
+                pipeWriter.Write(encodedCommand.AsSpan());
+//                var bytesSpan = pipeWriter.GetSpan(encodedCommand.Length);
+//                encodedCommand.CopyTo(bytesSpan);
+//                pipeWriter.Advance(encodedCommand.Length);
             }
 
             var task = pipeWriter.FlushAsync();
