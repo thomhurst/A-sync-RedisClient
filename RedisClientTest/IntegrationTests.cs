@@ -135,7 +135,8 @@ namespace RedisClientTest
             StackExchange,
             TomLonghurst
         }
-        //[Ignore("")]
+        
+        [Ignore("")]
        [TestCase(TestClient.StackExchange)]
         [TestCase(TestClient.TomLonghurst)]
         public async Task PerformanceTest(TestClient testClient)
