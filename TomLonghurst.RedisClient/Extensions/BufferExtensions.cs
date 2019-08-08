@@ -100,8 +100,6 @@ namespace TomLonghurst.RedisClient.Extensions
             var buffer = readResult.Buffer;
 
             SequencePosition? endOfLinePosition;
-            var shouldReadSynchronously = true;
-            long lastBufferSize = 0;
             while ((endOfLinePosition = buffer.GetEndOfLinePosition()) == null)
             {
                 // We don't want to consume it yet - So don't advance past the start
@@ -114,14 +112,12 @@ namespace TomLonghurst.RedisClient.Extensions
                     break;
                 }
 
-                if (!(shouldReadSynchronously && pipeReader.TryRead(out readResult)))
+                if (!pipeReader.TryRead(out readResult))
                 {
                     readResult = await pipeReader.ReadAsync().ConfigureAwait(false);
                 }
 
                 buffer = readResult.Buffer;
-                shouldReadSynchronously = buffer.Length == lastBufferSize;
-                lastBufferSize = buffer.Length;
             }
 
             return new ReadResultWithEndOfLine(readResult, endOfLinePosition);

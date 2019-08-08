@@ -21,7 +21,7 @@ namespace TomLonghurst.RedisClient.Models
     {
         private Client.RedisClient _redisClient;
         protected ReadResult ReadResult;
-        protected IDuplexPipe Pipe;
+        protected PipeReader PipeReader;
         
         public IRedisCommand LastCommand
         {
@@ -35,19 +35,19 @@ namespace TomLonghurst.RedisClient.Models
             set => _redisClient.LastAction = value;
         }
 
-        private void SetMembers(Client.RedisClient redisClient, IDuplexPipe pipe)
+        private void SetMembers(Client.RedisClient redisClient, PipeReader pipeReader)
         {
             _redisClient = redisClient;
-            Pipe = pipe;
+            PipeReader = pipeReader;
         }
 
-        internal async ValueTask<T> Start(Client.RedisClient redisClient, IDuplexPipe pipe)
+        internal async ValueTask<T> Start(Client.RedisClient redisClient, PipeReader pipeReader)
         {
-            SetMembers(redisClient, pipe);
+            SetMembers(redisClient, pipeReader);
             
-            if (!Pipe.Input.TryRead(out ReadResult))
+            if (!PipeReader.TryRead(out ReadResult))
             {
-                ReadResult = await Pipe.Input.ReadAsync().ConfigureAwait(false);
+                ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
             }
             
             return await Process();
@@ -87,10 +87,10 @@ namespace TomLonghurst.RedisClient.Models
                 }
 
                 LastAction = "Reading Data Synchronously in ReadData";
-                if (!Pipe.Input.TryRead(out ReadResult))
+                if (!PipeReader.TryRead(out ReadResult))
                 {
                     LastAction = "Reading Data Asynchronously in ReadData";
-                    ReadResult = await Pipe.Input.ReadAsync().ConfigureAwait(false);
+                    ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
                 }
 
                 buffer = ReadResult.Buffer;
@@ -105,7 +105,7 @@ namespace TomLonghurst.RedisClient.Models
 
                     buffer.CopyTo(bytes.Slice(0, (int) bytesReceived).Span);
 
-                    Pipe.Input.AdvanceTo(buffer.End);
+                    PipeReader.AdvanceTo(buffer.End);
 
                     while (bytesReceived < byteSizeOfData)
                     {
@@ -117,10 +117,10 @@ namespace TomLonghurst.RedisClient.Models
                         }
 
                         LastAction = "Reading Data Synchronously in ReadData Loop";
-                        if (!Pipe.Input.TryRead(out ReadResult))
+                        if (!PipeReader.TryRead(out ReadResult))
                         {
                             LastAction = "Reading Data Asynchronously in ReadData Loop";
-                            ReadResult = await Pipe.Input.ReadAsync().ConfigureAwait(false);
+                            ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
                         }
 
                         buffer = ReadResult.Buffer.Slice(0,
@@ -132,7 +132,7 @@ namespace TomLonghurst.RedisClient.Models
 
                         bytesReceived += buffer.Length;
 
-                        Pipe.Input.AdvanceTo(buffer.End);
+                        PipeReader.AdvanceTo(buffer.End);
                     }
 
                     if (ReadResult.IsCompleted && ReadResult.Buffer.IsEmpty)
@@ -140,13 +140,13 @@ namespace TomLonghurst.RedisClient.Models
                         return bytes;
                     }
 
-                    if (!Pipe.Input.TryRead(out ReadResult))
+                    if (!PipeReader.TryRead(out ReadResult))
                     {
                         LastAction = "Reading Data Asynchronously in ReadData Loop";
-                        ReadResult = await Pipe.Input.ReadAsync().ConfigureAwait(false);
+                        ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
                     }
 
-                    await Pipe.Input.AdvanceToLineTerminator(ReadResult);
+                    await PipeReader.AdvanceToLineTerminator(ReadResult);
 
                     return bytes;
                 }
@@ -164,7 +164,7 @@ namespace TomLonghurst.RedisClient.Models
             if (endOfLinePosition == null)
             {
                 LastAction = "Reading until End of Line found";
-                var readResultWithEndOfLine = await Pipe.Input.ReadUntilEndOfLineFound(ReadResult);
+                var readResultWithEndOfLine = await PipeReader.ReadUntilEndOfLineFound(ReadResult);
                 ReadResult = readResultWithEndOfLine.ReadResult;
 
                 LastAction = "Finding End of Line Position";
@@ -184,7 +184,7 @@ namespace TomLonghurst.RedisClient.Models
             var line = buffer.Slice(0, buffer.Length - 2).AsString();
 
             LastAction = "Advancing Buffer to End of Line";
-            Pipe.Input.AdvanceTo(endOfLinePosition.Value, ReadResult.Buffer.End);
+            PipeReader.AdvanceTo(endOfLinePosition.Value, ReadResult.Buffer.End);
 
             return line;
         }
@@ -278,10 +278,10 @@ namespace TomLonghurst.RedisClient.Models
             {
                 // Refresh the pipe buffer before 'ReadData' method reads it
                 LastAction = "Reading Data Synchronously in ExpectArray";
-                if (!Pipe.Input.TryRead(out ReadResult))
+                if (!PipeReader.TryRead(out ReadResult))
                 {
                     LastAction = "Reading Data Asynchronously in ExpectArray";
-                    var readPipeTask = Pipe.Input.ReadAsync();
+                    var readPipeTask = PipeReader.ReadAsync();
                     ReadResult = await readPipeTask.ConfigureAwait(false);
                 }
 

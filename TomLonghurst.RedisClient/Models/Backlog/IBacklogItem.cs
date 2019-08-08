@@ -9,7 +9,7 @@ namespace TomLonghurst.RedisClient.Models.Backlog
     public interface IBacklog
     {
         Client.RedisClient RedisClient { get; }
-        IDuplexPipe Pipe { get; }
+        PipeReader PipeReader { get; }
         
         IRedisCommand RedisCommand { get; }
         CancellationToken CancellationToken { get; }

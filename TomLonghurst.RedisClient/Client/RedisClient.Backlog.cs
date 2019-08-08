@@ -27,7 +27,7 @@ namespace TomLonghurst.RedisClient.Client
 
         protected void StartBacklogProcessor()
         {
-            _backlogScheduler.Schedule(_processBacklogAction, _weakReference);
+            //_backlogScheduler.Schedule(_processBacklogAction, _weakReference);
         }
 
         internal async Task ProcessBacklog()

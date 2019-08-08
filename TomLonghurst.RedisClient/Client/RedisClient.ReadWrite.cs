@@ -30,7 +30,8 @@ namespace TomLonghurst.RedisClient.Client
 
         private long _operationsPerformed;
 
-        private IDuplexPipe _pipe;
+        private PipeReader _pipeReader;
+        private PipeWriter _pipeWriter;
 
         public object IsBusyLock = new object();
         public bool IsBusy;
@@ -54,10 +55,10 @@ namespace TomLonghurst.RedisClient.Client
 
             Interlocked.Increment(ref _outStandingOperations);
             
-            if (!isReconnectionAttempt && CanQueueToBacklog && IsBusy)
-            {
-                return QueueToBacklog(command, resultProcessor, cancellationToken);
-            }
+//            if (!isReconnectionAttempt && CanQueueToBacklog && IsBusy)
+//            {
+//                return QueueToBacklog(command, resultProcessor, cancellationToken);
+//            }
 
             return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
         }
@@ -67,7 +68,7 @@ namespace TomLonghurst.RedisClient.Client
         {
             var taskCompletionSource = new TaskCompletionSource<T>();
 
-            _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor, this, _pipe));
+            _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor, this, _pipeReader));
 
             return new ValueTask<T>(taskCompletionSource.Task);
         }
@@ -98,7 +99,7 @@ namespace TomLonghurst.RedisClient.Client
 
                 LastAction = "Reading Bytes Async";
 
-                return await resultProcessor.Start(this, _pipe);
+                return await resultProcessor.Start(this, _pipeReader);
             }
             catch (Exception innerException)
             {
@@ -129,24 +130,23 @@ namespace TomLonghurst.RedisClient.Client
             var encodedCommandList = command.EncodedCommandList;
 
             LastAction = "Writing Bytes";
-            var pipeWriter = _pipe.Output;
 
 #if NETCORE
             foreach (var encodedCommand in encodedCommandList)
             {
-                pipeWriter.Write(encodedCommand.AsSpan());
+                _pipeWriter.Write(encodedCommand.AsSpan());
 //                var bytesSpan = pipeWriter.GetSpan(encodedCommand.Length);
 //                encodedCommand.CopyTo(bytesSpan);
 //                pipeWriter.Advance(encodedCommand.Length);
             }
-
-            var task = pipeWriter.FlushAsync();
+            
+            var task = _pipeWriter.FlushAsync();
             if (!task.IsCompleted)
             {
                 return WriteSlowAsync(task);
             }
 #else
-            var task = pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray().AsMemory());
+            var task = _pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray().AsMemory());
 
             if (!task.IsCompleted)
             {

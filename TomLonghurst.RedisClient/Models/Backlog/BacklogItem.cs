@@ -9,7 +9,7 @@ namespace TomLonghurst.RedisClient.Models.Backlog
     public class BacklogItem<T> : IBacklogItem<T>
     {
         public Client.RedisClient RedisClient { get; set; }
-        public IDuplexPipe Pipe { get; set; }
+        public PipeReader PipeReader { get; set; }
         public IRedisCommand RedisCommand { get; }
         public CancellationToken CancellationToken { get; }
         public async Task WriteAndSetResult()
@@ -42,7 +42,7 @@ namespace TomLonghurst.RedisClient.Models.Backlog
         {
             try
             {
-                var result = await ResultProcessor.Start(RedisClient, Pipe);
+                var result = await ResultProcessor.Start(RedisClient, PipeReader);
                 TaskCompletionSource.TrySetResult(result);
             }
             catch (Exception e)
@@ -54,14 +54,14 @@ namespace TomLonghurst.RedisClient.Models.Backlog
         public TaskCompletionSource<T> TaskCompletionSource { get; }
         public IResultProcessor<T> ResultProcessor { get; }
 
-        public BacklogItem(IRedisCommand redisCommand, CancellationToken cancellationToken, TaskCompletionSource<T> taskCompletionSource, IResultProcessor<T> resultProcessor, Client.RedisClient redisClient, IDuplexPipe pipe)
+        public BacklogItem(IRedisCommand redisCommand, CancellationToken cancellationToken, TaskCompletionSource<T> taskCompletionSource, IResultProcessor<T> resultProcessor, Client.RedisClient redisClient, PipeReader pipe)
         {
             RedisCommand = redisCommand;
             CancellationToken = cancellationToken;
             TaskCompletionSource = taskCompletionSource;
             ResultProcessor = resultProcessor;
             RedisClient = redisClient;
-            Pipe = pipe;
+            PipeReader = pipe;
         }
     }
 }

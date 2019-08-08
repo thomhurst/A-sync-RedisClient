@@ -13,7 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.IO.Pipelines" Version="4.6.0-preview7.19362.9" />
+    <PackageReference Include="System.IO.Pipelines" Version="4.6.0-preview4.19212.13" />
     <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
   </ItemGroup>
 

@@ -5,7 +5,7 @@ namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient
     {
-        private DedicatedScheduler _backlogScheduler = new DedicatedScheduler(workerCount: 1);
+        //private DedicatedScheduler _backlogScheduler = new DedicatedScheduler(workerCount: 1);
 
         protected RedisClient()
         {

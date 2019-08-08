@@ -206,12 +206,15 @@ namespace TomLonghurst.RedisClient.Client
                     }
 
                     LastAction = "Creating SSL Stream Pipe";
-                    _pipe = StreamPipe.GetDuplexPipe(_sslStream, redisPipeOptions.SendOptions, redisPipeOptions.ReceiveOptions);
+                    _pipeWriter = PipeWriter.Create(_sslStream);
+                    _pipeReader = PipeReader.Create(_sslStream);
                 }
                 else
                 {
                     LastAction = "Creating Socket Pipe";
-                    _pipe = SocketPipe.GetDuplexPipe(_socket, redisPipeOptions.SendOptions, redisPipeOptions.ReceiveOptions);
+                    var pipe = SocketPipe.GetDuplexPipe(_socket, redisPipeOptions.SendOptions, redisPipeOptions.ReceiveOptions);
+                    _pipeWriter = pipe.Output;
+                    _pipeReader = pipe.Input;
                 }
 
                 IsConnected = true;
@@ -262,7 +265,7 @@ namespace TomLonghurst.RedisClient.Client
             const long receivePauseWriterThreshold = 1024 * 1024 * 1024;
             const long receiveResumeWriterThreshold = receivePauseWriterThreshold / 2;
 
-            var scheduler = new DedicatedScheduler();
+            var scheduler = PipeScheduler.ThreadPool;
             var defaultPipeOptions = PipeOptions.Default;
 
             var receivePipeOptions = new PipeOptions(
