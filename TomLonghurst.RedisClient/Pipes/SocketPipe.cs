@@ -183,7 +183,7 @@ namespace TomLonghurst.RedisClient.Pipes
             }
         }
 
-        private Task WriteSingle(ReadOnlySequence<byte> buffer)
+        private Task WriteSingle(in ReadOnlySequence<byte> buffer)
         {
 #if NETCORE
             var valueTask = _innerSocket.SendAsync(buffer.First, SocketFlags.None);

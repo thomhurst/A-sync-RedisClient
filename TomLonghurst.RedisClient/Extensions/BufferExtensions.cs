@@ -15,7 +15,7 @@ namespace TomLonghurst.RedisClient.Extensions
             return buffer.Span.AsString();
         }
 
-        internal static string AsString(this ReadOnlySequence<byte> buffer)
+        internal static string AsString(this in ReadOnlySequence<byte> buffer)
         {
             if (buffer.IsEmpty)
             {
@@ -78,7 +78,7 @@ namespace TomLonghurst.RedisClient.Extensions
                 throw new RedisDataException("Can't find EOL");
             }
 
-            pipeReader.AdvanceTo(endOfLinePosition.Value, readResult.Buffer.End);
+            pipeReader.AdvanceTo(endOfLinePosition.Value);
 
             return readResult;
         }
@@ -123,7 +123,7 @@ namespace TomLonghurst.RedisClient.Extensions
             return new ReadResultWithEndOfLine(readResult, endOfLinePosition);
         }
 
-        internal static SequencePosition? GetEndOfLinePosition(this ReadOnlySequence<byte> buffer)
+        internal static SequencePosition? GetEndOfLinePosition(this in ReadOnlySequence<byte> buffer)
         {
             if (buffer.IsEmpty)
             {
@@ -154,7 +154,7 @@ namespace TomLonghurst.RedisClient.Extensions
             return null;
         }
 
-        private static SequencePosition? GetEndOfLinePositionSingleSegment(ReadOnlySequence<byte> buffer)
+        private static SequencePosition? GetEndOfLinePositionSingleSegment(in ReadOnlySequence<byte> buffer)
         {
             var segment = buffer.First.Span;
             for (var i = 0; i < segment.Length; i++)

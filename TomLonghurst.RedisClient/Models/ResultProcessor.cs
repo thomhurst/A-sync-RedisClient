@@ -184,7 +184,7 @@ namespace TomLonghurst.RedisClient.Models
             var line = buffer.Slice(0, buffer.Length - 2).AsString();
 
             LastAction = "Advancing Buffer to End of Line";
-            PipeReader.AdvanceTo(endOfLinePosition.Value, ReadResult.Buffer.End);
+            PipeReader.AdvanceTo(endOfLinePosition.Value);
 
             return line;
         }
