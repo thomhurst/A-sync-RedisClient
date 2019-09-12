@@ -44,7 +44,7 @@ namespace TomLonghurst.RedisClient.Client
         
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal ValueTask<T> SendOrQueueAsync<T>(IRedisCommand command,
-            IResultProcessor<T> resultProcessor,
+            ResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
         {
@@ -63,7 +63,7 @@ namespace TomLonghurst.RedisClient.Client
             return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
         }
 
-        private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,
+        private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, ResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken)
         {
             var taskCompletionSource = new TaskCompletionSource<T>();
@@ -73,7 +73,7 @@ namespace TomLonghurst.RedisClient.Client
             return new ValueTask<T>(taskCompletionSource.Task);
         }
 
-        internal async ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,
+        internal async ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command, ResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken, bool isReconnectionAttempt)
         {
             IsBusy = true;

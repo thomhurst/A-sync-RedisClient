@@ -50,19 +50,19 @@ namespace TomLonghurst.RedisClient.Pipes
 
             if (read)
             {
+                _readPipe = new Pipe(receivePipeOptions);
+                
                 receivePipeOptions.ReaderScheduler.Schedule(
                     async obj => await ((SocketPipe) obj).CopyFromSocketToReadPipe().ConfigureAwait(false), this);
-                
-                _readPipe = new Pipe(receivePipeOptions);
             }
 
 
             if (write)
             {
+                _writePipe = new Pipe(sendPipeOptions);
+                
                 sendPipeOptions.WriterScheduler.Schedule(
                     async obj => await ((SocketPipe) obj).CopyFromWritePipeToSocket().ConfigureAwait(false), this);
-                
-                _writePipe = new Pipe(sendPipeOptions);
             }
         }
 

@@ -52,9 +52,9 @@ namespace TomLonghurst.RedisClient.Models.Backlog
         }
 
         public TaskCompletionSource<T> TaskCompletionSource { get; }
-        public IResultProcessor<T> ResultProcessor { get; }
+        public ResultProcessor<T> ResultProcessor { get; }
 
-        public BacklogItem(IRedisCommand redisCommand, CancellationToken cancellationToken, TaskCompletionSource<T> taskCompletionSource, IResultProcessor<T> resultProcessor, Client.RedisClient redisClient, PipeReader pipe)
+        public BacklogItem(IRedisCommand redisCommand, CancellationToken cancellationToken, TaskCompletionSource<T> taskCompletionSource, ResultProcessor<T> resultProcessor, Client.RedisClient redisClient, PipeReader pipe)
         {
             RedisCommand = redisCommand;
             CancellationToken = cancellationToken;

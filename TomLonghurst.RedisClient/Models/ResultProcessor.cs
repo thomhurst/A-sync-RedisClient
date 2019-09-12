@@ -12,28 +12,20 @@ using TomLonghurst.RedisClient.Models.Commands;
 
 namespace TomLonghurst.RedisClient.Models
 {
-    public abstract class IResultProcessor
+    public abstract class ResultProcessor
     {
 
     }
 
-    public abstract class IResultProcessor<T> : IResultProcessor
+    public abstract class ResultProcessor<T> : ResultProcessor
     {
         private Client.RedisClient _redisClient;
         protected ReadResult ReadResult;
         protected PipeReader PipeReader;
-        
-        public IRedisCommand LastCommand
-        {
-            get => _redisClient.LastCommand;
-            set => _redisClient.LastCommand = value;
-        }
 
-        public string LastAction
-        {
-            get => _redisClient.LastAction;
-            set => _redisClient.LastAction = value;
-        }
+        public IRedisCommand LastCommand { get => _redisClient.LastCommand; set => _redisClient.LastCommand = value; }
+
+        public string LastAction { get => _redisClient.LastAction; set => _redisClient.LastAction = value; }
 
         private void SetMembers(Client.RedisClient redisClient, PipeReader pipeReader)
         {
@@ -44,15 +36,15 @@ namespace TomLonghurst.RedisClient.Models
         internal async ValueTask<T> Start(Client.RedisClient redisClient, PipeReader pipeReader)
         {
             SetMembers(redisClient, pipeReader);
-            
+
             if (!PipeReader.TryRead(out ReadResult))
             {
                 ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
             }
-            
+
             return await Process();
         }
-        
+
         private protected abstract ValueTask<T> Process();
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -65,18 +57,13 @@ namespace TomLonghurst.RedisClient.Models
                 throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
             }
 
-            var line = await ReadLine();
+            var line = await ReadLineAsString();
 
             var firstChar = line.First();
 
-            if (string.IsNullOrEmpty(line))
-            {
-                throw new RedisDataException("No data to process");
-            }
-
             if (firstChar == '-')
             {
-                throw new RedisFailedCommandException(line, LastCommand);
+                throw new RedisFailedCommandException(await ReadLineAsString(), LastCommand);
             }
 
             if (firstChar == '$')
@@ -157,7 +144,7 @@ namespace TomLonghurst.RedisClient.Models
             throw new UnexpectedRedisResponseException($"Unexpected reply: {line}");
         }
 
-        protected async ValueTask<string> ReadLine()
+        protected async Task<ReadOnlySequence<byte>> ReadLine()
         {
             LastAction = "Finding End of Line Position";
             var endOfLinePosition = ReadResult.Buffer.GetEndOfLinePosition();
@@ -178,33 +165,41 @@ namespace TomLonghurst.RedisClient.Models
 
             var buffer = ReadResult.Buffer;
 
-            buffer = buffer.Slice(0, endOfLinePosition.Value);
+            return buffer.Slice(0, endOfLinePosition.Value);
+        }
+
+        protected async ValueTask<string> ReadLineAsString()
+        {
+            var buffer = await ReadLine();
 
             // Reslice but removing the line terminators
             var line = buffer.Slice(0, buffer.Length - 2).AsString();
 
             LastAction = "Advancing Buffer to End of Line";
-            PipeReader.AdvanceTo(endOfLinePosition.Value);
+            PipeReader.AdvanceTo(buffer.End);
 
             return line;
         }
     }
 
-    public class SuccessResultProcessor : IResultProcessor<object>
+    public class SuccessResultProcessor : ResultProcessor<object>
     {
         private protected override async ValueTask<object> Process()
         {
-            var response = await ReadLine();
-            if (response.StartsWith("-"))
+            var buffer = await ReadLine();
+            if(buffer.First.Span[0] == '-')
             {
-                throw new RedisFailedCommandException(response, LastCommand);
+                
+                throw new RedisFailedCommandException(await ReadLineAsString(), LastCommand);
             }
-
+            
+            PipeReader.AdvanceTo(buffer.End);
+            
             return new object();
         }
     }
 
-    public class DataResultProcessor : IResultProcessor<string>
+    public class DataResultProcessor : ResultProcessor<string>
     {
         private protected override async ValueTask<string> Process()
         {
@@ -212,11 +207,11 @@ namespace TomLonghurst.RedisClient.Models
         }
     }
 
-    public class WordResultProcessor : IResultProcessor<string>
+    public class WordResultProcessor : ResultProcessor<string>
     {
         private protected override async ValueTask<string> Process()
         {
-            var word = await ReadLine();
+            var word = await ReadLineAsString();
 
             if (!word.StartsWith("+"))
             {
@@ -227,11 +222,11 @@ namespace TomLonghurst.RedisClient.Models
         }
     }
 
-    public class IntegerResultProcessor : IResultProcessor<int>
+    public class IntegerResultProcessor : ResultProcessor<int>
     {
         private protected override async ValueTask<int> Process()
         {
-            var line = await ReadLine();
+            var line = await ReadLineAsString();
 
             if (!line.StartsWith(":") || !int.TryParse(line.Substring(1), out var number))
             {
@@ -242,7 +237,7 @@ namespace TomLonghurst.RedisClient.Models
         }
     }
 
-    public class FloatResultProcessor : IResultProcessor<float>
+    public class FloatResultProcessor : ResultProcessor<float>
     {
         private protected override async ValueTask<float> Process()
         {
@@ -257,11 +252,11 @@ namespace TomLonghurst.RedisClient.Models
         }
     }
 
-    public class ArrayResultProcessor : IResultProcessor<IEnumerable<StringRedisValue>>
+    public class ArrayResultProcessor : ResultProcessor<IEnumerable<StringRedisValue>>
     {
         private protected override async ValueTask<IEnumerable<StringRedisValue>> Process()
         {
-            var arrayWithCountLine = await ReadLine();
+            var arrayWithCountLine = await ReadLineAsString();
 
             if (!arrayWithCountLine.StartsWith("*"))
             {

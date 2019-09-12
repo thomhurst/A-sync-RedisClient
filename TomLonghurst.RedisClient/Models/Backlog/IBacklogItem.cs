@@ -25,6 +25,6 @@ namespace TomLonghurst.RedisClient.Models.Backlog
     {
         TaskCompletionSource<T> TaskCompletionSource { get; }
         
-        IResultProcessor<T> ResultProcessor { get; }
+        ResultProcessor<T> ResultProcessor { get; }
     }
 }
