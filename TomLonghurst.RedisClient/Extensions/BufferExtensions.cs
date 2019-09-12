@@ -3,6 +3,7 @@ using System.Buffers;
 using System.IO.Pipelines;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.RedisClient.Exceptions;
 
@@ -13,6 +14,22 @@ namespace TomLonghurst.RedisClient.Extensions
         internal static string AsString(this Memory<byte> buffer)
         {
             return buffer.Span.AsString();
+        }
+
+        internal static T ItemAt<T>(this ReadOnlySequence<T> buffer, int index)
+        {
+            var alreadyReadCount = 0;
+            foreach (var readOnlyMemory in buffer)
+            {
+                if (alreadyReadCount + readOnlyMemory.Length >= index)
+                {
+                    return readOnlyMemory.Span[index - alreadyReadCount];
+                }
+
+                alreadyReadCount += readOnlyMemory.Length;
+            }
+
+            return default;
         }
 
         internal static string AsString(this in ReadOnlySequence<byte> buffer)

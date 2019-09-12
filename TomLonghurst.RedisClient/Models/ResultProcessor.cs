@@ -57,9 +57,9 @@ namespace TomLonghurst.RedisClient.Models
                 throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
             }
 
-            var line = await ReadLineAsString();
+            var line = await ReadLine();
 
-            var firstChar = line.First();
+            var firstChar = line.First.Span[0];
 
             if (firstChar == '-')
             {
@@ -68,10 +68,13 @@ namespace TomLonghurst.RedisClient.Models
 
             if (firstChar == '$')
             {
-                if (line == "$-1")
+                if (line.ItemAt(1) == '-' && line.ItemAt(2) == '1')
                 {
+                    PipeReader.AdvanceTo(line.End);
                     return null;
                 }
+
+                var lineAsString = await ReadLineAsString();
 
                 LastAction = "Reading Data Synchronously in ReadData";
                 if (!PipeReader.TryRead(out ReadResult))
@@ -81,8 +84,8 @@ namespace TomLonghurst.RedisClient.Models
                 }
 
                 buffer = ReadResult.Buffer;
-
-                if (long.TryParse(line.Substring(1), out var byteSizeOfData))
+                
+                if (long.TryParse(lineAsString.Substring(1), out var byteSizeOfData))
                 {
                     var bytes = new byte[byteSizeOfData].AsMemory();
 
