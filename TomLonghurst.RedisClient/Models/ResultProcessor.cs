@@ -68,7 +68,7 @@ namespace TomLonghurst.RedisClient.Models
 
             if (firstChar == '$')
             {
-                if (line.ItemAt(1) == '-' && line.ItemAt(2) == '1')
+                if (line.Length >= 3 && line.ItemAt(1) == '-' && line.ItemAt(2) == '1')
                 {
                     PipeReader.AdvanceTo(line.End);
                     return null;
