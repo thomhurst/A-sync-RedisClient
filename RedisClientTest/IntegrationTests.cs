@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Versioning;
+using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using StackExchange.Redis;
@@ -27,7 +28,7 @@ namespace RedisClientTest
             _config = new RedisClientConfig(TestInformation.Host, TestInformation.Port,
                 TestInformation.Password)
             {
-                Ssl = false
+                Ssl = true
             };
             _redisManager = new RedisClientManager(_config, 5);
             _redisManager.GetAllRedisClients();
@@ -511,7 +512,7 @@ namespace RedisClientTest
         public async Task Decr(string key)
         {
             await Incr(key);
-         
+
             var four = await (await TomLonghurstRedisClient).DecrementAsync(key);
             Assert.That(four, Is.EqualTo(4));
             
