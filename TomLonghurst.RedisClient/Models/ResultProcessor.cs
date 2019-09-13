@@ -59,7 +59,7 @@ namespace TomLonghurst.RedisClient.Models
 
             var line = await ReadLine();
 
-            var firstChar = line.First.Span[0];
+            var firstChar = line.ItemAt(0);
 
             if (firstChar == '-')
             {
@@ -68,13 +68,22 @@ namespace TomLonghurst.RedisClient.Models
 
             if (firstChar == '$')
             {
-                if (line.Length >= 3 && line.ItemAt(1) == '-' && line.ItemAt(2) == '1')
+                long byteSizeOfData;
+                if (line.Length == 5 && line.ItemAt(1) == '-' && line.ItemAt(2) == '1')
                 {
                     PipeReader.AdvanceTo(line.End);
                     return null;
                 }
 
-                var lineAsString = await ReadLineAsString();
+                if(line.Length == 4)
+                {
+                    byteSizeOfData = (long) char.GetNumericValue((char) line.ItemAt(1));
+                    PipeReader.AdvanceTo(line.End);
+                }
+                else
+                {
+                    long.TryParse((await ReadLineAsString()).Substring(1), out byteSizeOfData);
+                }
 
                 LastAction = "Reading Data Synchronously in ReadData";
                 if (!PipeReader.TryRead(out ReadResult))
@@ -85,7 +94,7 @@ namespace TomLonghurst.RedisClient.Models
 
                 buffer = ReadResult.Buffer;
                 
-                if (long.TryParse(lineAsString.Substring(1), out var byteSizeOfData))
+                if (byteSizeOfData != 0)
                 {
                     var bytes = new byte[byteSizeOfData].AsMemory();
 
@@ -176,7 +185,7 @@ namespace TomLonghurst.RedisClient.Models
             var buffer = await ReadLine();
 
             // Reslice but removing the line terminators
-            var line = buffer.Slice(0, buffer.Length - 2).AsString();
+            var line = buffer.AsStringWithoutLineTerminators();
 
             LastAction = "Advancing Buffer to End of Line";
             PipeReader.AdvanceTo(buffer.End);
@@ -190,9 +199,9 @@ namespace TomLonghurst.RedisClient.Models
         private protected override async ValueTask<object> Process()
         {
             var buffer = await ReadLine();
-            if(buffer.First.Span[0] == '-')
+            
+            if(buffer.ItemAt(0) == '-')
             {
-                
                 throw new RedisFailedCommandException(await ReadLineAsString(), LastCommand);
             }
             
@@ -214,14 +223,16 @@ namespace TomLonghurst.RedisClient.Models
     {
         private protected override async ValueTask<string> Process()
         {
-            var word = await ReadLineAsString();
+            var bytes = await ReadLine();
 
-            if (!word.StartsWith("+"))
+            if (bytes.ItemAt(0) != '+')
             {
-                throw new UnexpectedRedisResponseException(word);
+                throw new UnexpectedRedisResponseException(await ReadLineAsString());
             }
 
-            return word.Substring(1);
+            var word = bytes.Slice(1, bytes.Length - 1).AsStringWithoutLineTerminators();
+            PipeReader.AdvanceTo(bytes.End);
+            return word;
         }
     }
 
@@ -229,11 +240,34 @@ namespace TomLonghurst.RedisClient.Models
     {
         private protected override async ValueTask<int> Process()
         {
-            var line = await ReadLineAsString();
+            var line = await ReadLine();
 
-            if (!line.StartsWith(":") || !int.TryParse(line.Substring(1), out var number))
+            if (line.ItemAt(0) != ':')
             {
-                throw new UnexpectedRedisResponseException(line);
+                throw new UnexpectedRedisResponseException(await ReadLineAsString());
+            }
+
+            int number;
+            if (line.Length == 4)
+            {
+                number = (int) char.GetNumericValue((char) line.ItemAt(1));
+                PipeReader.AdvanceTo(line.End);
+                return number;
+            }
+            
+            if (line.Length == 5 && line.ItemAt(1) == '-' && line.ItemAt(2) == '1')
+            {
+                PipeReader.AdvanceTo(line.End);
+                return -1;
+            }
+            
+            var stringLine = line.Slice(1, line.Length - 1).AsStringWithoutLineTerminators();
+            var stringLine2 = line.Slice(1, line.Length - 1).AsString();
+            PipeReader.AdvanceTo(line.End);
+
+            if (!int.TryParse(stringLine, out number))
+            {
+                throw new UnexpectedRedisResponseException(stringLine);
             }
 
             return number;
@@ -259,17 +293,25 @@ namespace TomLonghurst.RedisClient.Models
     {
         private protected override async ValueTask<IEnumerable<StringRedisValue>> Process()
         {
-            var arrayWithCountLine = await ReadLineAsString();
 
-            if (!arrayWithCountLine.StartsWith("*"))
+            var bytes = await ReadLine();
+
+            if (bytes.ItemAt(0) != '*')
             {
-                throw new UnexpectedRedisResponseException(arrayWithCountLine);
+                throw new UnexpectedRedisResponseException(await ReadLineAsString());
             }
 
-            if (!int.TryParse(arrayWithCountLine.Substring(1), out var count))
+            int count;
+            if (bytes.Length == 4)
             {
-                throw new UnexpectedRedisResponseException($"Error getting message count: {arrayWithCountLine}");
+                count = (int) char.GetNumericValue((char) bytes.ItemAt(1));
             }
+            else
+            {
+                count = int.Parse(bytes.Slice(1, bytes.Length - 1).AsStringWithoutLineTerminators());
+            }
+            
+            PipeReader.AdvanceTo(bytes.End);
 
             var results = new byte [count][];
             for (var i = 0; i < count; i++)

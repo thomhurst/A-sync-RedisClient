@@ -32,6 +32,11 @@ namespace TomLonghurst.RedisClient.Extensions
             return default;
         }
 
+        internal static string AsStringWithoutLineTerminators(this in ReadOnlySequence<byte> buffer)
+        {
+            return buffer.Slice(0, buffer.Length - 2).AsString();
+        }
+
         internal static string AsString(this in ReadOnlySequence<byte> buffer)
         {
             if (buffer.IsEmpty)
@@ -52,12 +57,12 @@ namespace TomLonghurst.RedisClient.Extensions
             return s;
         }
 
-        internal static string AsString(this Span<byte> span)
+        internal static string AsString(this in Span<byte> span)
         {
             return ((ReadOnlySpan<byte>) span).AsString();
         }
 
-        internal static unsafe string AsString(this ReadOnlySpan<byte> span)
+        internal static unsafe string AsString(this in ReadOnlySpan<byte> span)
         {
             if (span.IsEmpty)
             {
