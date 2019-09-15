@@ -23,18 +23,23 @@ namespace TomLonghurst.RedisClient.Helpers
             {
                 return -1;
             }
+
+            if (buffer.GetEndOfLinePosition() != null)
+            {
+                return Parse(buffer.Slice(0, buffer.Length - 2));
+            }
             
             switch (buffer.Length)
             {
-                case 3:
+                case 1:
                     return Parse(buffer.ItemAt(0));
-                case 4:
+                case 2:
                     return Parse(buffer.ItemAt(0), buffer.ItemAt(1));
-                case 5:
+                case 3:
                     return Parse(buffer.ItemAt(0), buffer.ItemAt(1), buffer.ItemAt(2));
-                case 6:
+                case 4:
                     return Parse(buffer.ItemAt(0), buffer.ItemAt(1), buffer.ItemAt(2), buffer.ItemAt(3));
-                case 7:
+                case 5:
                     return Parse(buffer.ItemAt(0), buffer.ItemAt(1), buffer.ItemAt(2), buffer.ItemAt(3), buffer.ItemAt(4));
                 default:
                     return Parse(buffer.ToArray());
