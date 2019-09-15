@@ -183,11 +183,11 @@ namespace TomLonghurst.RedisClient.Models
             if (endOfLinePosition == null)
             {
                 LastAction = "Reading until End of Line found";
-                var readResultWithEndOfLine = await PipeReader.ReadUntilEndOfLineFound(ReadResult);
-                ReadResult = readResultWithEndOfLine.ReadResult;
+
+                ReadResult = await PipeReader.ReadUntilEndOfLineFound(ReadResult);
 
                 LastAction = "Finding End of Line Position";
-                endOfLinePosition = readResultWithEndOfLine.EndOfLinePosition;
+                endOfLinePosition = ReadResult.Buffer.GetEndOfLinePosition();
             }
 
             if (endOfLinePosition == null)

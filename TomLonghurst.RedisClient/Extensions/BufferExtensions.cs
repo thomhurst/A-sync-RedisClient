@@ -111,39 +111,22 @@ namespace TomLonghurst.RedisClient.Extensions
             return readResult;
         }
 
-        public class ReadResultWithEndOfLine
+        internal static async ValueTask<ReadResult> ReadUntilEndOfLineFound(this PipeReader pipeReader, ReadResult readResult)
         {
-            public ReadResult ReadResult { get; }
-            public SequencePosition? EndOfLinePosition { get; }
-
-            public ReadResultWithEndOfLine(ReadResult readResult, SequencePosition? endOfLinePosition)
-            {
-                ReadResult = readResult;
-                EndOfLinePosition = endOfLinePosition;
-            }
-        }
-
-        internal static async ValueTask<ReadResultWithEndOfLine> ReadUntilEndOfLineFound(this PipeReader pipeReader, ReadResult readResult)
-        {
-            var buffer = readResult.Buffer;
-
-            SequencePosition? endOfLinePosition;
-            while ((endOfLinePosition = buffer.GetEndOfLinePosition()) == null && !readResult.IsCanceled && !readResult.IsCompleted)
+            while (readResult.Buffer.GetEndOfLinePosition() == null && !readResult.IsCanceled && !readResult.IsCompleted)
             {
                 // We don't want to consume it yet - So don't advance past the start
                 // But do tell it we've examined up until the end - But it's not enough and we need more
                 // We need to call advance before calling another read though
-                pipeReader.AdvanceTo(buffer.Start, buffer.End);
+                pipeReader.AdvanceTo(readResult.Buffer.Start, readResult.Buffer.End);
 
                 if (!pipeReader.TryRead(out readResult))
                 {
                     readResult = await pipeReader.ReadAsync().ConfigureAwait(false);
                 }
-
-                buffer = readResult.Buffer;
             }
 
-            return new ReadResultWithEndOfLine(readResult, endOfLinePosition);
+            return readResult;
         }
 
         internal static SequencePosition? GetEndOfLinePosition(this in ReadOnlySequence<byte> buffer)
