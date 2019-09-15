@@ -68,7 +68,7 @@ namespace TomLonghurst.RedisClient.Models
 
             if (firstChar == '$')
             {
-                var alreadyReadToEnd = false;
+                var alreadyReadToLineTerminator = false;
                 long byteSizeOfData;
                 if (line.Length == 5 && line.ItemAt(1) == '-' && line.ItemAt(2) == '1')
                 {
@@ -107,7 +107,7 @@ namespace TomLonghurst.RedisClient.Models
 
                     if (buffer.Length == byteSizeOfData && ReadResult.Buffer.Length >= byteSizeOfData + 2)
                     {
-                        alreadyReadToEnd = true;
+                        alreadyReadToLineTerminator = true;
                         PipeReader.AdvanceTo(ReadResult.Buffer.Slice(0, byteSizeOfData + 2).End);
                     }
                     else
@@ -140,10 +140,10 @@ namespace TomLonghurst.RedisClient.Models
 
                         bytesReceived += buffer.Length;
 
-                        if(bytesReceived == byteSizeOfData && ReadResult.Buffer.Length >= byteSizeOfData + 2)
+                        if(bytesReceived == byteSizeOfData && ReadResult.Buffer.Length >= buffer.Length + 2)
                         {
-                            alreadyReadToEnd = true;
-                            PipeReader.AdvanceTo(ReadResult.Buffer.Slice(0, byteSizeOfData + 2).End);
+                            alreadyReadToLineTerminator = true;
+                            PipeReader.AdvanceTo(ReadResult.Buffer.Slice(0, buffer.Length + 2).End);
                         }
                         else
                         {
@@ -156,7 +156,7 @@ namespace TomLonghurst.RedisClient.Models
                         return bytes;
                     }
 
-                    if (!alreadyReadToEnd)
+                    if (!alreadyReadToLineTerminator)
                     {
                         if (!PipeReader.TryRead(out ReadResult))
                         {
@@ -203,8 +203,7 @@ namespace TomLonghurst.RedisClient.Models
         protected async ValueTask<string> ReadLineAsStringAndAdvance()
         {
             var buffer = await ReadLine();
-
-            // Reslice but removing the line terminators
+            
             var line = buffer.AsStringWithoutLineTerminators();
 
             LastAction = "Advancing Buffer to End of Line";
