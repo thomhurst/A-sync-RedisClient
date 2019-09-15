@@ -66,114 +66,114 @@ namespace TomLonghurst.RedisClient.Models
                 throw new RedisFailedCommandException(await ReadLineAsStringAndAdvance(), LastCommand);
             }
 
-            if (firstChar == '$')
+            if (firstChar != '$')
             {
-                var alreadyReadToLineTerminator = false;
-                long byteSizeOfData;
-                if (line.Length == 5 && line.ItemAt(1) == '-' && line.ItemAt(2) == '1')
+                throw new UnexpectedRedisResponseException($"Unexpected reply: {line}");
+            }
+            
+            var alreadyReadToLineTerminator = false;
+            long byteSizeOfData;
+            if (line.Length == 5 && line.ItemAt(1) == '-' && line.ItemAt(2) == '1')
+            {
+                PipeReader.AdvanceTo(line.End);
+                return null;
+            }
+
+            if(line.Length == 4)
+            {
+                byteSizeOfData = (long) char.GetNumericValue((char) line.ItemAt(1));
+                PipeReader.AdvanceTo(line.End);
+            }
+            else
+            {
+                long.TryParse((await ReadLineAsStringAndAdvance()).Substring(1), out byteSizeOfData);
+            }
+
+            LastAction = "Reading Data Synchronously in ReadData";
+            if (!PipeReader.TryRead(out ReadResult))
+            {
+                LastAction = "Reading Data Asynchronously in ReadData";
+                ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
+            }
+
+            buffer = ReadResult.Buffer;
+
+            if (byteSizeOfData == 0)
+            {
+                throw new UnexpectedRedisResponseException("Invalid length");
+            }
+            
+            var bytes = new byte[byteSizeOfData].AsMemory();
+
+            buffer = buffer.Slice(0, Math.Min(byteSizeOfData, buffer.Length));
+
+            var bytesReceived = buffer.Length;
+
+            buffer.CopyTo(bytes.Slice(0, (int) bytesReceived).Span);
+
+            if (buffer.Length == byteSizeOfData && ReadResult.Buffer.Length >= byteSizeOfData + 2)
+            {
+                alreadyReadToLineTerminator = true;
+                PipeReader.AdvanceTo(ReadResult.Buffer.Slice(0, byteSizeOfData + 2).End);
+            }
+            else
+            {
+                PipeReader.AdvanceTo(buffer.End);
+            }
+
+            while (bytesReceived < byteSizeOfData)
+            {
+                LastAction = "Advancing Buffer in ReadData Loop";
+
+                if ((ReadResult.IsCompleted || ReadResult.IsCanceled) && ReadResult.Buffer.IsEmpty)
                 {
-                    PipeReader.AdvanceTo(line.End);
-                    return null;
+                    break;
                 }
 
-                if(line.Length == 4)
-                {
-                    byteSizeOfData = (long) char.GetNumericValue((char) line.ItemAt(1));
-                    PipeReader.AdvanceTo(line.End);
-                }
-                else
-                {
-                    long.TryParse((await ReadLineAsStringAndAdvance()).Substring(1), out byteSizeOfData);
-                }
-
-                LastAction = "Reading Data Synchronously in ReadData";
+                LastAction = "Reading Data Synchronously in ReadData Loop";
                 if (!PipeReader.TryRead(out ReadResult))
                 {
-                    LastAction = "Reading Data Asynchronously in ReadData";
+                    LastAction = "Reading Data Asynchronously in ReadData Loop";
                     ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
                 }
 
-                buffer = ReadResult.Buffer;
-                
-                if (byteSizeOfData != 0)
+                buffer = ReadResult.Buffer.Slice(0,
+                    Math.Min(ReadResult.Buffer.Length, byteSizeOfData - bytesReceived));
+
+                buffer
+                    .CopyTo(bytes.Slice((int) bytesReceived,
+                        (int) Math.Min(buffer.Length, byteSizeOfData - bytesReceived)).Span);
+
+                bytesReceived += buffer.Length;
+
+                if(bytesReceived == byteSizeOfData && ReadResult.Buffer.Length >= buffer.Length + 2)
                 {
-                    var bytes = new byte[byteSizeOfData].AsMemory();
-
-                    buffer = buffer.Slice(0, Math.Min(byteSizeOfData, buffer.Length));
-
-                    var bytesReceived = buffer.Length;
-
-                    buffer.CopyTo(bytes.Slice(0, (int) bytesReceived).Span);
-
-                    if (buffer.Length == byteSizeOfData && ReadResult.Buffer.Length >= byteSizeOfData + 2)
-                    {
-                        alreadyReadToLineTerminator = true;
-                        PipeReader.AdvanceTo(ReadResult.Buffer.Slice(0, byteSizeOfData + 2).End);
-                    }
-                    else
-                    {
-                        PipeReader.AdvanceTo(buffer.End);
-                    }
-
-                    while (bytesReceived < byteSizeOfData)
-                    {
-                        LastAction = "Advancing Buffer in ReadData Loop";
-
-                        if ((ReadResult.IsCompleted || ReadResult.IsCanceled) && ReadResult.Buffer.IsEmpty)
-                        {
-                            break;
-                        }
-
-                        LastAction = "Reading Data Synchronously in ReadData Loop";
-                        if (!PipeReader.TryRead(out ReadResult))
-                        {
-                            LastAction = "Reading Data Asynchronously in ReadData Loop";
-                            ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
-                        }
-
-                        buffer = ReadResult.Buffer.Slice(0,
-                            Math.Min(ReadResult.Buffer.Length, byteSizeOfData - bytesReceived));
-
-                        buffer
-                            .CopyTo(bytes.Slice((int) bytesReceived,
-                                (int) Math.Min(buffer.Length, byteSizeOfData - bytesReceived)).Span);
-
-                        bytesReceived += buffer.Length;
-
-                        if(bytesReceived == byteSizeOfData && ReadResult.Buffer.Length >= buffer.Length + 2)
-                        {
-                            alreadyReadToLineTerminator = true;
-                            PipeReader.AdvanceTo(ReadResult.Buffer.Slice(0, buffer.Length + 2).End);
-                        }
-                        else
-                        {
-                            PipeReader.AdvanceTo(buffer.End);
-                        }
-                    }
-
-                    if (ReadResult.IsCompleted && ReadResult.Buffer.IsEmpty)
-                    {
-                        return bytes;
-                    }
-
-                    if (!alreadyReadToLineTerminator)
-                    {
-                        if (!PipeReader.TryRead(out ReadResult))
-                        {
-                            LastAction = "Reading Data Asynchronously in ReadData Loop";
-                            ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
-                        }
-
-                        await PipeReader.AdvanceToLineTerminator(ReadResult);
-                    }
-
-                    return bytes;
+                    alreadyReadToLineTerminator = true;
+                    PipeReader.AdvanceTo(ReadResult.Buffer.Slice(0, buffer.Length + 2).End);
                 }
-
-                throw new UnexpectedRedisResponseException("Invalid length");
+                else
+                {
+                    PipeReader.AdvanceTo(buffer.End);
+                }
             }
 
-            throw new UnexpectedRedisResponseException($"Unexpected reply: {line}");
+            if (ReadResult.IsCompleted && ReadResult.Buffer.IsEmpty)
+            {
+                return bytes;
+            }
+
+            if (!alreadyReadToLineTerminator)
+            {
+                if (!PipeReader.TryRead(out ReadResult))
+                {
+                    LastAction = "Reading Data Asynchronously in ReadData Loop";
+                    ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
+                }
+
+                await PipeReader.AdvanceToLineTerminator(ReadResult);
+            }
+
+            return bytes;
         }
 
         protected async Task<ReadOnlySequence<byte>> ReadLine()

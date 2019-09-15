@@ -142,16 +142,18 @@ namespace TomLonghurst.RedisClient.Extensions
         private static SequencePosition? GetEndOfLinePositionMultipleSegments(in ReadOnlySequence<byte> buffer)
         {
             var index = 0;
-            
+            byte lastChar = 0;
             foreach (var segment in buffer)
             {
                 var span = segment.Span;
                 foreach (var b in span)
                 {
-                    if (b == '\n')
+                    if (b == '\n' && lastChar == '\r')
                     {
                         return buffer.GetPosition(index + 1);
                     }
+
+                    lastChar = b;
 
                     index++;
                 }
@@ -165,7 +167,7 @@ namespace TomLonghurst.RedisClient.Extensions
             var segment = buffer.First.Span;
             for (var i = 0; i < segment.Length; i++)
             {
-                if (segment[i] == '\n')
+                if (segment[i] == '\n' && i != 0 && segment[i - 1] == '\r')
                 {
                     return buffer.GetPosition(i + 1);
                 }
