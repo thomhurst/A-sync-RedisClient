@@ -100,12 +100,10 @@ namespace TomLonghurst.RedisClient
                     }
                     
                     var list = new List<T>();
-                    
-                    var hasItem = true;
-                    while (hasItem)
+
+                    while (true)
                     {
-                        hasItem = _innerQueue.TryDequeue(out var item);
-                        if (hasItem)
+                        if (_innerQueue.TryDequeue(out var item))
                         {
                             list.Add(item);
                         }

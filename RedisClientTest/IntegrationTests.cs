@@ -492,6 +492,19 @@ namespace RedisClientTest
             await (await TomLonghurstRedisClient).ExpireAsync(key, 120);
         }
 
+        [TestCase("IncrKey")]
+        [Repeat(2)]
+        public async Task IncrLots(string key)
+        {
+            var tasks = new List<Task>();
+            for (int i = 0; i < 100; i++)
+            {
+                tasks.Add(Incr($"{key}{i}"));
+            }
+
+            await Task.WhenAll(tasks);
+        }
+
         [Test]
         [Repeat(2)]
         public async Task Info()
