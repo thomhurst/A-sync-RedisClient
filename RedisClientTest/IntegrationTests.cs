@@ -137,7 +137,7 @@ namespace RedisClientTest
             TomLonghurst
         }
         
-        [Ignore("")]
+        //[Ignore("")]
        [TestCase(TestClient.StackExchange)]
         [TestCase(TestClient.TomLonghurst)]
         public async Task PerformanceTest(TestClient testClient)
@@ -154,7 +154,7 @@ namespace RedisClientTest
                         {
                             EndPoints = {{TestInformation.Host, TestInformation.Port}},
                             Password = TestInformation.Password,
-                            Ssl = true
+                            Ssl = false
                         })).GetDatabase(0);
 
                         await stackExchange.StringSetAsync("SingleKey", "123", TimeSpan.FromSeconds(120));

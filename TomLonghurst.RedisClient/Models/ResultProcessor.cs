@@ -63,7 +63,7 @@ namespace TomLonghurst.RedisClient.Models
 
             if (firstChar == '-')
             {
-                throw new RedisFailedCommandException(await ReadLineAsString(), LastCommand);
+                throw new RedisFailedCommandException(await ReadLineAsStringAndAdvance(), LastCommand);
             }
 
             if (firstChar == '$')
@@ -83,7 +83,7 @@ namespace TomLonghurst.RedisClient.Models
                 }
                 else
                 {
-                    long.TryParse((await ReadLineAsString()).Substring(1), out byteSizeOfData);
+                    long.TryParse((await ReadLineAsStringAndAdvance()).Substring(1), out byteSizeOfData);
                 }
 
                 LastAction = "Reading Data Synchronously in ReadData";
@@ -200,7 +200,7 @@ namespace TomLonghurst.RedisClient.Models
             return buffer.Slice(0, endOfLinePosition.Value);
         }
 
-        protected async ValueTask<string> ReadLineAsString()
+        protected async ValueTask<string> ReadLineAsStringAndAdvance()
         {
             var buffer = await ReadLine();
 
@@ -222,7 +222,7 @@ namespace TomLonghurst.RedisClient.Models
             
             if(buffer.ItemAt(0) == '-')
             {
-                throw new RedisFailedCommandException(await ReadLineAsString(), LastCommand);
+                throw new RedisFailedCommandException(await ReadLineAsStringAndAdvance(), LastCommand);
             }
             
             PipeReader.AdvanceTo(buffer.End);
@@ -247,7 +247,7 @@ namespace TomLonghurst.RedisClient.Models
 
             if (bytes.ItemAt(0) != '+')
             {
-                throw new UnexpectedRedisResponseException(await ReadLineAsString());
+                throw new UnexpectedRedisResponseException(await ReadLineAsStringAndAdvance());
             }
 
             var word = bytes.Slice(1, bytes.Length - 1).AsStringWithoutLineTerminators();
@@ -264,7 +264,7 @@ namespace TomLonghurst.RedisClient.Models
 
             if (line.ItemAt(0) != ':')
             {
-                throw new UnexpectedRedisResponseException(await ReadLineAsString());
+                throw new UnexpectedRedisResponseException(await ReadLineAsStringAndAdvance());
             }
 
             int number;
@@ -282,7 +282,7 @@ namespace TomLonghurst.RedisClient.Models
             }
             
             var stringLine = line.Slice(1, line.Length - 1).AsStringWithoutLineTerminators();
-            var stringLine2 = line.Slice(1, line.Length - 1).AsString();
+
             PipeReader.AdvanceTo(line.End);
 
             if (!int.TryParse(stringLine, out number))
@@ -318,7 +318,7 @@ namespace TomLonghurst.RedisClient.Models
 
             if (bytes.ItemAt(0) != '*')
             {
-                throw new UnexpectedRedisResponseException(await ReadLineAsString());
+                throw new UnexpectedRedisResponseException(await ReadLineAsStringAndAdvance());
             }
 
             int count;
