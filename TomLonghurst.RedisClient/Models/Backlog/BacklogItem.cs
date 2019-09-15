@@ -12,30 +12,10 @@ namespace TomLonghurst.RedisClient.Models.Backlog
         public PipeReader PipeReader { get; set; }
         public IRedisCommand RedisCommand { get; }
         public CancellationToken CancellationToken { get; }
-        public async Task WriteAndSetResult()
+        
+        public void SetCancelled()
         {
-            if (CancellationToken.IsCancellationRequested)
-            {
-                TaskCompletionSource.TrySetCanceled();
-                return;
-            }
-
-            try
-            {
-                RedisClient.LastUsed = DateTime.Now;
-
-                var result =
-                    await RedisClient.SendAndReceiveAsync(RedisCommand, ResultProcessor, CancellationToken, false);
-                TaskCompletionSource.TrySetResult(result);
-            }
-            catch (OperationCanceledException)
-            {
-                TaskCompletionSource.TrySetCanceled();
-            }
-            catch (Exception e)
-            {
-                TaskCompletionSource.TrySetException(e);
-            }
+            TaskCompletionSource.TrySetCanceled();
         }
 
         public async Task SetResult()
@@ -44,6 +24,10 @@ namespace TomLonghurst.RedisClient.Models.Backlog
             {
                 var result = await ResultProcessor.Start(RedisClient, PipeReader);
                 TaskCompletionSource.TrySetResult(result);
+            }
+            catch (OperationCanceledException)
+            {
+                TaskCompletionSource.TrySetCanceled();
             }
             catch (Exception e)
             {

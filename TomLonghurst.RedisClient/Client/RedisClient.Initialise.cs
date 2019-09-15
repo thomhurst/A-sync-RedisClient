@@ -9,7 +9,6 @@ namespace TomLonghurst.RedisClient.Client
 
         protected RedisClient()
         {
-            _weakReference = new WeakReference<RedisClient>(this);
             CreateCommandClasses();
 
             StartBacklogProcessor();

@@ -20,9 +20,7 @@ namespace TomLonghurst.RedisClient.Client
     {
         private static readonly Logger Log = new Logger();
 
-        internal virtual bool CanQueueToBacklog { get; set; } = true;
-        
-        private SemaphoreSlim _sendAndReceiveSemaphoreSlim = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _sendAndReceiveSemaphoreSlim = new SemaphoreSlim(1, 1);
         
         private long _outStandingOperations;
 
@@ -32,9 +30,10 @@ namespace TomLonghurst.RedisClient.Client
 
         private PipeReader _pipeReader;
         private PipeWriter _pipeWriter;
-
-        public object IsBusyLock = new object();
+        
         public bool IsBusy;
+        
+        private Thread BacklogWorkerThread;
 
         internal string LastAction;
 
@@ -49,18 +48,20 @@ namespace TomLonghurst.RedisClient.Client
             bool isReconnectionAttempt = false)
         {
             LastUsed = DateTime.Now;
-            
+
             LastAction = "Throwing Cancelled Exception due to Cancelled Token";
             cancellationToken.ThrowIfCancellationRequested();
 
             Interlocked.Increment(ref _outStandingOperations);
-            
-//            if (!isReconnectionAttempt && CanQueueToBacklog && IsBusy)
-//            {
-//                return QueueToBacklog(command, resultProcessor, cancellationToken);
-//            }
 
             return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
+            
+//            if (isReconnectionAttempt)
+//            {
+//                return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
+//            }
+            
+            //return QueueToBacklog(command, resultProcessor, cancellationToken);
         }
 
         private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, ResultProcessor<T> resultProcessor,
