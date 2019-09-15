@@ -21,7 +21,7 @@ namespace TomLonghurst.RedisClient.Extensions
             var alreadyReadCount = 0;
             foreach (var readOnlyMemory in buffer)
             {
-                if (alreadyReadCount + readOnlyMemory.Length >= index)
+                if (alreadyReadCount + readOnlyMemory.Length - 1 >= index)
                 {
                     return readOnlyMemory.Span[index - alreadyReadCount];
                 }
@@ -87,17 +87,32 @@ namespace TomLonghurst.RedisClient.Extensions
                 return readResult;
             }
 
-            var endOfLinePosition = readResult.Buffer.GetEndOfLinePosition();
-            if (endOfLinePosition == null)
+            var buffer = readResult.Buffer;
+
+            SequencePosition? endOfLinePosition;
+            while ((endOfLinePosition = buffer.GetEndOfLinePosition()) == null)
             {
-                var readResultWithEndOfLine = await pipeReader.ReadUntilEndOfLineFound(readResult);
-                readResult = readResultWithEndOfLine.ReadResult;
-                endOfLinePosition = readResultWithEndOfLine.EndOfLinePosition;
+                // We don't want to consume it yet - So don't advance past the start
+                // But do tell it we've examined up until the end - But it's not enough and we need more
+                // We need to call advance before calling another read though
+                pipeReader.AdvanceTo(buffer.End);
+
+                if (readResult.IsCompleted || readResult.IsCanceled)
+                {
+                    break;
+                }
+
+                if (!pipeReader.TryRead(out readResult))
+                {
+                    readResult = await pipeReader.ReadAsync().ConfigureAwait(false);
+                }
+
+                buffer = readResult.Buffer;
             }
 
             if (endOfLinePosition == null)
             {
-                throw new RedisDataException("Can't find EOL");
+                throw new RedisDataException("Can't find EOL in AdvanceToLineTerminator");
             }
 
             pipeReader.AdvanceTo(endOfLinePosition.Value);

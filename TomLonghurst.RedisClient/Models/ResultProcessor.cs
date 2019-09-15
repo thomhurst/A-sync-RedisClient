@@ -68,6 +68,7 @@ namespace TomLonghurst.RedisClient.Models
 
             if (firstChar == '$')
             {
+                var alreadyReadToEnd = false;
                 long byteSizeOfData;
                 if (line.Length == 5 && line.ItemAt(1) == '-' && line.ItemAt(2) == '1')
                 {
@@ -104,7 +105,15 @@ namespace TomLonghurst.RedisClient.Models
 
                     buffer.CopyTo(bytes.Slice(0, (int) bytesReceived).Span);
 
-                    PipeReader.AdvanceTo(buffer.End);
+                    if (buffer.Length == byteSizeOfData && ReadResult.Buffer.Length >= byteSizeOfData + 2)
+                    {
+                        alreadyReadToEnd = true;
+                        PipeReader.AdvanceToLineTerminator(ReadResult);
+                    }
+                    else
+                    {
+                        PipeReader.AdvanceTo(buffer.End);
+                    }
 
                     while (bytesReceived < byteSizeOfData)
                     {
@@ -131,7 +140,15 @@ namespace TomLonghurst.RedisClient.Models
 
                         bytesReceived += buffer.Length;
 
-                        PipeReader.AdvanceTo(buffer.End);
+                        if(bytesReceived == byteSizeOfData && ReadResult.Buffer.Length >= byteSizeOfData + 2)
+                        {
+                            alreadyReadToEnd = true;
+                            PipeReader.AdvanceToLineTerminator(ReadResult);
+                        }
+                        else
+                        {
+                            PipeReader.AdvanceTo(buffer.End);
+                        }
                     }
 
                     if (ReadResult.IsCompleted && ReadResult.Buffer.IsEmpty)
@@ -139,13 +156,16 @@ namespace TomLonghurst.RedisClient.Models
                         return bytes;
                     }
 
-                    if (!PipeReader.TryRead(out ReadResult))
+                    if (!alreadyReadToEnd)
                     {
-                        LastAction = "Reading Data Asynchronously in ReadData Loop";
-                        ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
-                    }
+                        if (!PipeReader.TryRead(out ReadResult))
+                        {
+                            LastAction = "Reading Data Asynchronously in ReadData Loop";
+                            ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
+                        }
 
-                    await PipeReader.AdvanceToLineTerminator(ReadResult);
+                        await PipeReader.AdvanceToLineTerminator(ReadResult);
+                    }
 
                     return bytes;
                 }
@@ -172,7 +192,7 @@ namespace TomLonghurst.RedisClient.Models
 
             if (endOfLinePosition == null)
             {
-                throw new RedisDataException("Can't find EOL");
+                throw new RedisDataException("Can't find EOL in ReadLine");
             }
 
             var buffer = ReadResult.Buffer;

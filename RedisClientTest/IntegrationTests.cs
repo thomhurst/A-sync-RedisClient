@@ -28,7 +28,7 @@ namespace RedisClientTest
             _config = new RedisClientConfig(TestInformation.Host, TestInformation.Port,
                 TestInformation.Password)
             {
-                Ssl = true
+                Ssl = false
             };
             _redisManager = new RedisClientManager(_config, 5);
             _redisManager.GetAllRedisClients();
@@ -551,7 +551,7 @@ namespace RedisClientTest
             await (await TomLonghurstRedisClient).StringSetAsync("ExpireKeyDateTime", "123", AwaitOptions.AwaitCompletion);
             await (await TomLonghurstRedisClient).ExpireAtAsync("ExpireKeyDateTime", DateTimeOffset.Now.AddSeconds(30));
             var ttl = await (await TomLonghurstRedisClient).TimeToLiveAsync("ExpireKeyDateTime");
-            Assert.That(ttl, Is.LessThanOrEqualTo(31));
+            Assert.That(ttl, Is.LessThanOrEqualTo(32));
         }
     }
 }
