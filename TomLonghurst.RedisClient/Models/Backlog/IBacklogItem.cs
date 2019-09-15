@@ -10,6 +10,7 @@ namespace TomLonghurst.RedisClient.Models.Backlog
         IRedisCommand RedisCommand { get; }
         CancellationToken CancellationToken { get; }
         void SetCancelled();
+        void SetException(Exception exception);
         Task SetResult();
     }
 

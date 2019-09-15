@@ -36,7 +36,7 @@ namespace TomLonghurst.RedisClient.Extensions
         {
             // Reslice but removing the line terminators
             var sliced = buffer.Slice(buffer.Start, buffer.GetEndOfLinePosition().Value);
-            return sliced.Slice(0, buffer.Length - 2).AsString();
+            return sliced.Slice(0, sliced.Length - 2).AsString();
         }
 
         internal static string AsString(this in ReadOnlySequence<byte> buffer)

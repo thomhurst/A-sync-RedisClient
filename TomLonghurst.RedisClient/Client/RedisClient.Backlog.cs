@@ -39,7 +39,7 @@ namespace TomLonghurst.RedisClient.Client
                     timedOutItem.SetCancelled();
                 }
                 
-                var validItems = backlogItems.Where(item => !item.CancellationToken.IsCancellationRequested).ToList();
+                var validItems = backlogItems.Where(item => !itemsPastTimeout.Contains(item)).ToList();
                 
                 var pipelinedCommand = validItems
                     .Select(backlogItem => backlogItem.RedisCommand).ToList()
@@ -49,14 +49,26 @@ namespace TomLonghurst.RedisClient.Client
                 
                 if (!IsConnected)
                 {
-                    await TryConnectAsync(CancellationToken.None).ConfigureAwait(false);
+                    TryConnectAsync(CancellationToken.None).ConfigureAwait(false);
                 }
-                
-                await Write(pipelinedCommand);
-                
-                foreach (var backlogItem in validItems)
+
+                try
                 {
-                    await backlogItem.SetResult();
+                    await Write(pipelinedCommand);
+                
+                    foreach (var backlogItem in validItems)
+                    {
+                        await backlogItem.SetResult();
+                    }
+                }
+                catch (Exception e)
+                {
+                    foreach (var validItem in validItems)
+                    {
+                        validItem.SetException(e);
+                    }
+                    
+                    DisposeNetwork();
                 }
 
                 _sendAndReceiveSemaphoreSlim.Release();

@@ -60,8 +60,13 @@ namespace TomLonghurst.RedisClient.Client
 //            {
 //                return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
 //            }
-            
-            //return QueueToBacklog(command, resultProcessor, cancellationToken);
+//            
+//            if (!IsConnected)
+//            {
+//                TryConnectAsync(cancellationToken).ConfigureAwait(false);
+//            }
+//            
+//            return QueueToBacklog(command, resultProcessor, cancellationToken);
         }
 
         private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, ResultProcessor<T> resultProcessor,
