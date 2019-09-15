@@ -82,25 +82,15 @@ namespace TomLonghurst.RedisClient.Extensions
         internal static async ValueTask<ReadResult> AdvanceToLineTerminator(this PipeReader pipeReader,
             ReadResult readResult)
         {
-            if (readResult.IsCompleted || readResult.IsCanceled)
-            {
-                return readResult;
-            }
-
             var buffer = readResult.Buffer;
 
             SequencePosition? endOfLinePosition;
-            while ((endOfLinePosition = buffer.GetEndOfLinePosition()) == null)
+            while ((endOfLinePosition = buffer.GetEndOfLinePosition()) == null && !readResult.IsCanceled && !readResult.IsCompleted)
             {
                 // We don't want to consume it yet - So don't advance past the start
                 // But do tell it we've examined up until the end - But it's not enough and we need more
                 // We need to call advance before calling another read though
                 pipeReader.AdvanceTo(buffer.End);
-
-                if (readResult.IsCompleted || readResult.IsCanceled)
-                {
-                    break;
-                }
 
                 if (!pipeReader.TryRead(out readResult))
                 {
@@ -137,17 +127,12 @@ namespace TomLonghurst.RedisClient.Extensions
             var buffer = readResult.Buffer;
 
             SequencePosition? endOfLinePosition;
-            while ((endOfLinePosition = buffer.GetEndOfLinePosition()) == null)
+            while ((endOfLinePosition = buffer.GetEndOfLinePosition()) == null && !readResult.IsCanceled && !readResult.IsCompleted)
             {
                 // We don't want to consume it yet - So don't advance past the start
                 // But do tell it we've examined up until the end - But it's not enough and we need more
                 // We need to call advance before calling another read though
                 pipeReader.AdvanceTo(buffer.Start, buffer.End);
-
-                if (readResult.IsCompleted || readResult.IsCanceled)
-                {
-                    break;
-                }
 
                 if (!pipeReader.TryRead(out readResult))
                 {
