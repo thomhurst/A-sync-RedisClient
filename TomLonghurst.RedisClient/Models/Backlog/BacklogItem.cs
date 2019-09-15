@@ -18,6 +18,11 @@ namespace TomLonghurst.RedisClient.Models.Backlog
             TaskCompletionSource.TrySetCanceled();
         }
 
+        public void SetException(Exception exception)
+        {
+            TaskCompletionSource.SetException(exception);
+        }
+
         public async Task SetResult()
         {
             try
