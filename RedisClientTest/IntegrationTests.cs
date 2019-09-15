@@ -78,6 +78,19 @@ namespace RedisClientTest
             sw.Stop();
             Console.WriteLine($"{title} - Time Taken: {sw.ElapsedMilliseconds} ms");
         }
+
+        [Test]
+        [Repeat(2)]
+        public async Task LargeValue()
+        {
+            var client = await _redisManager.GetRedisClient();
+            var largeValueJson = await File.ReadAllTextAsync("large_json.json");
+            await client.StringSetAsync("LargeValue", largeValueJson, AwaitOptions.AwaitCompletion);
+            var result = await client.StringGetAsync($"LargeValue");
+            await client.ExpireAsync("LargeValue", 120);
+            
+            Assert.AreEqual(largeValueJson, result.Value);
+        }
         
         //[Test]
         public async Task MemoryTest()

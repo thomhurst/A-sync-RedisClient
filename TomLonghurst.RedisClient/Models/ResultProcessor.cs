@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Extensions;
+using TomLonghurst.RedisClient.Helpers;
 using TomLonghurst.RedisClient.Models.Commands;
 
 namespace TomLonghurst.RedisClient.Models
@@ -76,21 +77,13 @@ namespace TomLonghurst.RedisClient.Models
             }
             
             var alreadyReadToLineTerminator = false;
-            long byteSizeOfData;
             if (line.Length == 5 && line.ItemAt(1) == '-' && line.ItemAt(2) == '1')
             {
                 PipeReader.AdvanceTo(line.End);
                 return null;
             }
-
-            if(line.Length == 4)
-            {
-                byteSizeOfData = (long) char.GetNumericValue((char) line.ItemAt(1));
-            }
-            else
-            {
-                long.TryParse(line.Slice(1, line.Length-1).AsStringWithoutLineTerminators(), out byteSizeOfData);
-            }
+            
+            var byteSizeOfData = NumberParser.Parse(line);
             
             PipeReader.AdvanceTo(line.End);
 
