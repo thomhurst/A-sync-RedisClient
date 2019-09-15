@@ -108,7 +108,7 @@ namespace TomLonghurst.RedisClient.Models
                     if (buffer.Length == byteSizeOfData && ReadResult.Buffer.Length >= byteSizeOfData + 2)
                     {
                         alreadyReadToEnd = true;
-                        PipeReader.AdvanceToLineTerminator(ReadResult);
+                        PipeReader.AdvanceTo(ReadResult.Buffer.Slice(0, byteSizeOfData + 2).End);
                     }
                     else
                     {
@@ -143,7 +143,7 @@ namespace TomLonghurst.RedisClient.Models
                         if(bytesReceived == byteSizeOfData && ReadResult.Buffer.Length >= byteSizeOfData + 2)
                         {
                             alreadyReadToEnd = true;
-                            PipeReader.AdvanceToLineTerminator(ReadResult);
+                            PipeReader.AdvanceTo(ReadResult.Buffer.Slice(0, byteSizeOfData + 2).End);
                         }
                         else
                         {

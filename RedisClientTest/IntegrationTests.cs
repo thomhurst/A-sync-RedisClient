@@ -551,7 +551,7 @@ namespace RedisClientTest
             await (await TomLonghurstRedisClient).StringSetAsync("ExpireKeyDateTime", "123", AwaitOptions.AwaitCompletion);
             await (await TomLonghurstRedisClient).ExpireAtAsync("ExpireKeyDateTime", DateTimeOffset.Now.AddSeconds(30));
             var ttl = await (await TomLonghurstRedisClient).TimeToLiveAsync("ExpireKeyDateTime");
-            Assert.That(ttl, Is.LessThanOrEqualTo(32));
+            Assert.That(ttl, Is.LessThanOrEqualTo(33));
         }
     }
 }
