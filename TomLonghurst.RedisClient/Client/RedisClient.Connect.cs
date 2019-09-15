@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -29,8 +30,6 @@ namespace TomLonghurst.RedisClient.Client
 
         public RedisClientConfig ClientConfig { get; }
 
-        private readonly Timer _connectionChecker;
-        
         private RedisSocket _socket;
 
         public Socket Socket => _socket;
@@ -207,12 +206,15 @@ namespace TomLonghurst.RedisClient.Client
                     }
 
                     LastAction = "Creating SSL Stream Pipe";
-                    _pipe = StreamPipe.GetDuplexPipe(_sslStream, redisPipeOptions.SendOptions, redisPipeOptions.ReceiveOptions);
+                    _pipeWriter = PipeWriter.Create(_sslStream);
+                    _pipeReader = PipeReader.Create(_sslStream);
                 }
                 else
                 {
                     LastAction = "Creating Socket Pipe";
-                    _pipe = SocketPipe.GetDuplexPipe(_socket, redisPipeOptions.SendOptions, redisPipeOptions.ReceiveOptions);
+                    var pipe = SocketPipe.GetDuplexPipe(_socket, redisPipeOptions.SendOptions, redisPipeOptions.ReceiveOptions);
+                    _pipeWriter = pipe.Output;
+                    _pipeReader = pipe.Input;
                 }
 
                 IsConnected = true;
@@ -250,13 +252,45 @@ namespace TomLonghurst.RedisClient.Client
 
             try { _socket.NoDelay = true; } catch { }
         }
-
-        private static Lazy<RedisPipeOptions> Options;
+        
         private bool _disposed;
 
         private static RedisPipeOptions GetPipeOptions()
         {
-            return Options.Value;
+            const int defaultMinimumSegmentSize = 4 * 16;
+
+            const long sendPauseWriterThreshold = 512 * 1024;
+            const long sendResumeWriterThreshold = sendPauseWriterThreshold / 2;
+
+            const long receivePauseWriterThreshold = 1024 * 1024 * 1024;
+            const long receiveResumeWriterThreshold = receivePauseWriterThreshold / 2;
+
+            var scheduler = PipeScheduler.ThreadPool;
+            var defaultPipeOptions = PipeOptions.Default;
+
+            var receivePipeOptions = new PipeOptions(
+                defaultPipeOptions.Pool,
+                scheduler,
+                scheduler,
+                receivePauseWriterThreshold,
+                receiveResumeWriterThreshold,
+                defaultMinimumSegmentSize,
+                false);
+
+            var sendPipeOptions = new PipeOptions(
+                defaultPipeOptions.Pool,
+                scheduler,
+                scheduler,
+                sendPauseWriterThreshold,
+                sendResumeWriterThreshold,
+                defaultMinimumSegmentSize,
+                false);
+
+            return new RedisPipeOptions
+            {
+                SendOptions = sendPipeOptions,
+                ReceiveOptions = receivePipeOptions
+            };
         }
 
         public void Dispose()
@@ -264,8 +298,8 @@ namespace TomLonghurst.RedisClient.Client
             _disposed = true;
             DisposeNetwork();
             LastAction = "Disposing Client";
-            _connectionChecker?.Dispose();
             _connectSemaphoreSlim?.Dispose();
+            _backlog.Dispose();
         }
 
         private void DisposeNetwork()

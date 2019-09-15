@@ -8,6 +8,7 @@ namespace TomLonghurst.RedisClient.Extensions
     {
         internal static IRedisEncodable ToRedisEncoded(this string value)
         {
+            // TODO Don't use strings
             return new RedisEncodable(value);
         }
         

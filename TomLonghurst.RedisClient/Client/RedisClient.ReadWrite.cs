@@ -20,9 +20,7 @@ namespace TomLonghurst.RedisClient.Client
     {
         private static readonly Logger Log = new Logger();
 
-        internal virtual bool CanQueueToBacklog { get; set; } = true;
-        
-        private SemaphoreSlim _sendAndReceiveSemaphoreSlim = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _sendAndReceiveSemaphoreSlim = new SemaphoreSlim(1, 1);
         
         private long _outStandingOperations;
 
@@ -30,11 +28,12 @@ namespace TomLonghurst.RedisClient.Client
 
         private long _operationsPerformed;
 
-        private IDuplexPipe _pipe;
-        private ReadResult _readResult;
-
-        public object IsBusyLock = new object();
+        private PipeReader _pipeReader;
+        private PipeWriter _pipeWriter;
+        
         public bool IsBusy;
+        
+        private Thread BacklogWorkerThread;
 
         internal string LastAction;
 
@@ -43,48 +42,43 @@ namespace TomLonghurst.RedisClient.Client
         public DateTime LastUsed { get; internal set; }
         
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command,
-            IResultProcessor<T> resultProcessor,
+        internal ValueTask<T> SendOrQueueAsync<T>(IRedisCommand command,
+            ResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
         {
             LastUsed = DateTime.Now;
-            
+
             LastAction = "Throwing Cancelled Exception due to Cancelled Token";
             cancellationToken.ThrowIfCancellationRequested();
 
             Interlocked.Increment(ref _outStandingOperations);
 
-            if (!isReconnectionAttempt && CanQueueToBacklog && IsBusy)
-            {
-                return QueueToBacklog(command, resultProcessor, cancellationToken);
-            }
-
-            return SendAndReceive_Impl(command, resultProcessor, cancellationToken, isReconnectionAttempt);
+            return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
+            
+//            if (isReconnectionAttempt)
+//            {
+//                return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
+//            }
+            
+            //return QueueToBacklog(command, resultProcessor, cancellationToken);
         }
 
-        private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,
+        private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, ResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken)
         {
             var taskCompletionSource = new TaskCompletionSource<T>();
 
-            var backlogQueueCount = _backlog.Count;
-
-            _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor));
-
-            if (backlogQueueCount == 0)
-            {
-                StartBacklogProcessor();
-            }
+            _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor, this, _pipeReader));
 
             return new ValueTask<T>(taskCompletionSource.Task);
         }
 
-        internal async ValueTask<T> SendAndReceive_Impl<T>(IRedisCommand command, IResultProcessor<T> resultProcessor,
+        internal async ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command, ResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken, bool isReconnectionAttempt)
         {
             IsBusy = true;
-
+            
             Log.Debug($"Executing Command: {command}");
             LastCommand = command;
 
@@ -106,7 +100,7 @@ namespace TomLonghurst.RedisClient.Client
 
                 LastAction = "Reading Bytes Async";
 
-                return await resultProcessor.Start(this, _pipe);
+                return await resultProcessor.Start(this, _pipeReader);
             }
             catch (Exception innerException)
             {
@@ -132,43 +126,47 @@ namespace TomLonghurst.RedisClient.Client
             }
         }
 
-        internal ValueTask<FlushResult> Write(IRedisCommand command)
+        internal ValueTask Write(IRedisCommand command)
         {
             var encodedCommandList = command.EncodedCommandList;
-            
+
             LastAction = "Writing Bytes";
-            var pipeWriter = _pipe.Output;
+
 #if NETCORE
-            
             foreach (var encodedCommand in encodedCommandList)
             {
-                var bytesSpan = pipeWriter.GetSpan(encodedCommand.Length);
-                encodedCommand.CopyTo(bytesSpan);
-                pipeWriter.Advance(encodedCommand.Length);
+                _pipeWriter.Write(encodedCommand.AsSpan());
+//                var bytesSpan = pipeWriter.GetSpan(encodedCommand.Length);
+//                encodedCommand.CopyTo(bytesSpan);
+//                pipeWriter.Advance(encodedCommand.Length);
             }
-
-            return Flush();
+            
+            var task = _pipeWriter.FlushAsync();
+            if (!task.IsCompleted)
+            {
+                return WriteSlowAsync(task);
+            }
 #else
-            return pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray().AsMemory());
+            var task = _pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray().AsMemory());
+
+            if (!task.IsCompleted)
+            {
+                return WriteSlowAsync(task);
+            }
 #endif
-        }
 
-        private ValueTask<FlushResult> Flush()
-        {
-            bool GetResult(FlushResult flush)
-                // tell the calling code whether any more messages
-                // should be written
-                => !(flush.IsCanceled || flush.IsCompleted);
+            return default;
+            
+            async ValueTask WriteSlowAsync(ValueTask<FlushResult> flushTask)
+            {
+                var flushResult = await flushTask;
 
-            async ValueTask<FlushResult> Awaited(ValueTask<FlushResult> incomplete)
-                => await incomplete;
-
-            // apply back-pressure etc
-            var flushTask = _pipe.Output.FlushAsync();
-
-            return flushTask.IsCompletedSuccessfully
-                ? new ValueTask<FlushResult>(flushTask.Result)
-                : Awaited(flushTask);
+                // Cancellation can be triggered by PipeWriter.CancelPendingFlush
+                if (flushResult.IsCanceled)
+                {
+                    throw new OperationCanceledException();
+                }
+            }
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]

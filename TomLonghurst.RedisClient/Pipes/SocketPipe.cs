@@ -50,19 +50,19 @@ namespace TomLonghurst.RedisClient.Pipes
 
             if (read)
             {
+                _readPipe = new Pipe(receivePipeOptions);
+                
                 receivePipeOptions.ReaderScheduler.Schedule(
                     async obj => await ((SocketPipe) obj).CopyFromSocketToReadPipe().ConfigureAwait(false), this);
-                
-                _readPipe = new Pipe(receivePipeOptions);
             }
 
 
             if (write)
             {
+                _writePipe = new Pipe(sendPipeOptions);
+                
                 sendPipeOptions.WriterScheduler.Schedule(
                     async obj => await ((SocketPipe) obj).CopyFromWritePipeToSocket().ConfigureAwait(false), this);
-                
-                _writePipe = new Pipe(sendPipeOptions);
             }
         }
 
@@ -183,7 +183,7 @@ namespace TomLonghurst.RedisClient.Pipes
             }
         }
 
-        private Task WriteSingle(ReadOnlySequence<byte> buffer)
+        private Task WriteSingle(in ReadOnlySequence<byte> buffer)
         {
 #if NETCORE
             var valueTask = _innerSocket.SendAsync(buffer.First, SocketFlags.None);

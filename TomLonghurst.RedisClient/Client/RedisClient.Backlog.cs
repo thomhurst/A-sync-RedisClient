@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Models;
 using TomLonghurst.RedisClient.Models.Backlog;
 
@@ -10,53 +12,55 @@ namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient
     {
-        private WeakReference<RedisClient> _weakReference;
+        internal readonly BlockingQueue<IBacklog> _backlog = new BlockingQueue<IBacklog>();
 
-        internal readonly ConcurrentQueue<IBacklog> _backlog = new ConcurrentQueue<IBacklog>();
-        
-        private static readonly Action<object> _processBacklogAction = s =>
+        protected void StartBacklogProcessor()
         {
-            var wr = (WeakReference<RedisClient>)s;
-            if (wr.TryGetTarget(out var redisClient))
-            {
-                if (!redisClient.IsBacklogProcessorRunning)
-                {
-                    redisClient.ProcessBacklog();
-                }
-            }
-        };
-
-        protected virtual Task StartBacklogProcessor()
-        {
-            _pipeScheduler.Schedule(_processBacklogAction, _weakReference);
-            return Task.CompletedTask;
+//            BacklogWorkerThread = new Thread(state => ((RedisClient) state).ProcessBacklog())
+//            {
+//                Name = $"{nameof(RedisClient)}",
+//                Priority = ThreadPriority.Normal,
+//                IsBackground = true
+//            };
+//                
+//            BacklogWorkerThread.Start(this);
         }
 
-        private bool IsBacklogProcessorRunning;
         internal async Task ProcessBacklog()
         {
-            if (!IsBacklogProcessorRunning)
+            while (true)
             {
-                IsBacklogProcessorRunning = true;
-                if (_backlog.Count > 0)
+                var backlogItems = _backlog.DequeueAll();
+
+                var itemsPastTimeout = backlogItems.Where(item => item.CancellationToken.IsCancellationRequested);
+                
+                foreach (var timedOutItem in itemsPastTimeout)
                 {
-                    while (_backlog.Count > 0)
-                    {
-                        if (_backlog.TryDequeue(out var backlogItem))
-                        {
-                            await WriteAndReceiveBacklog(backlogItem).ConfigureAwait(false);
-                        }
-                    }
+                    timedOutItem.SetCancelled();
+                }
+                
+                var validItems = backlogItems.Where(item => !item.CancellationToken.IsCancellationRequested).ToList();
+                
+                var pipelinedCommand = validItems
+                    .Select(backlogItem => backlogItem.RedisCommand).ToList()
+                    .ToPipelinedCommand();
+
+                await _sendAndReceiveSemaphoreSlim.WaitAsync();
+                
+                if (!IsConnected)
+                {
+                    await TryConnectAsync(CancellationToken.None).ConfigureAwait(false);
+                }
+                
+                await Write(pipelinedCommand);
+                
+                foreach (var backlogItem in validItems)
+                {
+                    await backlogItem.SetResult();
                 }
 
-                IsBacklogProcessorRunning = false;
+                _sendAndReceiveSemaphoreSlim.Release();
             }
-        }
-
-        private async Task WriteAndReceiveBacklog(IBacklog backlogItem)
-        {
-            backlogItem.SetClientAndPipe(this, _pipe);
-            await backlogItem.WriteAndSetResult();
         }
     }
 }
