@@ -28,7 +28,7 @@ namespace RedisClientTest
             _config = new RedisClientConfig(TestInformation.Host, TestInformation.Port,
                 TestInformation.Password)
             {
-                Ssl = false
+                Ssl = true
             };
             _redisManager = new RedisClientManager(_config, 5);
             _redisManager.GetAllRedisClients();
@@ -150,7 +150,7 @@ namespace RedisClientTest
             TomLonghurst
         }
         
-        //[Ignore("")]
+        [Ignore("")]
        [TestCase(TestClient.StackExchange)]
         [TestCase(TestClient.TomLonghurst)]
         public async Task PerformanceTest(TestClient testClient)

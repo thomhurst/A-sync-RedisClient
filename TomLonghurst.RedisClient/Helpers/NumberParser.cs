@@ -13,15 +13,15 @@ namespace TomLonghurst.RedisClient.Helpers
             {
                 return 0;
             }
-            
-            if (buffer.ItemAt(0) == '$')
-            {
-                return Parse(buffer.Slice(1, buffer.Length - 1));
-            }
 
             if (buffer.Length >= 2 && buffer.ItemAt(0) == '-' && buffer.ItemAt(1) == '1')
             {
                 return -1;
+            }
+            
+            if (!char.IsDigit((char) buffer.ItemAt(0)) && buffer.ItemAt(0) != '-')
+            {
+                return Parse(buffer.Slice(1, buffer.Length - 1));
             }
 
             if (buffer.GetEndOfLinePosition() != null)
