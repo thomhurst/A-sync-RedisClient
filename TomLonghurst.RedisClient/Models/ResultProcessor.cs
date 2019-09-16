@@ -77,15 +77,15 @@ namespace TomLonghurst.RedisClient.Models
             }
             
             var alreadyReadToLineTerminator = false;
-            if (line.Length == 5 && line.ItemAt(1) == '-' && line.ItemAt(2) == '1')
-            {
-                PipeReader.AdvanceTo(line.End);
-                return null;
-            }
             
             var byteSizeOfData = NumberParser.Parse(line);
             
             PipeReader.AdvanceTo(line.End);
+            
+            if (byteSizeOfData == -1)
+            {
+                return null;
+            }
 
             LastAction = "Reading Data Synchronously in ReadData";
             if (!PipeReader.TryRead(out ReadResult))
@@ -109,7 +109,7 @@ namespace TomLonghurst.RedisClient.Models
 
             buffer.CopyTo(bytes.Slice(0, (int) bytesReceived).Span);
 
-            if (buffer.Length == byteSizeOfData && ReadResult.Buffer.Length >= byteSizeOfData + 2)
+            if (bytesReceived == byteSizeOfData && ReadResult.Buffer.Length >= byteSizeOfData + 2)
             {
                 alreadyReadToLineTerminator = true;
                 PipeReader.AdvanceTo(ReadResult.Buffer.Slice(0, byteSizeOfData + 2).End);
@@ -258,30 +258,16 @@ namespace TomLonghurst.RedisClient.Models
                 throw new UnexpectedRedisResponseException(invalidResponse);
             }
 
-            int number;
-            if (line.Length == 4)
-            {
-                number = (int) char.GetNumericValue((char) line.ItemAt(1));
-                PipeReader.AdvanceTo(line.End);
-                return number;
-            }
-            
-            if (line.Length == 5 && line.ItemAt(1) == '-' && line.ItemAt(2) == '1')
-            {
-                PipeReader.AdvanceTo(line.End);
-                return -1;
-            }
-            
-            var stringLine = line.Slice(1, line.Length - 1).AsStringWithoutLineTerminators();
+            var number = NumberParser.Parse(line);
 
             PipeReader.AdvanceTo(line.End);
 
-            if (!int.TryParse(stringLine, out number))
+            if (number == -1)
             {
-                throw new UnexpectedRedisResponseException(stringLine);
+                return -1;
             }
 
-            return number;
+            return (int) number;
         }
     }
 
@@ -313,15 +299,7 @@ namespace TomLonghurst.RedisClient.Models
                 throw new UnexpectedRedisResponseException(stringLine);
             }
 
-            int count;
-            if (bytes.Length == 4)
-            {
-                count = (int) char.GetNumericValue((char) bytes.ItemAt(1));
-            }
-            else
-            {
-                count = int.Parse(bytes.Slice(1, bytes.Length - 1).AsStringWithoutLineTerminators());
-            }
+            var count = NumberParser.Parse(bytes);
             
             PipeReader.AdvanceTo(bytes.End);
 

@@ -114,7 +114,7 @@ namespace TomLonghurst.RedisClient.Extensions
 
         internal static async ValueTask<ReadResult> ReadUntilEndOfLineFound(this PipeReader pipeReader, ReadResult readResult)
         {
-            while (readResult.Buffer.GetEndOfLinePosition() == null && !readResult.IsCanceled && !readResult.IsCompleted)
+            while (readResult.Buffer.GetEndOfLinePosition() == null)
             {
                 // We don't want to consume it yet - So don't advance past the start
                 // But do tell it we've examined up until the end - But it's not enough and we need more
