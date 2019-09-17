@@ -1,18 +1,22 @@
 ﻿using System;
-using System.Buffers;
 using System.IO.Pipelines;
-using System.Linq;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Sources;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Extensions;
 using TomLonghurst.RedisClient.Helpers;
 using TomLonghurst.RedisClient.Models;
 using TomLonghurst.RedisClient.Models.Backlog;
 using TomLonghurst.RedisClient.Models.Commands;
+
+#if NETSTANDARD
+using System.Linq;
+#endif
+
+#if NETCORE
+using System.Buffers;
+#endif
 
 namespace TomLonghurst.RedisClient.Client
 {
