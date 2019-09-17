@@ -2,7 +2,7 @@ using TomLonghurst.RedisClient.Helpers;
 
 namespace TomLonghurst.RedisClient.Exceptions
 {
-    public class RedisOperationTimeoutException : RedisException
+    public class RedisOperationTimeoutException : RedisRecoverableException
     {
         private readonly Client.RedisClient _redisClient;
 

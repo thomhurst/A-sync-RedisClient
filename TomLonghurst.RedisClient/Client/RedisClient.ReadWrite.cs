@@ -109,14 +109,19 @@ namespace TomLonghurst.RedisClient.Client
             }
             catch (Exception innerException)
             {
-                if (innerException.IsSameOrSubclassOf(typeof(RedisException)) ||
+                if (innerException.IsSameOrSubclassOf(typeof(RedisRecoverableException)) ||
                     innerException.IsSameOrSubclassOf(typeof(OperationCanceledException)))
                 {
                     throw;
                 }
 
                 DisposeNetwork();
-                IsConnected = false;
+                
+                if (innerException.IsSameOrSubclassOf(typeof(RedisNonRecoverableException)))
+                {
+                    throw;
+                } 
+                
                 throw new RedisConnectionException(innerException);
             }
             finally

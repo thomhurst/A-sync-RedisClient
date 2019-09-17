@@ -2,7 +2,7 @@ using System;
 
 namespace TomLonghurst.RedisClient.Exceptions
 {
-    public class RedisConnectionException : RedisException
+    public class RedisConnectionException : RedisNonRecoverableException
     {
         private readonly Exception _innerException;
 

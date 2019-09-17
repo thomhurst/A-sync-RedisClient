@@ -1,6 +1,6 @@
 namespace TomLonghurst.RedisClient.Exceptions
 {
-    public class RedisDataException : RedisException
+    public class RedisDataException : RedisNonRecoverableException
     {
         public override string Message { get; }
 
