@@ -28,27 +28,29 @@ namespace TomLonghurst.RedisClient.Helpers
             {
                 return Parse(buffer.Slice(0, buffer.Length - 2));
             }
-            
-            switch (buffer.Length)
-            {
-                case 1:
-                    return Parse(buffer.ItemAt(0));
-                case 2:
-                    return Parse(buffer.ItemAt(0), buffer.ItemAt(1));
-                case 3:
-                    return Parse(buffer.ItemAt(0), buffer.ItemAt(1), buffer.ItemAt(2));
-                case 4:
-                    return Parse(buffer.ItemAt(0), buffer.ItemAt(1), buffer.ItemAt(2), buffer.ItemAt(3));
-                case 5:
-                    return Parse(buffer.ItemAt(0), buffer.ItemAt(1), buffer.ItemAt(2), buffer.ItemAt(3), buffer.ItemAt(4));
-                default:
-                    return Parse(buffer.ToArray());
-            }
+
+            return ParseSequence(buffer);
         }
         
         public static long Parse(params byte[] byteValues)
         {
             return (long) byteValues.Select((t, i) => GetValue(t) * Math.Pow(10, (double) byteValues.Length - i - 1)).Sum();
+        }
+        
+        private static long ParseSequence(ReadOnlySequence<byte> byteValues)
+        {
+            var result = 0d;
+            var outerIndex = 0;
+            foreach (var readOnlyMemory in byteValues)
+            {
+                foreach (var b in readOnlyMemory.Span)
+                {
+                    result += (char) GetValue(b) * Math.Pow(10, byteValues.Length - 1 - outerIndex);
+                    outerIndex++;
+                }
+            }
+
+            return (long) result;
         }
         
         private static long GetValue(byte byteValue)
