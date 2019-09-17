@@ -1,10 +1,7 @@
 using System;
 using System.Buffers;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO.Pipelines;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using TomLonghurst.RedisClient.Exceptions;
 using TomLonghurst.RedisClient.Extensions;
@@ -109,10 +106,9 @@ namespace TomLonghurst.RedisClient.Models
 
             buffer.CopyTo(bytes.Slice(0, (int) bytesReceived).Span);
 
-            if (bytesReceived == byteSizeOfData && ReadResult.Buffer.Length >= byteSizeOfData + 2)
+            if (bytesReceived == byteSizeOfData)
             {
-                alreadyReadToLineTerminator = true;
-                PipeReader.AdvanceTo(ReadResult.Buffer.Slice(buffer.End).GetEndOfLinePosition().Value);
+                alreadyReadToLineTerminator = TryAdvanceToLineTerminator(ref buffer);
             }
             else
             {
@@ -144,10 +140,9 @@ namespace TomLonghurst.RedisClient.Models
 
                 bytesReceived += buffer.Length;
 
-                if(bytesReceived == byteSizeOfData && ReadResult.Buffer.Length >= buffer.Length + 2)
+                if (bytesReceived == byteSizeOfData)
                 {
-                    alreadyReadToLineTerminator = true;
-                    PipeReader.AdvanceTo(ReadResult.Buffer.Slice(buffer.End).GetEndOfLinePosition().Value);
+                    alreadyReadToLineTerminator = TryAdvanceToLineTerminator(ref buffer);
                 }
                 else
                 {
@@ -172,6 +167,26 @@ namespace TomLonghurst.RedisClient.Models
             }
 
             return bytes;
+        }
+
+        private bool TryAdvanceToLineTerminator(ref ReadOnlySequence<byte> buffer)
+        {
+            var slicedBytes = ReadResult.Buffer.Slice(buffer.End);
+            if (slicedBytes.IsEmpty)
+            {
+                PipeReader.AdvanceTo(buffer.End);
+                return false;
+            }
+
+            var endOfLinePosition = slicedBytes.GetEndOfLinePosition();
+            if (endOfLinePosition == null)
+            {
+                PipeReader.AdvanceTo(buffer.End);
+                return false;
+            }
+
+            PipeReader.AdvanceTo(endOfLinePosition.Value);
+            return true;
         }
 
         protected async Task<ReadOnlySequence<byte>> ReadLine()
@@ -204,17 +219,20 @@ namespace TomLonghurst.RedisClient.Models
         private protected override async ValueTask<object> Process()
         {
             var buffer = await ReadLine();
-            
-            if(buffer.ItemAt(0) == '-')
+
+            if (buffer.Length < 3 ||
+                buffer.ItemAt(0) != '+' ||
+                buffer.ItemAt(1) != 'O' ||
+                buffer.ItemAt(2) != 'K')
             {
                 var line = buffer.AsStringWithoutLineTerminators();
                 PipeReader.AdvanceTo(buffer.End);
                 throw new RedisFailedCommandException(line, LastCommand);
             }
-            
+
             PipeReader.AdvanceTo(buffer.End);
-            
-            return new object();
+
+            return null;
         }
     }
 
@@ -230,17 +248,17 @@ namespace TomLonghurst.RedisClient.Models
     {
         private protected override async ValueTask<string> Process()
         {
-            var bytes = await ReadLine();
+            var buffer = await ReadLine();
 
-            if (bytes.ItemAt(0) != '+')
+            if (buffer.ItemAt(0) != '+')
             {
-                var stringLine = bytes.AsStringWithoutLineTerminators();
-                PipeReader.AdvanceTo(bytes.End);
+                var stringLine = buffer.AsStringWithoutLineTerminators();
+                PipeReader.AdvanceTo(buffer.End);
                 throw new UnexpectedRedisResponseException(stringLine);
             }
 
-            var word = bytes.Slice(1, bytes.Length - 1).AsStringWithoutLineTerminators();
-            PipeReader.AdvanceTo(bytes.End);
+            var word = buffer.Slice(1, buffer.Length - 1).AsStringWithoutLineTerminators();
+            PipeReader.AdvanceTo(buffer.End);
             return word;
         }
     }
@@ -249,18 +267,18 @@ namespace TomLonghurst.RedisClient.Models
     {
         private protected override async ValueTask<int> Process()
         {
-            var line = await ReadLine();
+            var buffer = await ReadLine();
 
-            if (line.ItemAt(0) != ':')
+            if (buffer.ItemAt(0) != ':')
             {
-                var invalidResponse = line.AsStringWithoutLineTerminators();
-                PipeReader.AdvanceTo(line.End);
+                var invalidResponse = buffer.AsStringWithoutLineTerminators();
+                PipeReader.AdvanceTo(buffer.End);
                 throw new UnexpectedRedisResponseException(invalidResponse);
             }
 
-            var number = NumberParser.Parse(line);
+            var number = NumberParser.Parse(buffer);
 
-            PipeReader.AdvanceTo(line.End);
+            PipeReader.AdvanceTo(buffer.End);
 
             if (number == -1)
             {
@@ -290,18 +308,18 @@ namespace TomLonghurst.RedisClient.Models
     {
         private protected override async ValueTask<IEnumerable<StringRedisValue>> Process()
         {
-            var bytes = await ReadLine();
+            var buffer = await ReadLine();
 
-            if (bytes.ItemAt(0) != '*')
+            if (buffer.ItemAt(0) != '*')
             {
-                var stringLine = bytes.AsStringWithoutLineTerminators();
-                PipeReader.AdvanceTo(bytes.End);
+                var stringLine = buffer.AsStringWithoutLineTerminators();
+                PipeReader.AdvanceTo(buffer.End);
                 throw new UnexpectedRedisResponseException(stringLine);
             }
 
-            var count = NumberParser.Parse(bytes);
+            var count = NumberParser.Parse(buffer);
             
-            PipeReader.AdvanceTo(bytes.End);
+            PipeReader.AdvanceTo(buffer.End);
 
             var results = new byte [count][];
             for (var i = 0; i < count; i++)

@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Versioning;
-using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using StackExchange.Redis;
@@ -81,13 +80,15 @@ namespace RedisClientTest
 
         [Test]
         [Repeat(2)]
-        public async Task LargeValue()
+        [TestCase("LargeValue", "large_json.json")]
+        [TestCase("LargeValue2", "large_json2.json")]
+        public async Task LargeValue(string key, string filename)
         {
             var client = await _redisManager.GetRedisClient();
-            var largeValueJson = await File.ReadAllTextAsync("large_json.json");
-            await client.StringSetAsync("LargeValue", largeValueJson, AwaitOptions.AwaitCompletion);
-            var result = await client.StringGetAsync($"LargeValue");
-            await client.ExpireAsync("LargeValue", 120);
+            var largeValueJson = await File.ReadAllTextAsync(filename);
+            await client.StringSetAsync(key, largeValueJson, AwaitOptions.AwaitCompletion);
+            var result = await client.StringGetAsync(key);
+            await client.ExpireAsync(key, 120);
             
             Assert.AreEqual(largeValueJson, result.Value);
         }
@@ -578,6 +579,28 @@ namespace RedisClientTest
             await (await TomLonghurstRedisClient).ExpireAtAsync("ExpireKeyDateTime", DateTimeOffset.Now.AddSeconds(30));
             var ttl = await (await TomLonghurstRedisClient).TimeToLiveAsync("ExpireKeyDateTime");
             Assert.That(ttl, Is.LessThanOrEqualTo(33));
+        }
+
+        [Test]
+        [Repeat(2)]
+        public async Task Mix()
+        {
+            var tasks = new List<Task>();
+            
+            for (int i = 0; i < 5; i++)
+            {
+                tasks.Add(Task.Run(async () =>
+                {
+                    await SetGetMultipleKey();
+                    await Pipelining_Multiple_Sets();
+                    await GetKeys();
+                    await GetNonExistingKey();
+                    await GetKeys();
+                    await SetGetMultipleKey();
+                }));
+            }
+
+            await Task.WhenAll(tasks);
         }
     }
 }

@@ -1,11 +1,8 @@
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.RedisClient.Extensions;
-using TomLonghurst.RedisClient.Models;
 using TomLonghurst.RedisClient.Models.Backlog;
 
 namespace TomLonghurst.RedisClient.Client

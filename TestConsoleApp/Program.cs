@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using RedisClientTest;
-using StackExchange.Profiling;
 using TomLonghurst.RedisClient.Client;
 using TomLonghurst.RedisClient.Enums;
 

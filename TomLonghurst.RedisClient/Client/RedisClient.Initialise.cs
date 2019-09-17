@@ -1,6 +1,3 @@
-using System;
-using TomLonghurst.RedisClient.Pipes;
-
 namespace TomLonghurst.RedisClient.Client
 {
     public partial class RedisClient
