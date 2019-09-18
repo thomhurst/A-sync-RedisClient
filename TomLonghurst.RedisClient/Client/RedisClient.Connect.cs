@@ -134,12 +134,8 @@ namespace TomLonghurst.RedisClient.Client
             }
 
             LastAction = "Waiting for Connecting lock to be free";
-            var wait = _connectSemaphoreSlim.WaitAsync(cancellationToken);
-            if (!wait.IsCompletedSuccessfully())
-            {
-                await wait.ConfigureAwait(false);
-            }
-
+            await _connectSemaphoreSlim.WaitAsync(cancellationToken);
+            
             try
             {
                 if (IsConnected)

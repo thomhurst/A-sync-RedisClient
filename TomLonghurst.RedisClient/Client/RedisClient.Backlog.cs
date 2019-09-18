@@ -52,7 +52,7 @@ namespace TomLonghurst.RedisClient.Client
                 try
                 {
                     await Write(pipelinedCommand);
-                
+
                     foreach (var backlogItem in validItems)
                     {
                         await backlogItem.SetResult();
@@ -64,11 +64,13 @@ namespace TomLonghurst.RedisClient.Client
                     {
                         validItem.SetException(e);
                     }
-                    
+
                     DisposeNetwork();
                 }
-
-                _sendAndReceiveSemaphoreSlim.Release();
+                finally
+                {
+                    _sendAndReceiveSemaphoreSlim.Release();
+                }
             }
         }
     }

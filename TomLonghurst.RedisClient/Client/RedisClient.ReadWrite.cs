@@ -93,16 +93,16 @@ namespace TomLonghurst.RedisClient.Client
 
             Interlocked.Increment(ref _operationsPerformed);
 
+            if (!isReconnectionAttempt)
+            {
+                await _sendAndReceiveSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             try
             {
-                if (!isReconnectionAttempt)
+                if (!isReconnectionAttempt && !IsConnected)
                 {
-                    await _sendAndReceiveSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
-                    
-                    if (!IsConnected)
-                    {
-                        await TryConnectAsync(cancellationToken).ConfigureAwait(false);
-                    }
+                    await TryConnectAsync(cancellationToken).ConfigureAwait(false);
                 }
 
                 await Write(command);
