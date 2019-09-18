@@ -135,7 +135,15 @@ namespace TomLonghurst.RedisClient.Extensions
                 return null;
             }
 
-            return buffer.IsSingleSegment ? GetEndOfLinePositionSingleSegment(buffer) : GetEndOfLinePositionMultipleSegments(buffer);
+            var sequencePosition = buffer.PositionOf((byte) '\n');
+            
+            if (sequencePosition == null)
+            {
+                return null;
+            }
+            
+            return buffer.GetPosition(1, sequencePosition.Value);
+            //return buffer.IsSingleSegment ? GetEndOfLinePositionSingleSegment(buffer) : GetEndOfLinePositionMultipleSegments(buffer);
         }
 
         private static SequencePosition? GetEndOfLinePositionMultipleSegments(in ReadOnlySequence<byte> buffer)
@@ -148,7 +156,7 @@ namespace TomLonghurst.RedisClient.Extensions
                 {
                     if (b == '\n' && lastChar == '\r')
                     {
-                        return buffer.GetPosition(index + 1);
+                        return buffer.GetPosition(index);
                     }
 
                     lastChar = b;
