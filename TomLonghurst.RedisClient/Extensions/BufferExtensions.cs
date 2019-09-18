@@ -34,8 +34,7 @@ namespace TomLonghurst.RedisClient.Extensions
         internal static string AsStringWithoutLineTerminators(this in ReadOnlySequence<byte> buffer)
         {
             // Reslice but removing the line terminators
-            var sliced = buffer.Slice(buffer.Start, buffer.GetEndOfLinePosition().Value);
-            return sliced.Slice(0, sliced.Length - 2).AsString();
+            return buffer.Slice(0, buffer.Length - 2).AsString();
         }
 
         internal static string AsString(this in ReadOnlySequence<byte> buffer)
@@ -86,7 +85,7 @@ namespace TomLonghurst.RedisClient.Extensions
             var buffer = readResult.Buffer;
 
             SequencePosition? endOfLinePosition;
-            while ((endOfLinePosition = buffer.GetEndOfLinePosition()) == null && !readResult.IsCanceled && !readResult.IsCompleted)
+            while ((endOfLinePosition = buffer.GetEndOfLinePosition()) == null)
             {
                 // We don't want to consume it yet - So don't advance past the start
                 // But do tell it we've examined up until the end - But it's not enough and we need more
@@ -145,8 +144,7 @@ namespace TomLonghurst.RedisClient.Extensions
             byte lastChar = 0;
             foreach (var segment in buffer)
             {
-                var span = segment.Span;
-                foreach (var b in span)
+                foreach (var b in segment.Span)
                 {
                     if (b == '\n' && lastChar == '\r')
                     {
