@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using RedisClientTest;
-using TomLonghurst.RedisClient.Client;
-using TomLonghurst.RedisClient.Enums;
+using TomLonghurst.AsyncRedisClient.Client;
+using TomLonghurst.AsyncRedisClient.Enums;
 
 namespace TestConsoleApp
 {

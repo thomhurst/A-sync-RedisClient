@@ -8,7 +8,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\RedisClientTest\RedisClientTest.csproj" />
-      <ProjectReference Include="..\TomLonghurst.RedisClient\TomLonghurst.RedisClient.csproj" />
+      <ProjectReference Include="..\TomLonghurst.AsyncRedisClient\TomLonghurst.AsyncRedisClient.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -15,16 +15,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TomLonghurst.RedisClient\TomLonghurst.RedisClient.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="large_json.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="large_json2.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TomLonghurst.AsyncRedisClient\TomLonghurst.AsyncRedisClient.csproj" />
   </ItemGroup>
 
 </Project>

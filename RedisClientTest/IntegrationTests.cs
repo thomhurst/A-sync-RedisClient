@@ -8,9 +8,9 @@ using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using StackExchange.Redis;
-using TomLonghurst.RedisClient.Client;
-using TomLonghurst.RedisClient.Enums;
-using TomLonghurst.RedisClient.Models.RequestModels;
+using TomLonghurst.AsyncRedisClient.Client;
+using TomLonghurst.AsyncRedisClient.Enums;
+using TomLonghurst.AsyncRedisClient.Models.RequestModels;
 
 namespace RedisClientTest
 {
@@ -84,13 +84,25 @@ namespace RedisClientTest
         [TestCase("LargeValue2", "large_json2.json")]
         public async Task LargeValue(string key, string filename)
         {
-            var client = await _redisManager.GetRedisClient();
             var largeValueJson = await File.ReadAllTextAsync(filename);
-            await client.StringSetAsync(key, largeValueJson, AwaitOptions.AwaitCompletion);
-            var result = await client.StringGetAsync(key);
-            await client.ExpireAsync(key, 120);
+            await (await TomLonghurstRedisClient).StringSetAsync(key, largeValueJson, AwaitOptions.AwaitCompletion);
+            var result = await (await TomLonghurstRedisClient).StringGetAsync(key);
+            await (await TomLonghurstRedisClient).ExpireAsync(key, 120);
             
             Assert.AreEqual(largeValueJson, result.Value);
+        }
+
+        [Test]
+        public async Task MultipleThreads()
+        {
+            var tasks = new List<Task>();
+
+            for (var i = 0; i < 1000; i++)
+            {
+                tasks.Add(Task.Factory.StartNew(async () => await LargeValue($"MultiThread{i}", "large_json.json")).Unwrap());
+            }
+
+            await Task.WhenAll(tasks);
         }
         
         //[Test]
