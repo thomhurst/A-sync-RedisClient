@@ -35,17 +35,14 @@ namespace TomLonghurst.AsyncRedisClient.Models
         {
             SetMembers(redisClient, pipeReader);
 
-            if (!PipeReader.TryRead(out ReadResult))
-            {
-                ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
-            }
+            ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
 
             return await Process();
         }
 
         private protected abstract ValueTask<T> Process();
 
-        
+
         protected async ValueTask<Memory<byte>> ReadData()
         {
             var buffer = ReadResult.Buffer;
@@ -59,37 +56,33 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
             var firstChar = line.ItemAt(0);
 
-            if (firstChar == '-')
-            {
-                var stringLine = buffer.AsStringWithoutLineTerminators();
-                PipeReader.AdvanceTo(line.End);
-                throw new RedisFailedCommandException(stringLine, LastCommand);
-            }
-
             if (firstChar != '$')
             {
                 var stringLine = buffer.AsStringWithoutLineTerminators();
                 PipeReader.AdvanceTo(line.End);
+
+                if (firstChar == '-')
+                {
+                    throw new RedisFailedCommandException(stringLine, LastCommand);
+                }
+
                 throw new UnexpectedRedisResponseException($"Unexpected reply: {stringLine}");
             }
-            
+
             var alreadyReadToLineTerminator = false;
-            
+
             var byteSizeOfData = NumberParser.Parse(line);
-            
+
             PipeReader.AdvanceTo(line.End);
-            
+
             if (byteSizeOfData == -1)
             {
                 return null;
             }
 
             LastAction = "Reading Data Synchronously in ReadData";
-            if (!PipeReader.TryRead(out ReadResult))
-            {
-                LastAction = "Reading Data Asynchronously in ReadData";
-                ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
-            }
+            LastAction = "Reading Data Asynchronously in ReadData";
+            ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
 
             buffer = ReadResult.Buffer;
 
@@ -97,7 +90,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
             {
                 throw new UnexpectedRedisResponseException("Invalid length");
             }
-            
+
             var bytes = new byte[byteSizeOfData].AsMemory();
 
             buffer = buffer.Slice(0, Math.Min(byteSizeOfData, buffer.Length));
@@ -120,11 +113,8 @@ namespace TomLonghurst.AsyncRedisClient.Models
                 LastAction = "Advancing Buffer in ReadData Loop";
 
                 LastAction = "Reading Data Synchronously in ReadData Loop";
-                if (!PipeReader.TryRead(out ReadResult))
-                {
-                    LastAction = "Reading Data Asynchronously in ReadData Loop";
-                    ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
-                }
+                LastAction = "Reading Data Asynchronously in ReadData Loop";
+                ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
 
                 buffer = ReadResult.Buffer.Slice(0,
                     Math.Min(ReadResult.Buffer.Length, byteSizeOfData - bytesReceived));
@@ -147,11 +137,8 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
             if (!alreadyReadToLineTerminator)
             {
-                if (!PipeReader.TryRead(out ReadResult))
-                {
-                    LastAction = "Reading Data Asynchronously in ReadData Loop";
-                    ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
-                }
+                LastAction = "Reading Data Asynchronously in ReadData Loop";
+                ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
 
                 await PipeReader.AdvanceToLineTerminator(ReadResult);
             }
@@ -316,11 +303,8 @@ namespace TomLonghurst.AsyncRedisClient.Models
             {
                 // Refresh the pipe buffer before 'ReadData' method reads it
                 LastAction = "Reading Data Synchronously in ExpectArray";
-                if (!PipeReader.TryRead(out ReadResult))
-                {
-                    LastAction = "Reading Data Asynchronously in ExpectArray";
-                    ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
-                }
+                LastAction = "Reading Data Asynchronously in ExpectArray";
+                ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
 
                 results[i] = (await ReadData()).ToArray();
             }

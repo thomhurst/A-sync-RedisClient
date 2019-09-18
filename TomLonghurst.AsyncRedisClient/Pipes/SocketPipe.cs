@@ -163,8 +163,7 @@ namespace TomLonghurst.AsyncRedisClient.Pipes
 
                         reader.AdvanceTo(readResult.Buffer.End);
 
-                    } while (!(readResult.Buffer.IsEmpty && readResult.IsCompleted)
-                             && reader.TryRead(out readResult));
+                    } while (!(readResult.Buffer.IsEmpty && readResult.IsCompleted));
 
                     if ((readResult.IsCompleted || readResult.IsCanceled) && readResult.Buffer.IsEmpty)
                     {

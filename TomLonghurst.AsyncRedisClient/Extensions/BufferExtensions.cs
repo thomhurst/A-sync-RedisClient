@@ -92,10 +92,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
                 // We need to call advance before calling another read though
                 pipeReader.AdvanceTo(buffer.End);
 
-                if (!pipeReader.TryRead(out readResult))
-                {
-                    readResult = await pipeReader.ReadAsync().ConfigureAwait(false);
-                }
+                readResult = await pipeReader.ReadAsync().ConfigureAwait(false);
 
                 buffer = readResult.Buffer;
             }
@@ -119,10 +116,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
                 // We need to call advance before calling another read though
                 pipeReader.AdvanceTo(readResult.Buffer.Start, readResult.Buffer.End);
 
-                if (!pipeReader.TryRead(out readResult))
-                {
-                    readResult = await pipeReader.ReadAsync().ConfigureAwait(false);
-                }
+                readResult = await pipeReader.ReadAsync().ConfigureAwait(false);
             }
 
             return readResult;
