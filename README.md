@@ -3,7 +3,7 @@
 [![nuget](https://img.shields.io/nuget/v/TomLonghurst.RedisClient.svg)](https://www.nuget.org/packages/TomLonghurst.RedisClient/)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/b692f8fbb14142d3ad8f9ccb65d0889c)](https://app.codacy.com/app/thomhurst/A-sync-RedisClient?utm_source=github.com&utm_medium=referral&utm_content=thomhurst/A-sync-RedisClient&utm_campaign=Badge_Grade_Dashboard)
 
-## Please note this is still in development.
+## Please note this is still in development
 
 ## Install
 
