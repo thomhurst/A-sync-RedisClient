@@ -82,6 +82,8 @@ namespace TestConsoleApp
             }
             
             Console.WriteLine($"Finished at {DateTime.Now.ToLongTimeString()}");
+            Console.WriteLine("Press any key to exit.");
+            Console.Read();
         }
 
         static async Task DoSomething()
