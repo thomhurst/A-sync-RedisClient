@@ -9,11 +9,11 @@ namespace TomLonghurst.AsyncRedisClient.Client
 {
     public partial class RedisClient
     {
-        internal readonly BlockingQueue<IBacklog> _backlog = new BlockingQueue<IBacklog>();
+        private readonly BlockingQueue<IBacklog> _backlog = new BlockingQueue<IBacklog>();
 
         protected void StartBacklogProcessor()
         {
-//            BacklogWorkerThread = new Thread(state => ((RedisClient) state).ProcessBacklog())
+//            BacklogWorkerThread = new Thread(async state => await ((RedisClient) state).ProcessBacklog())
 //            {
 //                Name = $"{nameof(RedisClient)}",
 //                Priority = ThreadPriority.Normal,
@@ -27,6 +27,11 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             while (true)
             {
+                if (_disposed)
+                {
+                    return;
+                }
+                
                 var backlogItems = _backlog.DequeueAll();
 
                 var itemsPastTimeout = backlogItems.Where(item => item.CancellationToken.IsCancellationRequested).ToList();
@@ -42,12 +47,9 @@ namespace TomLonghurst.AsyncRedisClient.Client
                     .Select(backlogItem => backlogItem.RedisCommand).ToList()
                     .ToPipelinedCommand();
 
-                await _sendAndReceiveSemaphoreSlim.WaitAsync();
-                
                 if (!IsConnected)
                 {
-                    // TODO This doesn't work properly?
-                    TryConnectAsync(CancellationToken.None).ConfigureAwait(false);
+                    await TryConnectAsync(CancellationToken.None).ConfigureAwait(false);
                 }
 
                 try
@@ -56,7 +58,14 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
                     foreach (var backlogItem in validItems)
                     {
-                        await backlogItem.SetResult();
+                        try
+                        {
+                            await backlogItem.SetResult();
+                        }
+                        catch (Exception e)
+                        {
+                            backlogItem.SetException(e);
+                        }
                     }
                 }
                 catch (Exception e)
@@ -67,10 +76,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
                     }
 
                     DisposeNetwork();
-                }
-                finally
-                {
-                    _sendAndReceiveSemaphoreSlim.Release();
                 }
             }
         }

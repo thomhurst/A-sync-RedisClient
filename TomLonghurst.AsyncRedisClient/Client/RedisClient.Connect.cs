@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,12 +40,13 @@ namespace TomLonghurst.AsyncRedisClient.Client
         
         internal Func<RedisClient, Task> OnConnectionEstablished { get; set; }
         internal Func<RedisClient, Task> OnConnectionFailed { get; set; }
-
+        
         public bool IsConnected
         {
+            [MethodImpl(MethodImplOptions.Synchronized)]
             get
             {
-                if (_socket == null || _socket.IsDisposed)
+                if (_socket == null || _socket.IsDisposed || !_socket.Connected)
                 {
                     _isConnected = false;
                 }
@@ -52,6 +54,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 return _isConnected;
             }
             
+            [MethodImpl(MethodImplOptions.Synchronized)]
             private set
             {
                 _isConnected = value;
@@ -304,13 +307,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
             _socket?.Close();
             _socket?.Dispose();
             _sslStream?.Dispose();
-
-            if (!_disposed)
-            {
-#pragma warning disable 4014
-                TryConnectAsync(CancellationToken.None);
-#pragma warning restore 4014
-            }
         }
     }
 }

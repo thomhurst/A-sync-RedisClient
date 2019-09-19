@@ -74,12 +74,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 //            {
 //                return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
 //            }
-//            
-//            if (!IsConnected)
-//            {
-//                TryConnectAsync(cancellationToken).ConfigureAwait(false);
-//            }
-//            
+//
 //            return QueueToBacklog(command, resultProcessor, cancellationToken);
         }
 
