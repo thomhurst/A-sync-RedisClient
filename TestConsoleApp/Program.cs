@@ -26,7 +26,7 @@ namespace TestConsoleApp
                 TestData.Add(new KeyValuePair<string, string>(CreateString(20), CreateString(50000)));
             }
 
-            var runForDuration = TimeSpan.FromMinutes(15);
+            var runForDuration = TimeSpan.FromMinutes(5);
 
             var start = DateTime.Now;
 
@@ -34,11 +34,11 @@ namespace TestConsoleApp
                 TestInformation.Port,
                 TestInformation.Password) {Ssl = true};
 
-            _redisManager = new RedisClientManager(config, 10);
+            _redisManager = new RedisClientManager(config, 1);
 
             var tasks = new List<Task>();
 
-            for (var taskCount = 0; taskCount < 250; taskCount++)
+            for (var taskCount = 0; taskCount < 150; taskCount++)
             {
                 var taskId = taskCount;
                 var task = Task.Run(async () =>
@@ -77,9 +77,11 @@ namespace TestConsoleApp
                 var dateTime = _lastActive[key];
                 if (DateTime.Now - dateTime > TimeSpan.FromSeconds(10))
                 {
-                    Console.WriteLine($"Task {key} was last active at {dateTime.ToLongTimeString()}");
+                    Console.WriteLine($"Task {key} was last active at {dateTime.ToLongTimeString()} - {(DateTime.Now - dateTime).TotalMilliseconds} ms ago");
                 }
             }
+            
+            Console.WriteLine($"Finished at {DateTime.Now.ToLongTimeString()}");
         }
 
         static async Task DoSomething()
