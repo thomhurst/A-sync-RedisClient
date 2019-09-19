@@ -21,6 +21,8 @@ namespace TestConsoleApp
         static async Task Main(string[] args)
         {
 
+            var currentProcessId = Process.GetCurrentProcess().Id;
+
             for (int i = 0; i < 10000; i++)
             {
                 TestData.Add(new KeyValuePair<string, string>(CreateString(20), CreateString(50000)));
@@ -55,7 +57,7 @@ namespace TestConsoleApp
                             var tomLonghurstRedisClientStopwatchTimeTaken =
                                 tomLonghurstRedisClientStopwatch.ElapsedMilliseconds;
                             Console.WriteLine(
-                                $"Task {taskId} -- Time Taken: {tomLonghurstRedisClientStopwatchTimeTaken} ms");
+                                $"PID {currentProcessId} -- Task {taskId} -- Time Taken: {tomLonghurstRedisClientStopwatchTimeTaken} ms");
                             _lastActive[taskId] = DateTime.Now;
                         }
                     }
