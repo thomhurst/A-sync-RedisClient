@@ -52,7 +52,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
             if (buffer.IsEmpty)
             {
-                throw new UnexpectedRedisResponseException("Zero Length Response from Redis");
+                throw new RedisDataException("Zero Length Response from Redis");
             }
 
             var line = await ReadLine();
