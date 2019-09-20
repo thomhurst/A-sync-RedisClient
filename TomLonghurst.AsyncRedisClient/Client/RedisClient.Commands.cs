@@ -103,7 +103,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         public Task StringSetAsync(string key, string value, int timeToLiveInSeconds,
             AwaitOptions awaitOptions)
         {
-            return StringSetAsync(new RedisKeyValue(key, value), awaitOptions);
+            return StringSetAsync(new RedisKeyValue(key, value), timeToLiveInSeconds, awaitOptions);
         }
 
         private Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds, AwaitOptions awaitOptions)
