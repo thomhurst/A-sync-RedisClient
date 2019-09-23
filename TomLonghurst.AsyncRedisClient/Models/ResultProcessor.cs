@@ -230,6 +230,8 @@ namespace TomLonghurst.AsyncRedisClient.Models
             }
 
             var firstChar = line.ItemAt(0);
+            
+            // TODO Remove - Is for debugging
             var stringline = line.AsString();
 
             object result;
