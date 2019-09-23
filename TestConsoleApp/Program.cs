@@ -12,7 +12,7 @@ namespace TestConsoleApp
     class Program
     {
         private static RedisClientManager _redisManager;
-        private static Task<RedisClient> TomLonghurstRedisClient => _redisManager.GetRedisClient();
+        private static Task<RedisClient> TomLonghurstRedisClient => _redisManager.GetRedisClientAsync();
         
         private static readonly List<KeyValuePair<string, string>> TestData = new List<KeyValuePair<string, string>>();
         private static readonly Dictionary<int, DateTime> _lastActive = new Dictionary<int, DateTime>();
@@ -92,13 +92,13 @@ namespace TestConsoleApp
         {
             if (Random.Next(0, 2) != 0)
             {
-                await (await _redisManager.GetRedisClient()).StringGetAsync(TestData.PickRandom().Key);
+                await (await _redisManager.GetRedisClientAsync()).StringGetAsync(TestData.PickRandom().Key);
             }
             else
             {
                 var (key, value) = TestData.PickRandom();
                 
-                await (await _redisManager.GetRedisClient()).StringSetAsync(key, value, 120,
+                await (await _redisManager.GetRedisClientAsync()).StringSetAsync(key, value, 120,
                     AwaitOptions.FireAndForget);
             }
         } 

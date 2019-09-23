@@ -79,7 +79,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         protected RedisClient(RedisClientConfig redisClientConfig) : this()
         {
             ClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
-            //_connectionChecker = new Timer(CheckConnection, null, 30000, 30000);
+            _connectionChecker = new Timer(CheckConnection, null, 30000, 30000);
         }
 
         ~RedisClient()
@@ -140,13 +140,14 @@ namespace TomLonghurst.AsyncRedisClient.Client
             LastAction = "Waiting for Connecting lock to be free";
             await _connectSemaphoreSlim.WaitAsync(cancellationToken);
 
+            if (IsConnected)
+            {
+                _connectSemaphoreSlim.Release();
+                return;
+            }
+            
             try
             {
-                if (IsConnected)
-                {
-                    return;
-                }
-
                 LastAction = "Connecting";
                 Interlocked.Increment(ref _reconnectAttempts);
 
@@ -175,8 +176,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 {
                     Log.Debug("Socket Connect failed");
 
-                    _socket.Close();
-                    _socket = null;
+                    DisposeNetwork();
                     return;
                 }
 
@@ -199,24 +199,22 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
                     if (!_sslStream.IsEncrypted)
                     {
-                        Dispose();
+                        DisposeNetwork();
                         throw new SecurityException($"Could not establish an encrypted connection to Redis - {ClientConfig.Host}");
                     }
 
                     LastAction = "Creating SSL Stream Pipe";
-                    _pipeWriter = PipeWriter.Create(_sslStream);
-                    _pipeReader = PipeReader.Create(_sslStream);
+                    _pipeWriter = PipeWriter.Create(_sslStream, new StreamPipeWriterOptions(leaveOpen: true));
+                    _pipeReader = PipeReader.Create(_sslStream, new StreamPipeReaderOptions(leaveOpen: true));
                 }
                 else
                 {
                     LastAction = "Creating Socket Pipe";
-                    var pipe = SocketPipe.GetDuplexPipe(_socket, redisPipeOptions.SendOptions, redisPipeOptions.ReceiveOptions);
-                    _pipeWriter = pipe.Output;
-                    _pipeReader = pipe.Input;
+                    _socketPipe = SocketPipe.GetDuplexPipe(_socket, redisPipeOptions.SendOptions, redisPipeOptions.ReceiveOptions);
+                    _pipeWriter = _socketPipe.Output;
+                    _pipeReader = _socketPipe.Input;
                 }
 
-                IsConnected = true;
-                
                 if (!string.IsNullOrEmpty(ClientConfig.Password))
                 {
                     LastAction = "Authorizing";
@@ -234,6 +232,8 @@ namespace TomLonghurst.AsyncRedisClient.Client
                     LastAction = "Setting Client Name";
                     await SetClientNameAsync(cancellationToken);
                 }
+
+                IsConnected = true;
             }
             finally
             {
@@ -252,6 +252,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         }
         
         private bool _disposed;
+        private Timer _connectionChecker;
 
         private static RedisPipeOptions GetPipeOptions()
         {
@@ -297,7 +298,9 @@ namespace TomLonghurst.AsyncRedisClient.Client
             DisposeNetwork();
             LastAction = "Disposing Client";
             _connectSemaphoreSlim?.Dispose();
-            _backlog.Dispose();
+            _sendAndReceiveSemaphoreSlim?.Dispose();
+            _backlog?.Dispose();
+            _connectionChecker?.Dispose();
         }
 
         private void DisposeNetwork()
@@ -307,6 +310,8 @@ namespace TomLonghurst.AsyncRedisClient.Client
             _socket?.Close();
             _socket?.Dispose();
             _sslStream?.Dispose();
+            _pipeReader?.CompleteAsync();
+            _pipeWriter?.CompleteAsync();
         }
     }
 }

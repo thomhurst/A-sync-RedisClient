@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+
 namespace TomLonghurst.AsyncRedisClient.Client
 {
     public partial class RedisClient
@@ -15,6 +17,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             _clusterCommands = new ClusterCommands(this);
             _serverCommands = new ServerCommands(this);
+            _scriptCommands = new ScriptCommands(this);
         }
     }
 }

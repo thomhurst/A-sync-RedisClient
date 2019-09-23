@@ -12,6 +12,7 @@ using TomLonghurst.AsyncRedisClient.Models;
 using TomLonghurst.AsyncRedisClient.Models.Backlog;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
 using TomLonghurst.AsyncRedisClient.Extensions;
+using TomLonghurst.AsyncRedisClient.Pipes;
 #if NETSTANDARD
 using System.Linq;
 #endif
@@ -34,6 +35,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
         private long _operationsPerformed;
 
+        private SocketPipe _socketPipe;
         private PipeReader _pipeReader;
         private PipeWriter _pipeWriter;
         
@@ -110,6 +112,8 @@ namespace TomLonghurst.AsyncRedisClient.Client
                     await TryConnectAsync(cancellationToken).ConfigureAwait(false);
                 }
 
+                await ResetPipes();
+
                 await Write(command);
 
                 LastAction = "Reading Bytes Async";
@@ -142,6 +146,23 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 }
                 
                 IsBusy = false;
+            }
+        }
+
+        private async ValueTask ResetPipes()
+        {
+            if (_socketPipe == null)
+            {
+                _pipeWriter.CompleteAsync();
+                _pipeReader.CompleteAsync();
+                _pipeWriter = PipeWriter.Create(_sslStream, new StreamPipeWriterOptions(leaveOpen: true));
+                _pipeReader = PipeReader.Create(_sslStream, new StreamPipeReaderOptions(leaveOpen: true));
+            }
+            else
+            {
+                await _pipeWriter.CompleteAsync();
+                await _pipeReader.CompleteAsync();
+                _socketPipe.Reset();
             }
         }
 

@@ -87,9 +87,12 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
             SequencePosition? endOfLinePosition;
             while ((endOfLinePosition = buffer.GetEndOfLinePosition()) == null)
             {
-                // We don't want to consume it yet - So don't advance past the start
-                // But do tell it we've examined up until the end - But it's not enough and we need more
-                // We need to call advance before calling another read though
+                
+                if (readResult.IsCompleted && readResult.Buffer.IsEmpty)
+                {
+                    return default;
+                }
+                
                 pipeReader.AdvanceTo(buffer.End);
 
                 if (!pipeReader.TryRead(out readResult))
@@ -114,6 +117,11 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
         {
             while (readResult.Buffer.GetEndOfLinePosition() == null)
             {
+                if (readResult.IsCompleted && readResult.Buffer.IsEmpty)
+                {
+                    return default;
+                }
+                
                 // We don't want to consume it yet - So don't advance past the start
                 // But do tell it we've examined up until the end - But it's not enough and we need more
                 // We need to call advance before calling another read though

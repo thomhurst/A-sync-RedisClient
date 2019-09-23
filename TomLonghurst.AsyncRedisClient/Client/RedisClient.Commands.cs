@@ -214,17 +214,25 @@ namespace TomLonghurst.AsyncRedisClient.Client
             await RunWithTimeout(async token =>
             {
                 var encodedKeysAndValues = new List<IRedisEncodable>();
-                foreach (var keyValuePair in keyValuePairs)
+                var redisKeyValues = keyValuePairs.ToList();
+                foreach (var keyValuePair in redisKeyValues)
                 {
                     encodedKeysAndValues.Add(keyValuePair.Key.ToRedisEncoded());
                     encodedKeysAndValues.Add(keyValuePair.Value.ToRedisEncoded());
                 }
-                
+
                 var setCommand = RedisCommand.From(Commands.MSet, encodedKeysAndValues);
                 await SendOrQueueAsync(setCommand, SuccessResultProcessor, token);
+
+                var keys = redisKeyValues.Select(value => value.Key).ToList();
+                var arguments = new List<string>(keys) { [0] = timeToLiveInSeconds.ToString() };
+
+                var expireTask = Scripts.EvalSha(await Scripts.LazyMultiExpireLuaScript.Value,
+                    keys,
+                    arguments, CancellationToken.None);
                 
-                var expireCommand = keyValuePairs.Select(keyValuePair => RedisCommand.From(Commands.Expire, keyValuePair.Key.ToRedisEncoded(), timeToLiveInSeconds.ToRedisEncoded())).ToFireAndForgetCommand();
-                var expireTask = SendOrQueueAsync(expireCommand, SuccessResultProcessor, token);
+//                var expireCommand = redisKeyValues.Select(keyValuePair => RedisCommand.From(Commands.Expire, keyValuePair.Key.ToRedisEncoded(), timeToLiveInSeconds.ToRedisEncoded())).ToFireAndForgetCommand();
+//                var expireTask = SendOrQueueAsync(expireCommand, SuccessResultProcessor, token);
                 
                 if (awaitOptions == AwaitOptions.AwaitCompletion)
                 {

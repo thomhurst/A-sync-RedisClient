@@ -13,7 +13,7 @@ namespace TomLonghurst.AsyncRedisClient.Pipes
 {
     public class SocketPipe : IDuplexPipe
     {
-        public static IDuplexPipe GetDuplexPipe(Socket socket, PipeOptions sendPipeOptions,
+        public static SocketPipe GetDuplexPipe(Socket socket, PipeOptions sendPipeOptions,
             PipeOptions receivePipeOptions)
             => new SocketPipe(socket, sendPipeOptions, receivePipeOptions, true, true);
 
@@ -21,6 +21,12 @@ namespace TomLonghurst.AsyncRedisClient.Pipes
 
         private readonly Pipe _readPipe;
         private readonly Pipe _writePipe;
+
+        public void Reset()
+        {
+            _writePipe.Reset();
+            _readPipe.Reset();
+        }
 
         public SocketPipe(Socket socket, PipeOptions sendPipeOptions, PipeOptions receivePipeOptions, bool read,
             bool write)
