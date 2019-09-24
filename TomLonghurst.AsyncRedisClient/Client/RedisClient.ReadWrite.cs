@@ -151,6 +151,11 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
         private async ValueTask ResetPipes()
         {
+            if (DateTime.Now.Second != 0)
+            {
+                return;
+            }
+            
             if (_socketPipe == null)
             {
                 _pipeWriter.CompleteAsync();
