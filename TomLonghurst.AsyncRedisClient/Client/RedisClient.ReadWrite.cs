@@ -119,19 +119,19 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
                 LastAction = "Reading Bytes Async";
 
-                return await resultProcessor.Start(this, _pipeReader);
+                return await resultProcessor.Start(this, _pipeReader, cancellationToken);
             }
             catch (Exception innerException)
             {
-                if (innerException.IsSameOrSubclassOf(typeof(RedisRecoverableException)) ||
-                    innerException.IsSameOrSubclassOf(typeof(OperationCanceledException)))
-                {
-                    throw;
-                }
+//                if (innerException.IsSameOrSubclassOf(typeof(RedisRecoverableException)) ||
+//                    innerException.IsSameOrSubclassOf(typeof(OperationCanceledException)))
+//                {
+//                    throw;
+//                }
 
                 DisposeNetwork();
                 
-                if (innerException.IsSameOrSubclassOf(typeof(RedisNonRecoverableException)))
+                if (innerException.IsSameOrSubclassOf(typeof(RedisException)))
                 {
                     throw;
                 } 

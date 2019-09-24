@@ -3,6 +3,7 @@ using System.Buffers;
 using System.IO.Pipelines;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 
@@ -80,7 +81,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
         }
 
         internal static async ValueTask<ReadResult> AdvanceToLineTerminator(this PipeReader pipeReader,
-            ReadResult readResult)
+            ReadResult readResult, CancellationToken cancellationToken)
         {
             var buffer = readResult.Buffer;
 
@@ -97,7 +98,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
 
                 if (!pipeReader.TryRead(out readResult))
                 {
-                    readResult = await pipeReader.ReadAsync().ConfigureAwait(false);
+                    readResult = await pipeReader.ReadAsync(cancellationToken).ConfigureAwait(false);
                 }
 
                 buffer = readResult.Buffer;
@@ -113,7 +114,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
             return readResult;
         }
 
-        internal static async ValueTask<ReadResult> ReadUntilEndOfLineFound(this PipeReader pipeReader, ReadResult readResult)
+        internal static async ValueTask<ReadResult> ReadUntilEndOfLineFound(this PipeReader pipeReader, ReadResult readResult, CancellationToken cancellationToken)
         {
             while (readResult.Buffer.GetEndOfLinePosition() == null)
             {
@@ -129,7 +130,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
 
                 if (!pipeReader.TryRead(out readResult))
                 {
-                    readResult = await pipeReader.ReadAsync().ConfigureAwait(false);
+                    readResult = await pipeReader.ReadAsync(cancellationToken).ConfigureAwait(false);
                 }
             }
 

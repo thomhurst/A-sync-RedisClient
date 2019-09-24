@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Helpers;
@@ -12,19 +13,20 @@ namespace TomLonghurst.AsyncRedisClient.Models
 {
     public abstract class ResultProcessor
     {
-        protected Client.RedisClient _redisClient;
+        protected Client.RedisClient RedisClient;
         protected ReadResult ReadResult;
         protected PipeReader PipeReader;
+        protected CancellationToken CancellationToken;
         
-        internal void SetMembers(Client.RedisClient redisClient, PipeReader pipeReader)
+        internal void SetMembers(Client.RedisClient redisClient, PipeReader pipeReader, CancellationToken cancellationToken)
         {
-            _redisClient = redisClient;
+            RedisClient = redisClient;
             PipeReader = pipeReader;
         }
         
-        internal void SetMembers(Client.RedisClient redisClient, PipeReader pipeReader, ReadResult readResult)
+        internal void SetMembers(Client.RedisClient redisClient, PipeReader pipeReader, ReadResult readResult, CancellationToken cancellationToken)
         {
-            _redisClient = redisClient;
+            RedisClient = redisClient;
             PipeReader = pipeReader;
             ReadResult = readResult;
         }
@@ -32,17 +34,17 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
     public abstract class ResultProcessor<T> : ResultProcessor
     {
-        public IRedisCommand LastCommand { get => _redisClient.LastCommand; set => _redisClient.LastCommand = value; }
+        public IRedisCommand LastCommand { get => RedisClient.LastCommand; set => RedisClient.LastCommand = value; }
 
-        public string LastAction { get => _redisClient.LastAction; set => _redisClient.LastAction = value; }
+        public string LastAction { get => RedisClient.LastAction; set => RedisClient.LastAction = value; }
 
-        internal async ValueTask<T> Start(Client.RedisClient redisClient, PipeReader pipeReader)
+        internal async ValueTask<T> Start(Client.RedisClient redisClient, PipeReader pipeReader, CancellationToken cancellationToken)
         {
-            SetMembers(redisClient, pipeReader);
+            SetMembers(redisClient, pipeReader, cancellationToken);
 
             if (!PipeReader.TryRead(out ReadResult))
             {
-                ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
+                ReadResult = await PipeReader.ReadAsync(cancellationToken).ConfigureAwait(false);
             }
 
             return await Process();
@@ -98,7 +100,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
             if (!PipeReader.TryRead(out ReadResult))
             {
                 LastAction = "Reading Data Asynchronously in ReadData";
-                ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
+                ReadResult = await PipeReader.ReadAsync(CancellationToken).ConfigureAwait(false);
             }
 
             buffer = ReadResult.Buffer;
@@ -138,7 +140,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
                 if (!PipeReader.TryRead(out ReadResult))
                 {
                     LastAction = "Reading Data Asynchronously in ReadData Loop";
-                    ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
+                    ReadResult = await PipeReader.ReadAsync(CancellationToken).ConfigureAwait(false);
                 }
 
                 buffer = ReadResult.Buffer.Slice(0,
@@ -165,10 +167,10 @@ namespace TomLonghurst.AsyncRedisClient.Models
                 if (!PipeReader.TryRead(out ReadResult))
                 {
                     LastAction = "Reading Data Asynchronously in ReadData Loop";
-                    ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
+                    ReadResult = await PipeReader.ReadAsync(CancellationToken).ConfigureAwait(false);
                 }
 
-                await PipeReader.AdvanceToLineTerminator(ReadResult);
+                await PipeReader.AdvanceToLineTerminator(ReadResult, CancellationToken);
             }
 
             return bytes;
@@ -208,7 +210,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
             {
                 LastAction = "Reading until End of Line found";
 
-                ReadResult = await PipeReader.ReadUntilEndOfLineFound(ReadResult);
+                ReadResult = await PipeReader.ReadUntilEndOfLineFound(ReadResult, CancellationToken);
 
                 LastAction = "Finding End of Line Position";
                 endOfLinePosition = ReadResult.Buffer.GetEndOfLinePosition();
@@ -245,38 +247,38 @@ namespace TomLonghurst.AsyncRedisClient.Models
             
             if (firstChar == '*')
             {
-                var processor = _redisClient.ArrayResultProcessor;
-                processor.SetMembers(_redisClient, PipeReader, ReadResult);
+                var processor = RedisClient.ArrayResultProcessor;
+                processor.SetMembers(RedisClient, PipeReader, ReadResult, CancellationToken);
                 result = await processor.Process();
             }
             else if (firstChar == '+')
             {
-                var processor = _redisClient.WordResultProcessor;
-                processor.SetMembers(_redisClient, PipeReader, ReadResult);
+                var processor = RedisClient.WordResultProcessor;
+                processor.SetMembers(RedisClient, PipeReader, ReadResult, CancellationToken);
                 result =  await processor.Process();
             }
             else if (firstChar == ':')
             {
-                var processor = _redisClient.IntegerResultProcessor;
-                processor.SetMembers(_redisClient, PipeReader, ReadResult);
+                var processor = RedisClient.IntegerResultProcessor;
+                processor.SetMembers(RedisClient, PipeReader, ReadResult, CancellationToken);
                 result = await processor.Process();
             }
             else if (firstChar == '$')
             {
-                var processor = _redisClient.DataResultProcessor;
-                processor.SetMembers(_redisClient, PipeReader, ReadResult);
+                var processor = RedisClient.DataResultProcessor;
+                processor.SetMembers(RedisClient, PipeReader, ReadResult, CancellationToken);
                 result = await processor.Process();
             }
             else if (firstChar == '-')
             {
                 var redisResponse = ReadResult.Buffer.AsString();
                 PipeReader.AdvanceTo(ReadResult.Buffer.End);
-                throw new RedisFailedCommandException(redisResponse, _redisClient.LastCommand);
+                throw new RedisFailedCommandException(redisResponse, RedisClient.LastCommand);
             }
             else
             {
-                var processor = _redisClient.EmptyResultProcessor;
-                processor.SetMembers(_redisClient, PipeReader, ReadResult);
+                var processor = RedisClient.EmptyResultProcessor;
+                processor.SetMembers(RedisClient, PipeReader, ReadResult, CancellationToken);
                 result = await processor.Process();
             }
 
@@ -408,7 +410,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
                 if (!PipeReader.TryRead(out ReadResult))
                 {
                     LastAction = "Reading Data Asynchronously in ExpectArray";
-                    ReadResult = await PipeReader.ReadAsync().ConfigureAwait(false);
+                    ReadResult = await PipeReader.ReadAsync(CancellationToken).ConfigureAwait(false);
                 }
 
                 results[i] = (await ReadData()).ToArray();

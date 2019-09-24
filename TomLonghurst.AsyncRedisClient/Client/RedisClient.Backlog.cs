@@ -58,14 +58,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
                     foreach (var backlogItem in validItems)
                     {
-                        try
-                        {
-                            await backlogItem.SetResult();
-                        }
-                        catch (Exception e)
-                        {
-                            backlogItem.SetException(e);
-                        }
+                        await backlogItem.SetResult();
                     }
                 }
                 catch (Exception e)
