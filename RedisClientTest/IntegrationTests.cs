@@ -388,6 +388,18 @@ namespace RedisClientTest
                 Assert.That(value.Value, Is.EqualTo("123"));
             }
         }
+
+        [TestCase(AwaitOptions.AwaitCompletion)]
+        [TestCase(AwaitOptions.FireAndForget)]
+        [Repeat(2)]
+        public async Task SetGetMultipleKeyWithTtlMultiple(AwaitOptions awaitOptions)
+        {
+            await SetGetMultipleKeyWithTtl(awaitOptions);
+            await SetGetMultipleKeyWithTtl(awaitOptions);
+            await SetGetMultipleKeyWithTtl(awaitOptions);
+            await SetGetMultipleKeyWithTtl(awaitOptions);
+            await SetGetMultipleKeyWithTtl(awaitOptions);
+        }
         
         [TestCase(AwaitOptions.AwaitCompletion)]
         [TestCase(AwaitOptions.FireAndForget)]

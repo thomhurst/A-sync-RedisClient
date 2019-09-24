@@ -68,7 +68,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 var scriptHash = ScriptNameToShaKey.ContainsKey(sha1Hash) ? ScriptNameToShaKey[sha1Hash] : sha1Hash;
                 
                 var keysList = keys.ToList();
-                var command = RedisCommand.From(Commands.EvalSha, scriptHash.ToRedisEncoded(), keysList.Count.ToRedisEncoded(), string.Join(" ", keysList).ToRedisEncoded(), string.Join(" ", arguments).ToRedisEncoded());
+                var command = RedisCommand.FromScript(Commands.EvalSha, scriptHash.ToRedisEncoded(), keysList, arguments);
 
                 var scriptResult = await _redisClient.RunWithTimeout(async token =>
                     {

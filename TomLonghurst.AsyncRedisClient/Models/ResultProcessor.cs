@@ -21,6 +21,13 @@ namespace TomLonghurst.AsyncRedisClient.Models
             _redisClient = redisClient;
             PipeReader = pipeReader;
         }
+        
+        internal void SetMembers(Client.RedisClient redisClient, PipeReader pipeReader, ReadResult readResult)
+        {
+            _redisClient = redisClient;
+            PipeReader = pipeReader;
+            ReadResult = readResult;
+        }
     }
 
     public abstract class ResultProcessor<T> : ResultProcessor
@@ -239,25 +246,25 @@ namespace TomLonghurst.AsyncRedisClient.Models
             if (firstChar == '*')
             {
                 var processor = _redisClient.ArrayResultProcessor;
-                processor.SetMembers(_redisClient, PipeReader);
+                processor.SetMembers(_redisClient, PipeReader, ReadResult);
                 result = await processor.Process();
             }
             else if (firstChar == '+')
             {
                 var processor = _redisClient.WordResultProcessor;
-                processor.SetMembers(_redisClient, PipeReader);
+                processor.SetMembers(_redisClient, PipeReader, ReadResult);
                 result =  await processor.Process();
             }
             else if (firstChar == ':')
             {
                 var processor = _redisClient.IntegerResultProcessor;
-                processor.SetMembers(_redisClient, PipeReader);
+                processor.SetMembers(_redisClient, PipeReader, ReadResult);
                 result = await processor.Process();
             }
             else if (firstChar == '$')
             {
                 var processor = _redisClient.DataResultProcessor;
-                processor.SetMembers(_redisClient, PipeReader);
+                processor.SetMembers(_redisClient, PipeReader, ReadResult);
                 result = await processor.Process();
             }
             else if (firstChar == '-')
@@ -269,7 +276,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
             else
             {
                 var processor = _redisClient.EmptyResultProcessor;
-                processor.SetMembers(_redisClient, PipeReader);
+                processor.SetMembers(_redisClient, PipeReader, ReadResult);
                 result = await processor.Process();
             }
 
