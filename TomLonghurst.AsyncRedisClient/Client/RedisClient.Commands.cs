@@ -225,7 +225,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 await SendOrQueueAsync(setCommand, SuccessResultProcessor, token);
 
                 var keys = redisKeyValues.Select(value => value.Key).ToList();
-                var arguments = new List<string>(keys) { [0] = timeToLiveInSeconds.ToString() };
+                var arguments = new List<string>() { timeToLiveInSeconds.ToString() };
 
                 var expireTask = Scripts.EvalSha(await Scripts.LazyMultiExpireLuaScript.Value,
                     keys,
