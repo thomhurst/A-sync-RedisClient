@@ -50,6 +50,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         public DateTime LastUsed { get; internal set; }
 
         private Func<RedisTelemetryResult, Task> _telemetryCallback;
+        private int written;
 
         // TODO Make public
         private void SetTelemetryCallback(Func<RedisTelemetryResult, Task> telemetryCallback)
@@ -151,10 +152,12 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
         private async ValueTask ResetPipes()
         {
-            if (DateTime.Now.Second != 0)
+            if (written < 1000)
             {
                 return;
             }
+
+            written = 0;
             
             if (_socketPipe == null)
             {
@@ -173,6 +176,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
         internal ValueTask<FlushResult> Write(IRedisCommand command)
         {
+            written++;
             var encodedCommandList = command.EncodedCommandList;
 
             LastAction = "Writing Bytes";
