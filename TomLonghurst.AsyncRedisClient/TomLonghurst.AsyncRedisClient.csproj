@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <LangVersion>latest</LangVersion>
-    <PackageVersion>0.0.86-alpha16</PackageVersion>
+    <PackageVersion>0.0.86-alpha17</PackageVersion>
     <Description>An Asynchronous Redis Client for .NET</Description>
     <Copyright>Tom Longhurst</Copyright>
     <PackageProjectUrl>https://github.com/thomhurst/A-sync-RedisClient</PackageProjectUrl>
