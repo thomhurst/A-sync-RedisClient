@@ -123,15 +123,15 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
             catch (Exception innerException)
             {
-//                if (innerException.IsSameOrSubclassOf(typeof(RedisRecoverableException)) ||
-//                    innerException.IsSameOrSubclassOf(typeof(OperationCanceledException)))
-//                {
-//                    throw;
-//                }
+                if (innerException.IsSameOrSubclassOf(typeof(RedisRecoverableException)) ||
+                    innerException.IsSameOrSubclassOf(typeof(OperationCanceledException)))
+                {
+                    throw;
+                }
 
                 DisposeNetwork();
                 
-                if (innerException.IsSameOrSubclassOf(typeof(RedisException)))
+                if (innerException.IsSameOrSubclassOf(typeof(RedisNonRecoverableException)))
                 {
                     throw;
                 } 
@@ -209,14 +209,14 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
             catch (OperationCanceledException operationCanceledException)
             {
-                throw TimeoutOrCancelledException(operationCanceledException, originalCancellationToken);
+                throw WaitTimeoutOrCancelledException(operationCanceledException, originalCancellationToken);
             }
             catch (SocketException socketException)
             {
-                if (socketException.InnerException?.GetType().IsAssignableFrom(typeof(OperationCanceledException)) ==
+                if (socketException.InnerException?.IsSameOrSubclassOf(typeof(OperationCanceledException)) ==
                     true)
                 {
-                    throw TimeoutOrCancelledException(socketException.InnerException, originalCancellationToken);
+                    throw WaitTimeoutOrCancelledException(socketException.InnerException, originalCancellationToken);
                 }
 
                 throw;
@@ -250,14 +250,14 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
             catch (OperationCanceledException operationCanceledException)
             {
-                throw TimeoutOrCancelledException(operationCanceledException, originalCancellationToken);
+                throw WaitTimeoutOrCancelledException(operationCanceledException, originalCancellationToken);
             }
             catch (SocketException socketException)
             {
-                if (socketException.InnerException?.GetType().IsAssignableFrom(typeof(OperationCanceledException)) ==
+                if (socketException.InnerException?.IsSameOrSubclassOf(typeof(OperationCanceledException)) ==
                     true)
                 {
-                    throw TimeoutOrCancelledException(socketException.InnerException, originalCancellationToken);
+                    throw WaitTimeoutOrCancelledException(socketException.InnerException, originalCancellationToken);
                 }
 
                 throw;
@@ -268,14 +268,9 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
         }
 
-        private Exception TimeoutOrCancelledException(Exception exception, CancellationToken originalCancellationToken)
+        private Exception WaitTimeoutOrCancelledException(Exception exception, CancellationToken originalCancellationToken)
         {
-            if (originalCancellationToken.IsCancellationRequested)
-            {
-                throw exception;
-            }
-
-            throw new RedisOperationTimeoutException(this);
+            return originalCancellationToken.IsCancellationRequested ? exception : new RedisWaitTimeoutException(this);
         }
     }
 }

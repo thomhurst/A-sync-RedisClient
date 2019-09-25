@@ -2,11 +2,11 @@ using TomLonghurst.AsyncRedisClient.Helpers;
 
 namespace TomLonghurst.AsyncRedisClient.Exceptions
 {
-    public class RedisOperationTimeoutException : RedisException
+    public class RedisWaitTimeoutException : RedisRecoverableException
     {
         private readonly Client.RedisClient _redisClient;
 
-        internal RedisOperationTimeoutException(Client.RedisClient redisClient)
+        internal RedisWaitTimeoutException(Client.RedisClient redisClient)
         {
             _redisClient = redisClient;
         }

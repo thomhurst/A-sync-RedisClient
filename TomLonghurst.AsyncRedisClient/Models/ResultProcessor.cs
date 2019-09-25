@@ -44,7 +44,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
             if (!PipeReader.TryRead(out ReadResult))
             {
-                ReadResult = await PipeReader.ReadAsync(cancellationToken).ConfigureAwait(false);
+                ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken).ConfigureAwait(false);
             }
 
             return await Process();
@@ -100,7 +100,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
             if (!PipeReader.TryRead(out ReadResult))
             {
                 LastAction = "Reading Data Asynchronously in ReadData";
-                ReadResult = await PipeReader.ReadAsync(CancellationToken).ConfigureAwait(false);
+                ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken).ConfigureAwait(false);
             }
 
             buffer = ReadResult.Buffer;
@@ -133,6 +133,11 @@ namespace TomLonghurst.AsyncRedisClient.Models
                 {
                     return default;
                 }
+
+                if (ReadResult.IsCanceled)
+                {
+                    return default;
+                }
                 
                 LastAction = "Advancing Buffer in ReadData Loop";
 
@@ -140,7 +145,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
                 if (!PipeReader.TryRead(out ReadResult))
                 {
                     LastAction = "Reading Data Asynchronously in ReadData Loop";
-                    ReadResult = await PipeReader.ReadAsync(CancellationToken).ConfigureAwait(false);
+                    ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken).ConfigureAwait(false);
                 }
 
                 buffer = ReadResult.Buffer.Slice(0,
@@ -167,7 +172,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
                 if (!PipeReader.TryRead(out ReadResult))
                 {
                     LastAction = "Reading Data Asynchronously in ReadData Loop";
-                    ReadResult = await PipeReader.ReadAsync(CancellationToken).ConfigureAwait(false);
+                    ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken).ConfigureAwait(false);
                 }
 
                 await PipeReader.AdvanceToLineTerminator(ReadResult, CancellationToken);
@@ -410,7 +415,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
                 if (!PipeReader.TryRead(out ReadResult))
                 {
                     LastAction = "Reading Data Asynchronously in ExpectArray";
-                    ReadResult = await PipeReader.ReadAsync(CancellationToken).ConfigureAwait(false);
+                    ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken).ConfigureAwait(false);
                 }
 
                 results[i] = (await ReadData()).ToArray();

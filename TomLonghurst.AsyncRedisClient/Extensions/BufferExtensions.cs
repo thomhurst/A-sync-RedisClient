@@ -88,8 +88,12 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
             SequencePosition? endOfLinePosition;
             while ((endOfLinePosition = buffer.GetEndOfLinePosition()) == null)
             {
-                
                 if (readResult.IsCompleted && readResult.Buffer.IsEmpty)
+                {
+                    return default;
+                }
+                
+                if (readResult.IsCanceled)
                 {
                     return default;
                 }
@@ -98,7 +102,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
 
                 if (!pipeReader.TryRead(out readResult))
                 {
-                    readResult = await pipeReader.ReadAsync(cancellationToken).ConfigureAwait(false);
+                    readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken).ConfigureAwait(false);
                 }
 
                 buffer = readResult.Buffer;
@@ -122,7 +126,12 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
                 {
                     return default;
                 }
-                
+
+                if (readResult.IsCanceled)
+                {
+                    return default;
+                }
+
                 // We don't want to consume it yet - So don't advance past the start
                 // But do tell it we've examined up until the end - But it's not enough and we need more
                 // We need to call advance before calling another read though
@@ -130,7 +139,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
 
                 if (!pipeReader.TryRead(out readResult))
                 {
-                    readResult = await pipeReader.ReadAsync(cancellationToken).ConfigureAwait(false);
+                    readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken).ConfigureAwait(false);
                 }
             }
 
