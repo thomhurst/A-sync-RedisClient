@@ -41,14 +41,26 @@ namespace TomLonghurst.AsyncRedisClient.Client
         
         private Thread BacklogWorkerThread;
 
-        internal string LastAction;
+        private string _lastAction;
+
+        internal string LastAction
+        {
+            get { return _lastAction; }
+            set
+            {
+#if DEBUG
+                Console.WriteLine($"Last Action: {value}");
+#endif
+                _lastAction = value;
+            }
+        }
 
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
         public DateTime LastUsed { get; internal set; }
 
         private Func<RedisTelemetryResult, Task> _telemetryCallback;
-        private int written;
+        private int _written;
 
         // TODO Make public
         private void SetTelemetryCallback(Func<RedisTelemetryResult, Task> telemetryCallback)
@@ -63,8 +75,13 @@ namespace TomLonghurst.AsyncRedisClient.Client
             bool isReconnectionAttempt = false)
         {
             LastUsed = DateTime.Now;
-
-            LastAction = "Throwing Cancelled Exception due to Cancelled Token";
+            
+#if DEBUG
+            if (cancellationToken.IsCancellationRequested)
+            {
+                LastAction = "Throwing Cancelled Exception due to Cancelled Token";
+            }
+#endif
             cancellationToken.ThrowIfCancellationRequested();
 
             Interlocked.Increment(ref _outStandingOperations);
@@ -85,6 +102,8 @@ namespace TomLonghurst.AsyncRedisClient.Client
             var taskCompletionSource = new TaskCompletionSource<T>();
 
             _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor, this, _pipeReader));
+
+            cancellationToken.Register(() => taskCompletionSource.TrySetCanceled(cancellationToken));
 
             return new ValueTask<T>(taskCompletionSource.Task);
         }
@@ -114,8 +133,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 //await ResetPipes();
 
                 await Write(command);
-
-                LastAction = "Reading Bytes Async";
 
                 return await resultProcessor.Start(this, _pipeReader, cancellationToken);
             }
@@ -150,12 +167,12 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
         private async ValueTask ResetPipes()
         {
-            if (written < 1000)
+            if (_written < 1000)
             {
                 return;
             }
 
-            written = 0;
+            _written = 0;
             
             if (_socketPipe == null)
             {
@@ -172,21 +189,17 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
         }
 
-        internal ValueTask<FlushResult> Write(IRedisCommand command)
+        internal async ValueTask Write(IRedisCommand command)
         {
-            written++;
+            _written++;
             var encodedCommandList = command.EncodedCommandList;
 
             LastAction = "Writing Bytes";
             
-            var task = _pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray().AsMemory());
-
-            if (!task.IsCompleted)
+            foreach (var encodedCommand in encodedCommandList)
             {
-                return task;
+                await _pipeWriter.WriteAsync(encodedCommand);
             }
-
-            return default;
         }
 
         
@@ -211,8 +224,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
             catch (SocketException socketException)
             {
-                if (socketException.InnerException?.IsSameOrSubclassOf(typeof(OperationCanceledException)) ==
-                    true)
+                if (socketException.InnerException?.IsSameOrSubclassOf(typeof(OperationCanceledException)) == true)
                 {
                     throw WaitTimeoutOrCancelledException(socketException.InnerException, originalCancellationToken);
                 }

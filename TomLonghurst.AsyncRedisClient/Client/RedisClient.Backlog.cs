@@ -34,14 +34,8 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 
                 var backlogItems = _backlog.DequeueAll();
 
-                var itemsPastTimeout = backlogItems.Where(item => item.CancellationToken.IsCancellationRequested).ToList();
-                
-                foreach (var timedOutItem in itemsPastTimeout)
-                {
-                    timedOutItem.SetCancelled();
-                }
-                
-                var validItems = backlogItems.Where(item => !itemsPastTimeout.Contains(item)).ToList();
+                // Items cancelled will be taken care of by the CancellationToken.Register in the SendOrQueue method
+                var validItems = backlogItems.Where(item => !item.CancellationToken.IsCancellationRequested).ToList();
                 
                 var pipelinedCommand = validItems
                     .Select(backlogItem => backlogItem.RedisCommand).ToList()

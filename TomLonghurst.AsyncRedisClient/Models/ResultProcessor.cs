@@ -54,8 +54,11 @@ namespace TomLonghurst.AsyncRedisClient.Models
         {
             SetMembers(redisClient, pipeReader, cancellationToken);
 
+            LastAction = "Starting read in ResultProcessor.Start";
+            
             ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken).ConfigureAwait(false);
 
+            LastAction = "Starting ResultProcessor.Processor";
             return await Process();
         }
 
@@ -68,7 +71,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
             if (buffer.IsEmpty)
             {
-                throw new RedisDataException("Zero Length Response at start of ReadData");
+                throw new RedisDataException("Empty buffer at start of ReadData");
             }
 
             var line = await GetOrReadLine();
@@ -78,7 +81,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
             if (firstChar != ByteConstants.Dollar)
             {
                 var stringLine = line.AsStringWithoutLineTerminators();
-                PipeReader.AdvanceTo(buffer.End);
+                PipeReader.AdvanceTo(line.End);
                 
                 if (firstChar == ByteConstants.Dash)
                 {
@@ -194,8 +197,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
             var slicedBytes = ReadResult.Buffer.Slice(buffer.End);
             if (slicedBytes.IsEmpty)
             {
-                PipeReader.AdvanceTo(buffer.End);
-                return false;
+                throw new RedisDataException("Buffer is empty in TryAdvanceToLineTerminator");
             }
 
             var endOfLinePosition = slicedBytes.GetEndOfLinePosition();
@@ -204,7 +206,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
                 PipeReader.AdvanceTo(buffer.End);
                 return false;
             }
-
+            
             PipeReader.AdvanceTo(endOfLinePosition.Value);
             return true;
         }
