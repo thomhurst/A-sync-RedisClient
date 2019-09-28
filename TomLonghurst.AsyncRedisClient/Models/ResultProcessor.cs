@@ -53,10 +53,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
         {
             SetMembers(redisClient, pipeReader, cancellationToken);
 
-            if (!PipeReader.TryRead(out ReadResult))
-            {
-                ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken).ConfigureAwait(false);
-            }
+            ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken).ConfigureAwait(false);
 
             return await Process();
         }
@@ -214,13 +211,21 @@ namespace TomLonghurst.AsyncRedisClient.Models
         protected ValueTask<ReadOnlySequence<byte>> ReadLine()
         {
             LastAction = "Finding End of Line Position";
+            
+            var endOfLinePosition = ReadResult.Buffer.GetEndOfLinePosition();
+            if (endOfLinePosition != null)
+            {
+                return new ValueTask<ReadOnlySequence<byte>>(ReadResult.Buffer.Slice(0, endOfLinePosition.Value));
+            }
 
             if (ReadResult.IsCompleted && ReadResult.Buffer.IsEmpty)
             {
-                return default;
+                throw new Exception("Read is completed and buffer is empty - Can't find a complete line in ReadLine'");
             }
 
 #if !NETSTANDARD2_0 && !NETCOREAPP2_2
+            PipeReader.AdvanceTo(ReadResult.Buffer.Start, ReadResult.Buffer.End);
+            
             var reader = new SequenceReader<byte>(ReadResult.Buffer);
 
             if (reader.TryReadTo(out ReadOnlySequence<byte> line, (byte) '\n', false))
