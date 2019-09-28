@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Linq;
+using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Extensions;
 
 namespace TomLonghurst.AsyncRedisClient.Helpers
@@ -14,12 +15,12 @@ namespace TomLonghurst.AsyncRedisClient.Helpers
                 return 0;
             }
 
-            if (buffer.Length >= 2 && buffer.ItemAt(0) == '-' && buffer.ItemAt(1) == '1')
+            if (buffer.Length >= 2 && buffer.ItemAt(0) == ByteConstants.Dash && buffer.ItemAt(1) == ByteConstants.One)
             {
                 return -1;
             }
             
-            if (!char.IsDigit((char) buffer.ItemAt(0)) && buffer.ItemAt(0) != '-')
+            if (!char.IsDigit((char) buffer.ItemAt(0)) && buffer.ItemAt(0) != ByteConstants.Dash)
             {
                 return Parse(buffer.Slice(1));
             }

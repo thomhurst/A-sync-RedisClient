@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 
 namespace TomLonghurst.AsyncRedisClient.Extensions
@@ -159,7 +160,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
                 throw new RedisDataException("The buffer is empty in GetEndOfLinePosition");
             }
 
-            var sequencePosition = buffer.PositionOf((byte) '\n');
+            var sequencePosition = buffer.PositionOf(ByteConstants.NewLine);
             
             if (sequencePosition == null)
             {

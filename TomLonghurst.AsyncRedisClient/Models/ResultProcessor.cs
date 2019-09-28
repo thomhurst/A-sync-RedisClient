@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
+using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Helpers;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
@@ -74,12 +75,12 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
             var firstChar = line.ItemAt(0);
             
-            if (firstChar != '$')
+            if (firstChar != ByteConstants.Dollar)
             {
                 var stringLine = line.AsStringWithoutLineTerminators();
                 PipeReader.AdvanceTo(buffer.End);
                 
-                if (firstChar == '-')
+                if (firstChar == ByteConstants.Dash)
                 {
                     throw new RedisFailedCommandException(stringLine, LastCommand);
                 }
@@ -226,7 +227,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
 #if !NETSTANDARD2_0 && !NETCOREAPP2_2
             var reader = new SequenceReader<byte>(ReadResult.Buffer);
 
-            if (reader.TryReadTo(out ReadOnlySequence<byte> line, (byte) '\n', false))
+            if (reader.TryReadTo(out ReadOnlySequence<byte> line, ByteConstants.NewLine, false))
             {
                 return new ValueTask<ReadOnlySequence<byte>>(line);
             }
@@ -277,31 +278,31 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
             object result;
 
-            if (firstChar == '*')
+            if (firstChar == ByteConstants.Asterix)
             {
                 var processor = RedisClient.ArrayResultProcessor;
                 processor.SetMembers(RedisClient, PipeReader, ReadResult, CancellationToken);
                 result = await processor.Process();
             }
-            else if (firstChar == '+')
+            else if (firstChar == ByteConstants.Plus)
             {
                 var processor = RedisClient.WordResultProcessor;
                 processor.SetMembers(RedisClient, PipeReader, ReadResult, CancellationToken);
                 result = await processor.Process();
             }
-            else if (firstChar == ':')
+            else if (firstChar == ByteConstants.Colon)
             {
                 var processor = RedisClient.IntegerResultProcessor;
                 processor.SetMembers(RedisClient, PipeReader, ReadResult, CancellationToken);
                 result = await processor.Process();
             }
-            else if (firstChar == '$')
+            else if (firstChar == ByteConstants.Dollar)
             {
                 var processor = RedisClient.DataResultProcessor;
                 processor.SetMembers(RedisClient, PipeReader, ReadResult, CancellationToken);
                 result = await processor.Process();
             }
-            else if (firstChar == '-')
+            else if (firstChar == ByteConstants.Dash)
             {
                 var redisResponse = ReadResult.Buffer.AsString();
                 PipeReader.AdvanceTo(ReadResult.Buffer.End);
@@ -334,9 +335,9 @@ namespace TomLonghurst.AsyncRedisClient.Models
             var line = await GetOrReadLine();
 
             if (line.Length < 3 ||
-                line.ItemAt(0) != '+' ||
-                line.ItemAt(1) != 'O' ||
-                line.ItemAt(2) != 'K')
+                line.ItemAt(0) != ByteConstants.Plus ||
+                line.ItemAt(1) != ByteConstants.O ||
+                line.ItemAt(2) != ByteConstants.K)
             {
                 var stringLine = line.AsStringWithoutLineTerminators();
                 PipeReader.AdvanceTo(ReadResult.Buffer.End);
@@ -363,7 +364,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
         {
             var line = await GetOrReadLine();
 
-            if (line.ItemAt(0) != '+')
+            if (line.ItemAt(0) != ByteConstants.Plus)
             {
                 var stringLine = line.AsStringWithoutLineTerminators();
                 PipeReader.AdvanceTo(ReadResult.Buffer.End);
@@ -382,7 +383,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
         {
             var buffer = await GetOrReadLine();
 
-            if (buffer.ItemAt(0) != ':')
+            if (buffer.ItemAt(0) != ByteConstants.Colon)
             {
                 var invalidResponse = buffer.AsStringWithoutLineTerminators();
                 PipeReader.AdvanceTo(buffer.End);
@@ -423,7 +424,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
         {
             var buffer = await GetOrReadLine();
 
-            if (buffer.ItemAt(0) != '*')
+            if (buffer.ItemAt(0) != ByteConstants.Asterix)
             {
                 var stringLine = buffer.AsStringWithoutLineTerminators();
                 PipeReader.AdvanceTo(buffer.End);
