@@ -79,7 +79,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         protected RedisClient(RedisClientConfig redisClientConfig) : this()
         {
             ClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
-            _connectionChecker = new Timer(CheckConnection, null, 30000, 30000);
+            _connectionChecker = new Timer(CheckConnection, null, 2500, 250);
         }
 
         ~RedisClient()

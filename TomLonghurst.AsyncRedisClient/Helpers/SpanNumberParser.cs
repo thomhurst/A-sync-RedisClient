@@ -5,7 +5,7 @@ using TomLonghurst.AsyncRedisClient.Extensions;
 
 namespace TomLonghurst.AsyncRedisClient.Helpers
 {
-    public static class NumberParser
+    public static class SpanNumberParser
     {
         public static long Parse(ReadOnlySequence<byte> buffer)
         {
@@ -21,7 +21,7 @@ namespace TomLonghurst.AsyncRedisClient.Helpers
             
             if (!char.IsDigit((char) buffer.ItemAt(0)) && buffer.ItemAt(0) != '-')
             {
-                return Parse(buffer.Slice(1, buffer.Length - 1));
+                return Parse(buffer.Slice(1));
             }
 
             if (buffer.GetEndOfLinePosition() != null)
