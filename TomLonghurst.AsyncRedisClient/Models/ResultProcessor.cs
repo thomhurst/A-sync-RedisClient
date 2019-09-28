@@ -224,8 +224,6 @@ namespace TomLonghurst.AsyncRedisClient.Models
             }
 
 #if !NETSTANDARD2_0 && !NETCOREAPP2_2
-            PipeReader.AdvanceTo(ReadResult.Buffer.Start, ReadResult.Buffer.End);
-            
             var reader = new SequenceReader<byte>(ReadResult.Buffer);
 
             if (reader.TryReadTo(out ReadOnlySequence<byte> line, (byte) '\n', false))
