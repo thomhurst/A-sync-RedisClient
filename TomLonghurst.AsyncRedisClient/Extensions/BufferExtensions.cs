@@ -70,7 +70,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
                 return null;
             }
 
-#if  NETCORE
+#if !NETSTANDARD2_0
             return Encoding.UTF8.GetString(span);
 #endif
 

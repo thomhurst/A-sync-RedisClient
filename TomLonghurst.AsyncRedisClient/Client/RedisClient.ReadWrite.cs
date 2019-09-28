@@ -13,11 +13,9 @@ using TomLonghurst.AsyncRedisClient.Models.Backlog;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
 using TomLonghurst.AsyncRedisClient.Extensions;
 using TomLonghurst.AsyncRedisClient.Pipes;
-#if NETSTANDARD
+#if NETSTANDARD2_0
 using System.Linq;
-#endif
-
-#if NETCORE
+#else
 using System.Buffers;
 #endif
 
@@ -113,7 +111,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                     await TryConnectAsync(cancellationToken).ConfigureAwait(false);
                 }
 
-                await ResetPipes();
+                //await ResetPipes();
 
                 await Write(command);
 
