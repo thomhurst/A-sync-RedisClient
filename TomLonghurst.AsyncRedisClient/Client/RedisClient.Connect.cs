@@ -89,7 +89,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         
         private void CheckConnection(object state)
         {
-            if (!IsConnected)
+            if (!IsConnected && !_disposed)
             {
                 Task.Run(() => TryConnectAsync(CancellationToken.None));
             }
@@ -124,7 +124,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
             catch (Exception innerException)
             {
-                IsConnected = false;
                 DisposeNetwork();
                 throw new RedisConnectionException(innerException);
             }
@@ -252,7 +251,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         }
         
         private bool _disposed;
-        private Timer _connectionChecker;
+        private readonly Timer _connectionChecker;
 
         private static RedisPipeOptions GetPipeOptions()
         {
@@ -307,11 +306,11 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             IsConnected = false;
             LastAction = "Disposing Network";
+            _pipeReader?.CompleteAsync();
+            _pipeWriter?.CompleteAsync();
             _socket?.Close();
             _socket?.Dispose();
             _sslStream?.Dispose();
-            _pipeReader?.CompleteAsync();
-            _pipeWriter?.CompleteAsync();
         }
     }
 }
