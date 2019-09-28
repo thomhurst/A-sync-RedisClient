@@ -70,7 +70,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
                 throw new RedisDataException("Zero Length Response at start of ReadData");
             }
 
-            var line = await ReadLine();
+            var line = await GetOrReadLine();
 
             var firstChar = line.ItemAt(0);
             
@@ -100,7 +100,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
             if (ReadResult.IsCompleted && ReadResult.Buffer.IsEmpty)
             {
-                return default;
+                throw new RedisDataException("ReadResult is completed and buffer is empty starting ReadData");
             }
 
             LastAction = "Reading Data Synchronously in ReadData";
@@ -138,12 +138,12 @@ namespace TomLonghurst.AsyncRedisClient.Models
             {
                 if (ReadResult.IsCompleted && ReadResult.Buffer.IsEmpty)
                 {
-                    return default;
+                    throw new RedisDataException("ReadResult is completed and buffer is empty reading in loop in ReadData");
                 }
 
                 if (ReadResult.IsCanceled)
                 {
-                    return default;
+                    throw new RedisDataException("ReadResult is cancelled reading in loop in ReadData");
                 }
 
                 LastAction = "Advancing Buffer in ReadData Loop";
@@ -208,7 +208,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
             return true;
         }
 
-        protected ValueTask<ReadOnlySequence<byte>> ReadLine()
+        protected ValueTask<ReadOnlySequence<byte>> GetOrReadLine()
         {
             LastAction = "Finding End of Line Position";
             
@@ -267,7 +267,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
             if (line.IsEmpty)
             {
-                return default;
+                throw new RedisDataException("ReadResult is empty in GenericResultProcessor");
             }
 
             var firstChar = line.ItemAt(0);
@@ -323,7 +323,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
         internal override ValueTask<object> Process()
         {
             // Do Nothing!
-            return default;
+            return new ValueTask<object>();
         }
     }
 
@@ -331,7 +331,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
     {
         internal override async ValueTask<object> Process()
         {
-            var line = await ReadLine();
+            var line = await GetOrReadLine();
 
             if (line.Length < 3 ||
                 line.ItemAt(0) != '+' ||
@@ -361,7 +361,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
     {
         internal override async ValueTask<string> Process()
         {
-            var line = await ReadLine();
+            var line = await GetOrReadLine();
 
             if (line.ItemAt(0) != '+')
             {
@@ -380,7 +380,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
     {
         internal override async ValueTask<int> Process()
         {
-            var buffer = await ReadLine();
+            var buffer = await GetOrReadLine();
 
             if (buffer.ItemAt(0) != ':')
             {
@@ -421,7 +421,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
     {
         internal override async ValueTask<IEnumerable<StringRedisValue>> Process()
         {
-            var buffer = await ReadLine();
+            var buffer = await GetOrReadLine();
 
             if (buffer.ItemAt(0) != '*')
             {

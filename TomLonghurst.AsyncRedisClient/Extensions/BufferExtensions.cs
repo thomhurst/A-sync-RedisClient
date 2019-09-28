@@ -90,12 +90,12 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
             {
                 if (readResult.IsCompleted && readResult.Buffer.IsEmpty)
                 {
-                    return default;
+                    throw new RedisDataException("ReadResult is completed and buffer is empty. Can't find EOL in AdvanceToLineTerminator");
                 }
                 
                 if (readResult.IsCanceled)
                 {
-                    return default;
+                    throw new RedisDataException("ReadResult is cancelled. Can't find EOL in AdvanceToLineTerminator");
                 }
                 
                 pipeReader.AdvanceTo(buffer.End);
