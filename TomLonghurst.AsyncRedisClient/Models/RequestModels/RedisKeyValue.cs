@@ -1,3 +1,4 @@
+using System;
 using TomLonghurst.AsyncRedisClient.Constants;
 
 namespace TomLonghurst.AsyncRedisClient.Models.RequestModels
@@ -10,7 +11,7 @@ namespace TomLonghurst.AsyncRedisClient.Models.RequestModels
         public RedisKeyValue(string key, string value)
         {
             Key = key;
-            if (value?.Contains(StringConstants.NewLine) == true)
+            if (value?.AsSpan().Contains(StringConstants.NewLine.AsSpan(), StringComparison.Ordinal) == true)
             {
                 Value = value.Replace(StringConstants.NewLine, StringConstants.EncodedNewLine);
             }

@@ -20,7 +20,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
         internal StringRedisValue(string value) : base(value)
         {
-            if (value?.AsSpan().Contains(StringConstants.EncodedNewLineSpan, StringComparison.Ordinal) == true)
+            if (value?.AsSpan().Contains(StringConstants.EncodedNewLine.AsSpan(), StringComparison.Ordinal) == true)
             {
                 Value = value.Replace(StringConstants.EncodedNewLine, StringConstants.NewLine);
             }

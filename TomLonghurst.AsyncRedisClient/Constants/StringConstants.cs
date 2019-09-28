@@ -9,8 +9,5 @@ namespace TomLonghurst.AsyncRedisClient.Constants
         
         public const string LineTerminator = "\r\n";
         public const string NewLine = "\n";
-        
-        public static ReadOnlySpan<char> NewLineSpan = "\n".AsSpan();
-        public static ReadOnlySpan<char> EncodedNewLineSpan = @"\n".AsSpan();
     }
 }
