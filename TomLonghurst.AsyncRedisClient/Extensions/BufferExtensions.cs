@@ -19,18 +19,12 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
 
         internal static T ItemAt<T>(this ReadOnlySequence<T> buffer, int index)
         {
-            var alreadyReadCount = 0;
-            foreach (var readOnlyMemory in buffer)
+            if (buffer.IsEmpty || index > buffer.Length)
             {
-                if (alreadyReadCount + readOnlyMemory.Length - 1 >= index)
-                {
-                    return readOnlyMemory.Span[index - alreadyReadCount];
-                }
-
-                alreadyReadCount += readOnlyMemory.Length;
-            }
-
-            return default;
+                return default;
+            } 
+            
+            return buffer.Slice(buffer.GetPosition(index, buffer.Start)).First.Span[0];
         }
 
         internal static string AsStringWithoutLineTerminators(this in ReadOnlySequence<byte> buffer)
