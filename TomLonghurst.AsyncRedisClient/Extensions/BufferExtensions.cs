@@ -115,10 +115,9 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
 
         internal static async ValueTask<ReadResult> ReadUntilEndOfLineFound(this PipeReader pipeReader, ReadResult readResult, CancellationToken cancellationToken)
         {
-            var readResultBuffer = readResult.Buffer;
-            while (readResultBuffer.GetEndOfLinePosition() == null)
+            while (readResult.Buffer.GetEndOfLinePosition() == null)
             {
-                if (readResult.IsCompleted && readResultBuffer.IsEmpty)
+                if (readResult.IsCompleted && readResult.Buffer.IsEmpty)
                 {
                     break;
                 }
@@ -131,7 +130,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
                 // We don't want to consume it yet - So don't advance past the start
                 // But do tell it we've examined up until the end - But it's not enough and we need more
                 // We need to call advance before calling another read though
-                pipeReader.AdvanceTo(readResultBuffer.Start, readResultBuffer.End);
+                pipeReader.AdvanceTo(readResult.Buffer.Start, readResult.Buffer.End);
 
                 if (!pipeReader.TryRead(out readResult))
                 {
@@ -139,7 +138,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
                 }
             }
 
-            if (readResultBuffer.GetEndOfLinePosition() == null)
+            if (readResult.Buffer.GetEndOfLinePosition() == null)
             {
                 throw new RedisDataException("No EOL found while executing ReadUntilEndOfLineFound");
             }
