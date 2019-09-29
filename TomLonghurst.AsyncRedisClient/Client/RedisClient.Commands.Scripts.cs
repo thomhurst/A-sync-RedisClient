@@ -34,7 +34,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             {
                 LazyMultiExpireLuaScript = new Lazy<Task<string>>(async () => await LoadScript(MultiSetExpire,
                     $"for i, name in ipairs(KEYS) do redis.call(\"EXPIRE\", name, ARGV[1]); end",
-                    CancellationToken.None));
+                    CancellationToken.None).ConfigureAwait(false));
             }
 
             public async Task FlushScripts(CancellationToken cancellationToken)

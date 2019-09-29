@@ -2,12 +2,12 @@ using System;
 
 namespace TomLonghurst.AsyncRedisClient.Constants
 {
-    public ref struct StringConstants
+    public static class StringConstants
     {
-        public const string EncodedLineTerminator = @"\r\n";
-        public const string EncodedNewLine = @"\n";
+        public static string EncodedLineTerminator { get; } = @"\r\n";
+        public static string EncodedNewLine { get; } = @"\n";
         
-        public const string LineTerminator = "\r\n";
-        public const string NewLine = "\n";
+        public static string LineTerminator { get; } = "\r\n";
+        public static string NewLine { get; } = "\n";
     }
 }

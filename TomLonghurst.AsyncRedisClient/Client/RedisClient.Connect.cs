@@ -103,7 +103,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
         {
             var redisClient = new RedisClient(redisClientConfig);
-            await redisClient.TryConnectAsync(cancellationToken);
+            await redisClient.TryConnectAsync(cancellationToken).ConfigureAwait(false);
             return redisClient;
         }
 
@@ -137,7 +137,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
 
             LastAction = "Waiting for Connecting lock to be free";
-            await _connectSemaphoreSlim.WaitAsync(cancellationToken);
+            await _connectSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
 
             if (IsConnected)
             {

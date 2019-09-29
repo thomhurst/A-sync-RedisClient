@@ -18,8 +18,13 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
 
         public static async Task<StringRedisValue> StringGetAsync(this Task<RedisClient> redisClient, string key, CancellationToken cancellationToken)
         {
-            var client = await redisClient;
-            return await client.StringGetAsync(key, cancellationToken);
+            var client = await GetClient(redisClient);
+            return await client.StringGetAsync(key, cancellationToken).ConfigureAwait(false);
+        }
+
+        private static async Task<RedisClient> GetClient(Task<RedisClient> redisClient)
+        {
+            return await redisClient.ConfigureAwait(false);
         }
     }
 }
