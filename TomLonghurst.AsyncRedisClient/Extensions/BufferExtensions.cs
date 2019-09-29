@@ -83,20 +83,18 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
             {
                 if (readResult.IsCompleted && readResult.Buffer.IsEmpty)
                 {
-                    throw new RedisDataException("ReadResult is completed and buffer is empty. Can't find EOL in AdvanceToLineTerminator");
+                    throw new RedisDataException(
+                        "ReadResult is completed and buffer is empty. Can't find EOL in AdvanceToLineTerminator");
                 }
-                
+
                 if (readResult.IsCanceled)
                 {
                     throw new RedisDataException("ReadResult is cancelled. Can't find EOL in AdvanceToLineTerminator");
                 }
-                
+
                 pipeReader.AdvanceTo(readResult.Buffer.End);
 
-                if (!pipeReader.TryRead(out readResult))
-                {
-                    readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken).ConfigureAwait(false);
-                }
+                readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken).ConfigureAwait(false);
             }
 
             if (endOfLinePosition == null)
@@ -128,10 +126,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
                 // We need to call advance before calling another read though
                 pipeReader.AdvanceTo(readResult.Buffer.Start, readResult.Buffer.End);
 
-                if (!pipeReader.TryRead(out readResult))
-                {
-                    readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken).ConfigureAwait(false);
-                }
+                readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken).ConfigureAwait(false);
             }
 
             if (readResult.Buffer.GetEndOfLinePosition() == null)

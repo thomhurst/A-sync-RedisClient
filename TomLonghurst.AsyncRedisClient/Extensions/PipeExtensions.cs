@@ -8,11 +8,16 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
 {
     public static class PipeExtensions
     {
-        public static ValueTask<ReadResult> ReadAsyncOrThrowReadTimeout(this PipeReader pipeReader, CancellationToken cancellationToken)
+        public static async ValueTask<ReadResult> ReadAsyncOrThrowReadTimeout(this PipeReader pipeReader, CancellationToken cancellationToken)
         {
             try
             {
-                return pipeReader.ReadAsync(cancellationToken);
+                if (pipeReader.TryRead(out var readResult))
+                {
+                    return readResult;
+                }
+                
+                return await pipeReader.ReadAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException e)
             {
