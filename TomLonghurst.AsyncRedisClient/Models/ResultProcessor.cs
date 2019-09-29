@@ -256,17 +256,16 @@ namespace TomLonghurst.AsyncRedisClient.Models
         {
             var firstChar = await ReadByte();
 
+            PipeReader.AdvanceTo(ReadResult.Buffer.Start, ReadResult.Buffer.Slice(1).Start);
+            
             if (firstChar == ByteConstants.Dash)
             {
-                PipeReader.AdvanceTo(ReadResult.Buffer.Start, ReadResult.Buffer.Slice(1).Start);
                 var line = await ReadLine();
                 var redisResponse = line.AsString();
                 PipeReader.AdvanceTo(line.End);
                 throw new RedisFailedCommandException(redisResponse, RedisClient.LastCommand);
             }
 
-            PipeReader.AdvanceTo(ReadResult.Buffer.Start, ReadResult.Buffer.Slice(1).Start);
-            
             object result;
 
             if (firstChar == ByteConstants.Asterix)
@@ -443,10 +442,6 @@ namespace TomLonghurst.AsyncRedisClient.Models
             var results = new byte [count][];
             for (var i = 0; i < count; i++)
             {
-                // Refresh the pipe buffer before 'ReadData' method reads it
-                LastAction = "Reading Data in ExpectArray";
-                ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken).ConfigureAwait(false);
-
                 results[i] = (await ReadData()).ToArray();
             }
 
