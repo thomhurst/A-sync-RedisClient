@@ -54,10 +54,6 @@ namespace TomLonghurst.AsyncRedisClient.Models
         {
             SetMembers(redisClient, pipeReader, cancellationToken);
 
-            LastAction = "Starting read in ResultProcessor.Start";
-            
-            ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken).ConfigureAwait(false);
-
             LastAction = "Starting ResultProcessor.Processor";
             return await Process();
         }
@@ -67,14 +63,12 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
         protected async ValueTask<Memory<byte>> ReadData()
         {
-            var buffer = ReadResult.Buffer;
+            var line = await ReadLine();
 
-            if (buffer.IsEmpty)
+            if (line.IsEmpty)
             {
                 throw new RedisDataException("Empty buffer at start of ReadData");
             }
-
-            var line = await GetOrReadLine();
 
             var firstChar = line.ItemAt(0);
 
@@ -110,7 +104,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
             LastAction = "Reading Data in ReadData";
             ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken).ConfigureAwait(false);
 
-            buffer = ReadResult.Buffer;
+            var buffer = ReadResult.Buffer;
 
             if (byteSizeOfData == 0)
             {
@@ -201,14 +195,27 @@ namespace TomLonghurst.AsyncRedisClient.Models
             return true;
         }
 
-        protected ValueTask<ReadOnlySequence<byte>> GetOrReadLine()
+        protected async ValueTask<byte> ReadByte()
         {
+            ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken);
+
+            if (ReadResult.Buffer.IsEmpty)
+            {
+                throw new RedisDataException("Empty buffer in ReadByte");
+            }
+
+            return ReadResult.Buffer.Slice(ReadResult.Buffer.Start, 1).First.Span[0];
+        }
+
+        protected async ValueTask<ReadOnlySequence<byte>> ReadLine()
+        {
+            ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken);
+         
             LastAction = "Finding End of Line Position";
-            
             var endOfLinePosition = ReadResult.Buffer.GetEndOfLinePosition();
             if (endOfLinePosition != null)
             {
-                return new ValueTask<ReadOnlySequence<byte>>(ReadResult.Buffer.Slice(ReadResult.Buffer.Start, endOfLinePosition.Value));
+                return ReadResult.Buffer.Slice(ReadResult.Buffer.Start, endOfLinePosition.Value);
             }
 
             if (ReadResult.IsCompleted && ReadResult.Buffer.IsEmpty)
@@ -216,16 +223,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
                 throw new Exception("Read is completed and buffer is empty - Can't find a complete line in ReadLine'");
             }
 
-#if !NETSTANDARD2_0 && !NETCOREAPP2_2
-            var reader = new SequenceReader<byte>(ReadResult.Buffer);
-
-            if (reader.TryReadTo(out ReadOnlySequence<byte> line, ByteConstants.NewLine, false))
-            {
-                return new ValueTask<ReadOnlySequence<byte>>(line);
-            }
-#endif
-
-            return ReadLineAsync();
+            return await ReadLineAsync();
         }
 
         private async ValueTask<ReadOnlySequence<byte>> ReadLineAsync()
@@ -256,18 +254,19 @@ namespace TomLonghurst.AsyncRedisClient.Models
     {
         internal override async ValueTask<RawResult> Process()
         {
-            var line = ReadResult.Buffer;
+            var firstChar = await ReadByte();
 
-            if (line.IsEmpty)
+            if (firstChar == ByteConstants.Dash)
             {
-                throw new RedisDataException("ReadResult is empty in GenericResultProcessor");
+                PipeReader.AdvanceTo(ReadResult.Buffer.Start, ReadResult.Buffer.Slice(1).Start);
+                var line = await ReadLine();
+                var redisResponse = line.AsString();
+                PipeReader.AdvanceTo(line.End);
+                throw new RedisFailedCommandException(redisResponse, RedisClient.LastCommand);
             }
 
-            var firstChar = line.ItemAt(0);
-
-            // TODO Remove - Is for debugging
-            var stringline = line.AsString();
-
+            PipeReader.AdvanceTo(ReadResult.Buffer.Start, ReadResult.Buffer.Slice(1).Start);
+            
             object result;
 
             if (firstChar == ByteConstants.Asterix)
@@ -294,12 +293,6 @@ namespace TomLonghurst.AsyncRedisClient.Models
                 processor.SetMembers(RedisClient, PipeReader, ReadResult, CancellationToken);
                 result = await processor.Process();
             }
-            else if (firstChar == ByteConstants.Dash)
-            {
-                var redisResponse = ReadResult.Buffer.AsString();
-                PipeReader.AdvanceTo(ReadResult.Buffer.End);
-                throw new RedisFailedCommandException(redisResponse, RedisClient.LastCommand);
-            }
             else
             {
                 var processor = RedisClient.EmptyResultProcessor;
@@ -324,7 +317,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
     {
         internal override async ValueTask<object> Process()
         {
-            var line = await GetOrReadLine();
+            var line = await ReadLine();
 
             if (line.Length < 3 ||
                 line.ItemAt(0) != ByteConstants.Plus ||
@@ -360,7 +353,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
     {
         internal override async ValueTask<string> Process()
         {
-            var line = await GetOrReadLine();
+            var line = await ReadLine();
 
             if (line.ItemAt(0) != ByteConstants.Plus)
             {
@@ -386,7 +379,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
     {
         internal override async ValueTask<int> Process()
         {
-            var line = await GetOrReadLine();
+            var line = await ReadLine();
 
             if (line.ItemAt(0) != ByteConstants.Colon)
             {
@@ -434,7 +427,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
     {
         internal override async ValueTask<IEnumerable<StringRedisValue>> Process()
         {
-            var line = await GetOrReadLine();
+            var line = await ReadLine();
 
             if (line.ItemAt(0) != ByteConstants.Asterix)
             {
