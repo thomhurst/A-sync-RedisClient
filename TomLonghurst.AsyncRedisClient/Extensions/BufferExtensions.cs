@@ -78,10 +78,8 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
         internal static async ValueTask<ReadResult> AdvanceToLineTerminator(this PipeReader pipeReader,
             ReadResult readResult, CancellationToken cancellationToken)
         {
-            var buffer = readResult.Buffer;
-
             SequencePosition? endOfLinePosition;
-            while ((endOfLinePosition = buffer.GetEndOfLinePosition()) == null)
+            while ((endOfLinePosition = readResult.Buffer.GetEndOfLinePosition()) == null)
             {
                 if (readResult.IsCompleted && readResult.Buffer.IsEmpty)
                 {
@@ -93,14 +91,12 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
                     throw new RedisDataException("ReadResult is cancelled. Can't find EOL in AdvanceToLineTerminator");
                 }
                 
-                pipeReader.AdvanceTo(buffer.End);
+                pipeReader.AdvanceTo(readResult.Buffer.End);
 
                 if (!pipeReader.TryRead(out readResult))
                 {
                     readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken).ConfigureAwait(false);
                 }
-
-                buffer = readResult.Buffer;
             }
 
             if (endOfLinePosition == null)
@@ -208,6 +204,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
 
             if (index != -1)
             {
+                // +2 to advance two positions past \r
                 return buffer.GetPosition(index + 2, previous);
             }
 

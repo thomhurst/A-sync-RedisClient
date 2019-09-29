@@ -343,8 +343,14 @@ namespace TomLonghurst.AsyncRedisClient.Models
                 line.ItemAt(2) != ByteConstants.K)
             {
                 var stringLine = line.AsStringWithoutLineTerminators();
-                PipeReader.AdvanceTo(ReadResult.Buffer.End);
-                throw new RedisFailedCommandException(stringLine, LastCommand);
+                PipeReader.AdvanceTo(line.End);
+                
+                if (line.ItemAt(0) == ByteConstants.Dash)
+                {
+                    throw new RedisFailedCommandException(stringLine, LastCommand);
+                }
+                
+                throw new UnexpectedRedisResponseException(stringLine);
             }
 
             PipeReader.AdvanceTo(line.End);
@@ -370,7 +376,14 @@ namespace TomLonghurst.AsyncRedisClient.Models
             if (line.ItemAt(0) != ByteConstants.Plus)
             {
                 var stringLine = line.AsStringWithoutLineTerminators();
-                PipeReader.AdvanceTo(ReadResult.Buffer.End);
+                
+                PipeReader.AdvanceTo(line.End);
+                
+                if (line.ItemAt(0) == ByteConstants.Dash)
+                {
+                    throw new RedisFailedCommandException(stringLine, LastCommand);
+                }
+                
                 throw new UnexpectedRedisResponseException(stringLine);
             }
 
@@ -384,18 +397,25 @@ namespace TomLonghurst.AsyncRedisClient.Models
     {
         internal override async ValueTask<int> Process()
         {
-            var buffer = await GetOrReadLine();
+            var line = await GetOrReadLine();
 
-            if (buffer.ItemAt(0) != ByteConstants.Colon)
+            if (line.ItemAt(0) != ByteConstants.Colon)
             {
-                var invalidResponse = buffer.AsStringWithoutLineTerminators();
-                PipeReader.AdvanceTo(buffer.End);
-                throw new UnexpectedRedisResponseException(invalidResponse);
+                var stringLine = line.AsStringWithoutLineTerminators();
+                PipeReader.AdvanceTo(line.End);
+                
+                if (line.ItemAt(0) == ByteConstants.Dash)
+                {
+                    throw new RedisFailedCommandException(stringLine, LastCommand);
+                }
+                
+                throw new UnexpectedRedisResponseException(stringLine);
+                
             }
 
-            var number = SpanNumberParser.Parse(buffer);
+            var number = SpanNumberParser.Parse(line);
 
-            PipeReader.AdvanceTo(buffer.End);
+            PipeReader.AdvanceTo(line.End);
 
             if (number == -1)
             {
@@ -425,18 +445,18 @@ namespace TomLonghurst.AsyncRedisClient.Models
     {
         internal override async ValueTask<IEnumerable<StringRedisValue>> Process()
         {
-            var buffer = await GetOrReadLine();
+            var line = await GetOrReadLine();
 
-            if (buffer.ItemAt(0) != ByteConstants.Asterix)
+            if (line.ItemAt(0) != ByteConstants.Asterix)
             {
-                var stringLine = buffer.AsStringWithoutLineTerminators();
-                PipeReader.AdvanceTo(buffer.End);
+                var stringLine = line.AsStringWithoutLineTerminators();
+                PipeReader.AdvanceTo(line.End);
                 throw new UnexpectedRedisResponseException(stringLine);
             }
 
-            var count = SpanNumberParser.Parse(buffer);
+            var count = SpanNumberParser.Parse(line);
 
-            PipeReader.AdvanceTo(buffer.End);
+            PipeReader.AdvanceTo(line.End);
 
             var results = new byte [count][];
             for (var i = 0; i < count; i++)
