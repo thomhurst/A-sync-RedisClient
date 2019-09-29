@@ -137,7 +137,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
             return readResult;
         }
 
-        internal static SequencePosition? GetEndOfLinePosition2(this in ReadOnlySequence<byte> buffer)
+        internal static SequencePosition? GetEndOfLinePosition(this in ReadOnlySequence<byte> buffer)
         {
             if (buffer.IsEmpty)
             {
@@ -154,7 +154,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
             return buffer.GetPosition(1, sequencePosition.Value);
         }
 
-        internal static SequencePosition? GetEndOfLinePosition(this in ReadOnlySequence<byte> buffer)
+        internal static SequencePosition? GetEndOfLinePosition2(this in ReadOnlySequence<byte> buffer)
         {
             var position = buffer.Start;
             var previous = position;
