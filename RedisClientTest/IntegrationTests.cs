@@ -18,7 +18,7 @@ namespace RedisClientTest
     {
         private RedisClientManager _redisManager;
         private RedisClientConfig _config;
-        private Task<RedisClient> TomLonghurstRedisClient => _redisManager.GetRedisClient();
+        private Task<RedisClient> TomLonghurstRedisClient => _redisManager.GetRedisClientAsync();
 
         // To test, create a Test Information static class to store your Host, Port and Password for your Test Redis Server
         [OneTimeSetUp]
@@ -29,8 +29,14 @@ namespace RedisClientTest
             {
                 Ssl = true
             };
-            _redisManager = new RedisClientManager(_config, 5);
+            _redisManager = new RedisClientManager(_config, 1);
             _redisManager.GetAllRedisClients();
+        }
+
+        [SetUp]
+        public void BeforeTest()
+        {
+            Console.WriteLine($"Process ID: {Process.GetCurrentProcess().Id}");
         }
 
         [TestCase("value with a space")]
@@ -124,7 +130,7 @@ namespace RedisClientTest
                     {
                         try
                         {
-                            var client = await _redisManager.GetRedisClient();
+                            var client = await _redisManager.GetRedisClientAsync();
                             
                             await Time("Set", async delegate
                             {
@@ -328,6 +334,23 @@ namespace RedisClientTest
 
         [Test]
         [Repeat(2)]
+        public async Task SetMultipleTtl()
+        {
+            var client = await TomLonghurstRedisClient;
+            await client.StringSetAsync(new List<RedisKeyValue>
+                {
+                    {new RedisKeyValue("BlahTTL1", "Blah1")},
+                    {new RedisKeyValue("BlahTTL2", "Blah2")},
+                    {new RedisKeyValue("BlahTTL3", "Blah3")},
+                    {new RedisKeyValue("BlahTTL4", "Blah4")},
+                    {new RedisKeyValue("BlahTTL5", "Blah5")},
+                },
+                120,
+                AwaitOptions.AwaitCompletion);
+        }
+
+        [Test]
+        [Repeat(2)]
         public async Task SetGetMultipleKey()
         {
             var keyValues = new List<RedisKeyValue>
@@ -364,6 +387,18 @@ namespace RedisClientTest
                 var value = await tomLonghurstRedisClient.StringGetAsync(key);
                 Assert.That(value.Value, Is.EqualTo("123"));
             }
+        }
+
+        [TestCase(AwaitOptions.AwaitCompletion)]
+        [TestCase(AwaitOptions.FireAndForget)]
+        [Repeat(2)]
+        public async Task SetGetMultipleKeyWithTtlMultiple(AwaitOptions awaitOptions)
+        {
+            await SetGetMultipleKeyWithTtl(awaitOptions);
+            await SetGetMultipleKeyWithTtl(awaitOptions);
+            await SetGetMultipleKeyWithTtl(awaitOptions);
+            await SetGetMultipleKeyWithTtl(awaitOptions);
+            await SetGetMultipleKeyWithTtl(awaitOptions);
         }
         
         [TestCase(AwaitOptions.AwaitCompletion)]
@@ -418,9 +453,10 @@ namespace RedisClientTest
         // Needs Access to Socket (which is private) to Close it
         [Test]
         [Repeat(2)]
+        [Ignore("")]
         public async Task Disconnected()
         {
-            var client = await _redisManager.GetRedisClient();
+            var client = await _redisManager.GetRedisClientAsync();
             await client.StringSetAsync("DisconnectTest", "123", 120, AwaitOptions.AwaitCompletion);
             var redisValue = await client.StringGetAsync("DisconnectTest");
             Assert.AreEqual("123", redisValue.Value);
@@ -456,9 +492,9 @@ namespace RedisClientTest
         {
             var keys = GenerateMassKeys();
 
-            var client1 = await _redisManager.GetRedisClient();
-            var client2 = await _redisManager.GetRedisClient();
-            var client3 = await _redisManager.GetRedisClient();
+            var client1 = await _redisManager.GetRedisClientAsync();
+            var client2 = await _redisManager.GetRedisClientAsync();
+            var client3 = await _redisManager.GetRedisClientAsync();
             
             var resultTask =
                 client1.StringGetAsync(keys);

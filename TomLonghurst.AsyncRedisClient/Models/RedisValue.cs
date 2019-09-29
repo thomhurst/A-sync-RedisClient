@@ -1,3 +1,4 @@
+using System;
 using TomLonghurst.AsyncRedisClient.Constants;
 
 namespace TomLonghurst.AsyncRedisClient.Models
@@ -19,7 +20,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
         internal StringRedisValue(string value) : base(value)
         {
-            if (value?.Contains(StringConstants.EncodedNewLine) == true)
+            if (value?.AsSpan().Contains(StringConstants.EncodedNewLine.AsSpan(), StringComparison.Ordinal) == true)
             {
                 Value = value.Replace(StringConstants.EncodedNewLine, StringConstants.NewLine);
             }

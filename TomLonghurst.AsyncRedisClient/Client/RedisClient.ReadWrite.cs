@@ -12,11 +12,10 @@ using TomLonghurst.AsyncRedisClient.Models;
 using TomLonghurst.AsyncRedisClient.Models.Backlog;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
 using TomLonghurst.AsyncRedisClient.Extensions;
-#if NETSTANDARD
+using TomLonghurst.AsyncRedisClient.Pipes;
+#if NETSTANDARD2_0
 using System.Linq;
-#endif
-
-#if NETCORE
+#else
 using System.Buffers;
 #endif
 
@@ -34,6 +33,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
         private long _operationsPerformed;
 
+        private SocketPipe _socketPipe;
         private PipeReader _pipeReader;
         private PipeWriter _pipeWriter;
         
@@ -41,13 +41,26 @@ namespace TomLonghurst.AsyncRedisClient.Client
         
         private Thread BacklogWorkerThread;
 
-        internal string LastAction;
+        private string _lastAction;
+
+        internal string LastAction
+        {
+            get { return _lastAction; }
+            set
+            {
+#if DEBUG
+                Console.WriteLine($"Last Action: {value}");
+#endif
+                _lastAction = value;
+            }
+        }
 
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
         public DateTime LastUsed { get; internal set; }
 
         private Func<RedisTelemetryResult, Task> _telemetryCallback;
+        private int _written;
 
         // TODO Make public
         private void SetTelemetryCallback(Func<RedisTelemetryResult, Task> telemetryCallback)
@@ -62,8 +75,13 @@ namespace TomLonghurst.AsyncRedisClient.Client
             bool isReconnectionAttempt = false)
         {
             LastUsed = DateTime.Now;
-
-            LastAction = "Throwing Cancelled Exception due to Cancelled Token";
+            
+#if DEBUG
+            if (cancellationToken.IsCancellationRequested)
+            {
+                LastAction = "Throwing Cancelled Exception due to Cancelled Token";
+            }
+#endif
             cancellationToken.ThrowIfCancellationRequested();
 
             Interlocked.Increment(ref _outStandingOperations);
@@ -84,6 +102,8 @@ namespace TomLonghurst.AsyncRedisClient.Client
             var taskCompletionSource = new TaskCompletionSource<T>();
 
             _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor, this, _pipeReader));
+
+            cancellationToken.Register(() => taskCompletionSource.TrySetCanceled(cancellationToken));
 
             return new ValueTask<T>(taskCompletionSource.Task);
         }
@@ -112,9 +132,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
                 await Write(command);
 
-                LastAction = "Reading Bytes Async";
-
-                return await resultProcessor.Start(this, _pipeReader);
+                return await resultProcessor.Start(this, _pipeReader, cancellationToken);
             }
             catch (Exception innerException)
             {
@@ -147,18 +165,12 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
         internal ValueTask<FlushResult> Write(IRedisCommand command)
         {
+            _written++;
             var encodedCommandList = command.EncodedCommandList;
 
             LastAction = "Writing Bytes";
-            
-            var task = _pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray().AsMemory());
 
-            if (!task.IsCompleted)
-            {
-                return task;
-            }
-
-            return default;
+            return _pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray());
         }
 
         
@@ -179,14 +191,13 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
             catch (OperationCanceledException operationCanceledException)
             {
-                throw TimeoutOrCancelledException(operationCanceledException, originalCancellationToken);
+                throw WaitTimeoutOrCancelledException(operationCanceledException, originalCancellationToken);
             }
             catch (SocketException socketException)
             {
-                if (socketException.InnerException?.GetType().IsAssignableFrom(typeof(OperationCanceledException)) ==
-                    true)
+                if (socketException.InnerException?.IsSameOrSubclassOf(typeof(OperationCanceledException)) == true)
                 {
-                    throw TimeoutOrCancelledException(socketException.InnerException, originalCancellationToken);
+                    throw WaitTimeoutOrCancelledException(socketException.InnerException, originalCancellationToken);
                 }
 
                 throw;
@@ -220,14 +231,14 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
             catch (OperationCanceledException operationCanceledException)
             {
-                throw TimeoutOrCancelledException(operationCanceledException, originalCancellationToken);
+                throw WaitTimeoutOrCancelledException(operationCanceledException, originalCancellationToken);
             }
             catch (SocketException socketException)
             {
-                if (socketException.InnerException?.GetType().IsAssignableFrom(typeof(OperationCanceledException)) ==
+                if (socketException.InnerException?.IsSameOrSubclassOf(typeof(OperationCanceledException)) ==
                     true)
                 {
-                    throw TimeoutOrCancelledException(socketException.InnerException, originalCancellationToken);
+                    throw WaitTimeoutOrCancelledException(socketException.InnerException, originalCancellationToken);
                 }
 
                 throw;
@@ -238,14 +249,9 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
         }
 
-        private Exception TimeoutOrCancelledException(Exception exception, CancellationToken originalCancellationToken)
+        private Exception WaitTimeoutOrCancelledException(Exception exception, CancellationToken originalCancellationToken)
         {
-            if (originalCancellationToken.IsCancellationRequested)
-            {
-                throw exception;
-            }
-
-            throw new RedisOperationTimeoutException(this);
+            return originalCancellationToken.IsCancellationRequested ? exception : new RedisWaitTimeoutException(this);
         }
     }
 }

@@ -4,12 +4,24 @@ namespace TomLonghurst.AsyncRedisClient.Client
 {
     public partial class RedisClient
     {
-        private SuccessResultProcessor SuccessResultProcessor => new SuccessResultProcessor();
-        private DataResultProcessor DataResultProcessor => new DataResultProcessor();
-        private IntegerResultProcessor IntegerResultProcessor => new IntegerResultProcessor();
-        private FloatResultProcessor FloatResultProcessor => new FloatResultProcessor();
-        private ArrayResultProcessor ArrayResultProcessor => new ArrayResultProcessor();
-        private WordResultProcessor WordResultProcessor => new WordResultProcessor();
+        internal GenericResultProcessor GenericResultProcessor => new GenericResultProcessor(); 
+        internal EmptyResultProcessor EmptyResultProcessor => new EmptyResultProcessor();
+        internal SuccessResultProcessor SuccessResultProcessor => new SuccessResultProcessor();
+        internal DataResultProcessor DataResultProcessor => new DataResultProcessor();
+        internal IntegerResultProcessor IntegerResultProcessor => new IntegerResultProcessor();
+        internal FloatResultProcessor FloatResultProcessor => new FloatResultProcessor();
+        internal ArrayResultProcessor ArrayResultProcessor => new ArrayResultProcessor();
+        internal WordResultProcessor WordResultProcessor => new WordResultProcessor();
 
+    }
+
+    public enum ResponseType
+    {
+        Empty,
+        Word,
+        ComplexString,
+        Integer,
+        Float,
+        Array
     }
 }

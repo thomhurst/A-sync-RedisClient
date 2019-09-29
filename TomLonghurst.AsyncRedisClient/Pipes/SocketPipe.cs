@@ -5,7 +5,7 @@ using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
-#if !NETCORE
+#if NETSTANDARD2_0
 using TomLonghurst.AsyncRedisClient.Extensions;
 #endif
 
@@ -13,7 +13,7 @@ namespace TomLonghurst.AsyncRedisClient.Pipes
 {
     public class SocketPipe : IDuplexPipe
     {
-        public static IDuplexPipe GetDuplexPipe(Socket socket, PipeOptions sendPipeOptions,
+        public static SocketPipe GetDuplexPipe(Socket socket, PipeOptions sendPipeOptions,
             PipeOptions receivePipeOptions)
             => new SocketPipe(socket, sendPipeOptions, receivePipeOptions, true, true);
 
@@ -21,6 +21,12 @@ namespace TomLonghurst.AsyncRedisClient.Pipes
 
         private readonly Pipe _readPipe;
         private readonly Pipe _writePipe;
+
+        public void Reset()
+        {
+            _writePipe.Reset();
+            _readPipe.Reset();
+        }
 
         public SocketPipe(Socket socket, PipeOptions sendPipeOptions, PipeOptions receivePipeOptions, bool read,
             bool write)
@@ -83,7 +89,7 @@ namespace TomLonghurst.AsyncRedisClient.Pipes
                     try
                     {
                         var memory = writer.GetMemory(512);
-#if NETCORE
+#if !NETSTANDARD2_0
                     var bytesRead = await _innerSocket.ReceiveAsync(memory, SocketFlags.None);
 #else
                         var arr = memory.GetArraySegment();
@@ -184,7 +190,7 @@ namespace TomLonghurst.AsyncRedisClient.Pipes
 
         private Task WriteSingle(in ReadOnlySequence<byte> buffer)
         {
-#if NETCORE
+#if !NETSTANDARD2_0
             var valueTask = _innerSocket.SendAsync(buffer.First, SocketFlags.None);
             return valueTask.IsCompletedSuccessfully ? Task.CompletedTask : valueTask.AsTask();
 #else
@@ -197,7 +203,7 @@ namespace TomLonghurst.AsyncRedisClient.Pipes
         {
             foreach (var segment in buffer)
             {
-#if NETCORE
+#if !NETSTANDARD2_0
                 await _innerSocket.SendAsync(segment, SocketFlags.None);
 #else
                 var arraySegment = segment.GetArraySegment();

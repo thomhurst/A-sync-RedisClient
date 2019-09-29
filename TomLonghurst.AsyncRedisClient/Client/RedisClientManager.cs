@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TomLonghurst.AsyncRedisClient.Extensions;
 
 namespace TomLonghurst.AsyncRedisClient.Client
 {
@@ -25,7 +26,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
         }
 
-        public async Task<RedisClient> GetRedisClient()
+        public async Task<RedisClient> GetRedisClientAsync()
         {
             if (_redisClients.Count == 1)
             {
@@ -36,31 +37,35 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
             if (redisClientsLoaded.Count != _redisClients.Count)
             {
-                return await Task.WhenAny(_redisClients).Unwrap().ConfigureAwait(false);
+                return await _redisClients.WhenAny(x => x.IsConnected)
+                    ?? await Task.WhenAny(_redisClients).Unwrap().ConfigureAwait(false);
             }
 
-            var orderByLeastOutstandingOperations = _redisClients.Select(x => x.Result).OrderBy(client => client.OutstandingOperations).ToList();
+            var orderByLeastOutstandingOperations = (await Task.WhenAll(_redisClients)).OrderBy(client => client.OutstandingOperations).ToList();
                 
             var connectedClient = orderByLeastOutstandingOperations.FirstOrDefault(client => client.IsConnected);
 
             return connectedClient ?? orderByLeastOutstandingOperations.First();
         }
 
-        private async Task SetConnectionCallbacks()
+        private void SetConnectionCallbacks()
         {
             foreach (var redisClient in _redisClients)
             {
-                var client = await redisClient;
-                
-                if (client.OnConnectionFailed == null)
+                redisClient.ContinueWith(task =>
                 {
-                    client.OnConnectionFailed = OnConnectionFailed;
-                }
+                    var client = task.Result;
 
-                if (client.OnConnectionEstablished == null)
-                {
-                    client.OnConnectionEstablished = OnConnectionEstablished;
-                }
+                    if (client.OnConnectionFailed == null)
+                    {
+                        client.OnConnectionFailed = OnConnectionFailed;
+                    }
+
+                    if (client.OnConnectionEstablished == null)
+                    {
+                        client.OnConnectionEstablished = OnConnectionEstablished;
+                    }
+                });
             }
         }
 

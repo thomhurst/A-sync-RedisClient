@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
 
 namespace TomLonghurst.AsyncRedisClient.Extensions
@@ -39,8 +40,8 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
                 }
             }
 
-            byteArray[encodedLength] = (byte) '\r';
-            byteArray[encodedLength + 1] = (byte) '\n';
+            byteArray[encodedLength] = ByteConstants.BackslashR;
+            byteArray[encodedLength + 1] = ByteConstants.NewLine;
 
             return byteArray;
         }
@@ -76,8 +77,8 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
                 }
             }
             
-            bytesSpan[encodedLength] = (byte) '\r';
-            bytesSpan[encodedLength + 1] = (byte) '\n';
+            bytesSpan[encodedLength] = ByteConstants.BackslashR;
+            bytesSpan[encodedLength + 1] = ByteConstants.NewLine;
 
             return encodedLength + 2;
         }

@@ -55,6 +55,11 @@ namespace TomLonghurst.AsyncRedisClient.Models.Commands
         {
             return new RedisCommand(redisEncodables);
         }
+        
+        public static RedisCommand FromScript(IRedisEncodable command, IRedisEncodable scriptOrSha1, List<string> keys, IEnumerable<string> args)
+        {
+            return new RedisCommand(new List<IRedisEncodable> { command, scriptOrSha1, keys.Count.ToRedisEncoded() }.Concat(keys.Select(key => key.ToRedisEncoded())).Concat(args.Select(arg => arg.ToRedisEncoded())));
+        }
 
         private RedisCommand(IRedisEncodable redisEncodable)
         {

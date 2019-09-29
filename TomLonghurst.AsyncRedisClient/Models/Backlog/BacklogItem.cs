@@ -27,16 +27,19 @@ namespace TomLonghurst.AsyncRedisClient.Models.Backlog
         {
             try
             {
-                var result = await ResultProcessor.Start(RedisClient, PipeReader);
+                // TODO Cancellation Token
+                var result = await ResultProcessor.Start(RedisClient, PipeReader, CancellationToken);
                 TaskCompletionSource.TrySetResult(result);
             }
             catch (OperationCanceledException)
             {
                 TaskCompletionSource.TrySetCanceled();
+                throw;
             }
             catch (Exception e)
             {
                 TaskCompletionSource.TrySetException(e);
+                throw;
             }
         }
 

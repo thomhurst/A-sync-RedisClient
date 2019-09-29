@@ -1,11 +1,12 @@
 using System;
 using System.Buffers;
 using System.Linq;
+using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Extensions;
 
 namespace TomLonghurst.AsyncRedisClient.Helpers
 {
-    public static class NumberParser
+    public static class SpanNumberParser
     {
         public static long Parse(ReadOnlySequence<byte> buffer)
         {
@@ -14,19 +15,19 @@ namespace TomLonghurst.AsyncRedisClient.Helpers
                 return 0;
             }
 
-            if (buffer.Length >= 2 && buffer.ItemAt(0) == '-' && buffer.ItemAt(1) == '1')
+            if (buffer.Length >= 2 && buffer.ItemAt(0) == ByteConstants.Dash && buffer.ItemAt(1) == ByteConstants.One)
             {
                 return -1;
             }
             
-            if (!char.IsDigit((char) buffer.ItemAt(0)) && buffer.ItemAt(0) != '-')
+            if (!char.IsDigit((char) buffer.ItemAt(0)) && buffer.ItemAt(0) != ByteConstants.Dash)
             {
-                return Parse(buffer.Slice(1, buffer.Length - 1));
+                return Parse(buffer.Slice(buffer.GetPosition(1, buffer.Start)));
             }
 
             if (buffer.GetEndOfLinePosition() != null)
             {
-                return Parse(buffer.Slice(0, buffer.Length - 2));
+                return Parse(buffer.Slice(buffer.Start, buffer.Length - 2));
             }
 
             return ParseSequence(buffer);

@@ -3,7 +3,9 @@ using System.Buffers;
 using System.IO.Pipelines;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 
 namespace TomLonghurst.AsyncRedisClient.Extensions
@@ -17,24 +19,18 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
 
         internal static T ItemAt<T>(this ReadOnlySequence<T> buffer, int index)
         {
-            var alreadyReadCount = 0;
-            foreach (var readOnlyMemory in buffer)
+            if (buffer.IsEmpty || index > buffer.Length)
             {
-                if (alreadyReadCount + readOnlyMemory.Length - 1 >= index)
-                {
-                    return readOnlyMemory.Span[index - alreadyReadCount];
-                }
-
-                alreadyReadCount += readOnlyMemory.Length;
-            }
-
-            return default;
+                return default;
+            } 
+            
+            return buffer.Slice(buffer.GetPosition(index, buffer.Start)).First.Span[0];
         }
 
         internal static string AsStringWithoutLineTerminators(this in ReadOnlySequence<byte> buffer)
         {
             // Reslice but removing the line terminators
-            return buffer.Slice(0, buffer.Length - 2).AsString();
+            return buffer.GetEndOfLinePosition() == null ? buffer.AsString() : buffer.Slice(buffer.Start, buffer.Length - 2).AsString();
         }
 
         internal static string AsString(this in ReadOnlySequence<byte> buffer)
@@ -69,7 +65,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
                 return null;
             }
 
-#if  NETCORE
+#if !NETSTANDARD2_0
             return Encoding.UTF8.GetString(span);
 #endif
 
@@ -80,24 +76,25 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
         }
 
         internal static async ValueTask<ReadResult> AdvanceToLineTerminator(this PipeReader pipeReader,
-            ReadResult readResult)
+            ReadResult readResult, CancellationToken cancellationToken)
         {
-            var buffer = readResult.Buffer;
-
             SequencePosition? endOfLinePosition;
-            while ((endOfLinePosition = buffer.GetEndOfLinePosition()) == null)
+            while ((endOfLinePosition = readResult.Buffer.GetEndOfLinePosition()) == null)
             {
-                // We don't want to consume it yet - So don't advance past the start
-                // But do tell it we've examined up until the end - But it's not enough and we need more
-                // We need to call advance before calling another read though
-                pipeReader.AdvanceTo(buffer.End);
-
-                if (!pipeReader.TryRead(out readResult))
+                if (readResult.IsCompleted && readResult.Buffer.IsEmpty)
                 {
-                    readResult = await pipeReader.ReadAsync().ConfigureAwait(false);
+                    throw new RedisDataException(
+                        "ReadResult is completed and buffer is empty. Can't find EOL in AdvanceToLineTerminator");
                 }
 
-                buffer = readResult.Buffer;
+                if (readResult.IsCanceled)
+                {
+                    throw new RedisDataException("ReadResult is cancelled. Can't find EOL in AdvanceToLineTerminator");
+                }
+
+                pipeReader.AdvanceTo(readResult.Buffer.End);
+
+                readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken).ConfigureAwait(false);
             }
 
             if (endOfLinePosition == null)
@@ -110,19 +107,31 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
             return readResult;
         }
 
-        internal static async ValueTask<ReadResult> ReadUntilEndOfLineFound(this PipeReader pipeReader, ReadResult readResult)
+        internal static async ValueTask<ReadResult> ReadUntilEndOfLineFound(this PipeReader pipeReader, ReadResult readResult, CancellationToken cancellationToken)
         {
             while (readResult.Buffer.GetEndOfLinePosition() == null)
             {
+                if (readResult.IsCompleted && readResult.Buffer.IsEmpty)
+                {
+                    break;
+                }
+
+                if (readResult.IsCanceled)
+                {
+                    break;
+                }
+
                 // We don't want to consume it yet - So don't advance past the start
                 // But do tell it we've examined up until the end - But it's not enough and we need more
                 // We need to call advance before calling another read though
                 pipeReader.AdvanceTo(readResult.Buffer.Start, readResult.Buffer.End);
 
-                if (!pipeReader.TryRead(out readResult))
-                {
-                    readResult = await pipeReader.ReadAsync().ConfigureAwait(false);
-                }
+                readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken).ConfigureAwait(false);
+            }
+
+            if (readResult.Buffer.GetEndOfLinePosition() == null)
+            {
+                throw new RedisDataException("No EOL found while executing ReadUntilEndOfLineFound");
             }
 
             return readResult;
@@ -132,10 +141,10 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
         {
             if (buffer.IsEmpty)
             {
-                return null;
+                throw new RedisDataException("The buffer is empty in GetEndOfLinePosition");
             }
 
-            var sequencePosition = buffer.PositionOf((byte) '\n');
+            var sequencePosition = buffer.PositionOf(ByteConstants.NewLine);
             
             if (sequencePosition == null)
             {
@@ -143,40 +152,55 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
             }
             
             return buffer.GetPosition(1, sequencePosition.Value);
-            //return buffer.IsSingleSegment ? GetEndOfLinePositionSingleSegment(buffer) : GetEndOfLinePositionMultipleSegments(buffer);
         }
 
-        private static SequencePosition? GetEndOfLinePositionMultipleSegments(in ReadOnlySequence<byte> buffer)
+        internal static SequencePosition? GetEndOfLinePosition2(this in ReadOnlySequence<byte> buffer)
         {
-            var index = 0;
-            byte lastChar = 0;
-            foreach (var segment in buffer)
+            var position = buffer.Start;
+            var previous = position;
+            var index = -1;
+
+            while (buffer.TryGet(ref position, out var segment))
             {
-                foreach (var b in segment.Span)
+                var span = segment.Span;
+
+                // Look for \r in the current segment
+                index = span.IndexOf(ByteConstants.BackslashR);
+
+                if (index != -1)
                 {
-                    if (b == '\n' && lastChar == '\r')
+                    // Check next segment for \n
+                    if (index + 1 >= span.Length)
                     {
-                        return buffer.GetPosition(index);
+                        var next = position;
+                        
+                        if (!buffer.TryGet(ref next, out var nextSegment))
+                        {
+                            // We're at the end of the sequence
+                            return null;
+                        }
+
+                        if (nextSegment.Span[0] == ByteConstants.NewLine)
+                        {
+                            //  We found a match
+                            break;
+                        }
                     }
-
-                    lastChar = b;
-
-                    index++;
+                    // Check the current segment of \n
+                    else if (span[index + 1] == ByteConstants.NewLine)
+                    {
+                        // Found it
+                        break;
+                    }
                 }
+
+                previous = position;
             }
 
-            return null;
-        }
-
-        private static SequencePosition? GetEndOfLinePositionSingleSegment(in ReadOnlySequence<byte> buffer)
-        {
-            var segment = buffer.First.Span;
-            for (var i = 0; i < segment.Length; i++)
+            if (index != -1)
             {
-                if (segment[i] == '\n' && i != 0 && segment[i - 1] == '\r')
-                {
-                    return buffer.GetPosition(i + 1);
-                }
+                // +2 to advance two positions past \r
+                return buffer.GetPosition(index + 2, previous);
             }
 
             return null;
