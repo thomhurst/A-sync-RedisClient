@@ -129,7 +129,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                     await TryConnectAsync(cancellationToken).ConfigureAwait(false);
                 }
 
-                await Write(command);
+                await Write(command).ConfigureAwait(false);
 
                 return await resultProcessor.Start(this, _pipeReader, cancellationToken);
             }
