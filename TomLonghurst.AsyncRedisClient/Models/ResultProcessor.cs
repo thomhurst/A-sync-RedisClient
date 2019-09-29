@@ -120,10 +120,10 @@ namespace TomLonghurst.AsyncRedisClient.Models
             {
                 throw new UnexpectedRedisResponseException("Invalid length");
             }
-
+            
             var dataByteStorage = new byte[byteSizeOfData].AsMemory();
 
-            buffer = buffer.Slice(0, Math.Min(byteSizeOfData, buffer.Length));
+            buffer = buffer.Slice(buffer.Start, Math.Min(byteSizeOfData, buffer.Length));
 
             var bytesReceived = buffer.Length;
 
@@ -159,7 +159,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
                     ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken).ConfigureAwait(false);
                 }
 
-                buffer = ReadResult.Buffer.Slice(0,
+                buffer = ReadResult.Buffer.Slice(ReadResult.Buffer.Start,
                     Math.Min(ReadResult.Buffer.Length, byteSizeOfData - bytesReceived));
 
                 buffer
@@ -197,7 +197,8 @@ namespace TomLonghurst.AsyncRedisClient.Models
             var slicedBytes = ReadResult.Buffer.Slice(buffer.End);
             if (slicedBytes.IsEmpty)
             {
-                throw new RedisDataException("Buffer is empty in TryAdvanceToLineTerminator");
+                PipeReader.AdvanceTo(buffer.End);
+                return false;
             }
 
             var endOfLinePosition = slicedBytes.GetEndOfLinePosition();
@@ -218,7 +219,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
             var endOfLinePosition = ReadResult.Buffer.GetEndOfLinePosition();
             if (endOfLinePosition != null)
             {
-                return new ValueTask<ReadOnlySequence<byte>>(ReadResult.Buffer.Slice(0, endOfLinePosition.Value));
+                return new ValueTask<ReadOnlySequence<byte>>(ReadResult.Buffer.Slice(ReadResult.Buffer.Start, endOfLinePosition.Value));
             }
 
             if (ReadResult.IsCompleted && ReadResult.Buffer.IsEmpty)
@@ -258,7 +259,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
             var buffer = ReadResult.Buffer;
 
-            return buffer.Slice(0, endOfLinePosition.Value);
+            return buffer.Slice(buffer.Start, endOfLinePosition.Value);
         }
     }
 
@@ -373,7 +374,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
                 throw new UnexpectedRedisResponseException(stringLine);
             }
 
-            var word = line.Slice(1).AsStringWithoutLineTerminators();
+            var word = line.Slice(line.GetPosition(1, line.Start)).AsStringWithoutLineTerminators();
             PipeReader.AdvanceTo(line.End);
             return word;
         }

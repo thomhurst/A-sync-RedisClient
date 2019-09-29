@@ -36,7 +36,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
         internal static string AsStringWithoutLineTerminators(this in ReadOnlySequence<byte> buffer)
         {
             // Reslice but removing the line terminators
-            return buffer.GetEndOfLinePosition() == null ? buffer.AsString() : buffer.Slice(0, buffer.Length - 2).AsString();
+            return buffer.GetEndOfLinePosition() == null ? buffer.AsString() : buffer.Slice(buffer.Start, buffer.Length - 2).AsString();
         }
 
         internal static string AsString(this in ReadOnlySequence<byte> buffer)
@@ -153,7 +153,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
             return readResult;
         }
 
-        internal static SequencePosition? GetEndOfLinePosition(this in ReadOnlySequence<byte> buffer)
+        internal static SequencePosition? GetEndOfLinePosition2(this in ReadOnlySequence<byte> buffer)
         {
             if (buffer.IsEmpty)
             {
@@ -168,6 +168,57 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
             }
             
             return buffer.GetPosition(1, sequencePosition.Value);
+        }
+
+        internal static SequencePosition? GetEndOfLinePosition(this in ReadOnlySequence<byte> buffer)
+        {
+            var position = buffer.Start;
+            var previous = position;
+            var index = -1;
+
+            while (buffer.TryGet(ref position, out var segment))
+            {
+                var span = segment.Span;
+
+                // Look for \r in the current segment
+                index = span.IndexOf(ByteConstants.BackslashR);
+
+                if (index != -1)
+                {
+                    // Check next segment for \n
+                    if (index + 1 >= span.Length)
+                    {
+                        var next = position;
+                        
+                        if (!buffer.TryGet(ref next, out var nextSegment))
+                        {
+                            // We're at the end of the sequence
+                            return null;
+                        }
+
+                        if (nextSegment.Span[0] == ByteConstants.NewLine)
+                        {
+                            //  We found a match
+                            break;
+                        }
+                    }
+                    // Check the current segment of \n
+                    else if (span[index + 1] == ByteConstants.NewLine)
+                    {
+                        // Found it
+                        break;
+                    }
+                }
+
+                previous = position;
+            }
+
+            if (index != -1)
+            {
+                return buffer.GetPosition(index + 2, previous);
+            }
+
+            return null;
         }
 
         internal static ArraySegment<byte> GetArraySegment(this Memory<byte> buffer) => GetArraySegment((ReadOnlyMemory<byte>)buffer);

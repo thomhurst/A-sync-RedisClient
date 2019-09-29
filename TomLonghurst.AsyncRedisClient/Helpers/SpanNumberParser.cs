@@ -22,12 +22,12 @@ namespace TomLonghurst.AsyncRedisClient.Helpers
             
             if (!char.IsDigit((char) buffer.ItemAt(0)) && buffer.ItemAt(0) != ByteConstants.Dash)
             {
-                return Parse(buffer.Slice(1));
+                return Parse(buffer.Slice(buffer.GetPosition(1, buffer.Start)));
             }
 
             if (buffer.GetEndOfLinePosition() != null)
             {
-                return Parse(buffer.Slice(0, buffer.Length - 2));
+                return Parse(buffer.Slice(buffer.Start, buffer.Length - 2));
             }
 
             return ParseSequence(buffer);
