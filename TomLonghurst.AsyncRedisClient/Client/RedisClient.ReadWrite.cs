@@ -130,8 +130,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
                     await TryConnectAsync(cancellationToken).ConfigureAwait(false);
                 }
 
-                //await ResetPipes();
-
                 await Write(command);
 
                 return await resultProcessor.Start(this, _pipeReader, cancellationToken);
@@ -162,30 +160,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 }
                 
                 IsBusy = false;
-            }
-        }
-
-        private async ValueTask ResetPipes()
-        {
-            if (_written < 1000)
-            {
-                return;
-            }
-
-            _written = 0;
-            
-            if (_socketPipe == null)
-            {
-                _pipeWriter.CompleteAsync();
-                _pipeReader.CompleteAsync();
-                _pipeWriter = PipeWriter.Create(_sslStream, new StreamPipeWriterOptions(leaveOpen: true));
-                _pipeReader = PipeReader.Create(_sslStream, new StreamPipeReaderOptions(leaveOpen: true));
-            }
-            else
-            {
-                await _pipeWriter.CompleteAsync();
-                await _pipeReader.CompleteAsync();
-                _socketPipe.Reset();
             }
         }
 
