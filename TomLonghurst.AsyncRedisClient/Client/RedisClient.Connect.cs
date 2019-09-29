@@ -247,7 +247,14 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 return;
             }
 
-            try { _socket.NoDelay = true; } catch { }
+            try
+            {
+                _socket.NoDelay = true;
+            }
+            catch
+            {
+                // If we can't set this, just continue - There's nothing we can do!
+            }
         }
         
         private bool _disposed;

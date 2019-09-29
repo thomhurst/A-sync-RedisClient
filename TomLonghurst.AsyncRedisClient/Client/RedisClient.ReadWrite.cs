@@ -36,9 +36,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         private SocketPipe _socketPipe;
         private PipeReader _pipeReader;
         private PipeWriter _pipeWriter;
-        
-        public bool IsBusy;
-        
+
         private Thread BacklogWorkerThread;
 
         private string _lastAction;
@@ -61,6 +59,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
         private Func<RedisTelemetryResult, Task> _telemetryCallback;
         private int _written;
+        private bool _isBusy;
 
         // TODO Make public
         private void SetTelemetryCallback(Func<RedisTelemetryResult, Task> telemetryCallback)
@@ -111,7 +110,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         internal async ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command, ResultProcessor<T> resultProcessor,
             CancellationToken cancellationToken, bool isReconnectionAttempt)
         {
-            IsBusy = true;
+            _isBusy = true;
             
             Log.Debug($"Executing Command: {command}");
             LastCommand = command;
@@ -159,7 +158,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                     _sendAndReceiveSemaphoreSlim.Release();
                 }
                 
-                IsBusy = false;
+                _isBusy = false;
             }
         }
 

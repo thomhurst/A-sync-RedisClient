@@ -121,8 +121,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
         private async Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds, AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-           //CollateMultipleRequestsForPipelining(new Tuple<string, string, int>(key, value, timeToLiveInSeconds), _stringSetWithTtlQueue);
-
             await RunWithTimeout(async token =>
             {
                 var command = RedisCommand.From(Commands.SetEx, redisKeyValue.Key.ToRedisEncoded(),
@@ -155,8 +153,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
         private async Task StringSetAsync(RedisKeyValue redisKeyValue, AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-            //CollateMultipleRequestsForPipelining(new Tuple<string, string>(key, value), _stringSetQueue);
-
             await RunWithTimeout(async token =>
             {
                 var command = RedisCommand.From(Commands.Set, redisKeyValue.Key.ToRedisEncoded(),
@@ -225,15 +221,12 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 await SendOrQueueAsync(setCommand, SuccessResultProcessor, token);
 
                 var keys = redisKeyValues.Select(value => value.Key).ToList();
-                var arguments = new List<string>() { timeToLiveInSeconds.ToString() };
+                var arguments = new List<string> { timeToLiveInSeconds.ToString() };
 
                 var expireTask = Scripts.EvalSha(await Scripts.LazyMultiExpireLuaScript.Value,
                     keys,
                     arguments, CancellationToken.None);
-                
-//                var expireCommand = redisKeyValues.Select(keyValuePair => RedisCommand.From(Commands.Expire, keyValuePair.Key.ToRedisEncoded(), timeToLiveInSeconds.ToRedisEncoded())).ToFireAndForgetCommand();
-//                var expireTask = SendOrQueueAsync(expireCommand, SuccessResultProcessor, token);
-                
+
                 if (awaitOptions == AwaitOptions.AwaitCompletion)
                 {
                     await expireTask;

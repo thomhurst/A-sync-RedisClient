@@ -220,7 +220,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
             if (ReadResult.IsCompleted && ReadResult.Buffer.IsEmpty)
             {
-                throw new Exception("Read is completed and buffer is empty - Can't find a complete line in ReadLine'");
+                throw new RedisDataException("Read is completed and buffer is empty - Can't find a complete line in ReadLine'");
             }
 
             return await ReadLineAsync();

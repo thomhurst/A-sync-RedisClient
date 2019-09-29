@@ -97,11 +97,6 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
                 readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken).ConfigureAwait(false);
             }
 
-            if (endOfLinePosition == null)
-            {
-                throw new RedisDataException("Can't find EOL in AdvanceToLineTerminator");
-            }
-
             pipeReader.AdvanceTo(endOfLinePosition.Value);
 
             return readResult;

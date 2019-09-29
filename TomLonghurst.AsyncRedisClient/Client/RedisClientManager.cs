@@ -30,18 +30,18 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             if (_redisClients.Count == 1)
             {
-                return await _redisClients.First();
+                return await _redisClients.First().ConfigureAwait(false);
             }
 
             var redisClientsLoaded = _redisClients.Where(x => x.IsCompleted).ToList();
 
             if (redisClientsLoaded.Count != _redisClients.Count)
             {
-                return await _redisClients.WhenAny(x => x.IsConnected)
+                return await _redisClients.WhenAny(x => x.IsConnected).ConfigureAwait(false)
                     ?? await Task.WhenAny(_redisClients).Unwrap().ConfigureAwait(false);
             }
 
-            var orderByLeastOutstandingOperations = (await Task.WhenAll(_redisClients)).OrderBy(client => client.OutstandingOperations).ToList();
+            var orderByLeastOutstandingOperations = (await Task.WhenAll(_redisClients).ConfigureAwait(false)).OrderBy(client => client.OutstandingOperations).ToList();
                 
             var connectedClient = orderByLeastOutstandingOperations.FirstOrDefault(client => client.IsConnected);
 

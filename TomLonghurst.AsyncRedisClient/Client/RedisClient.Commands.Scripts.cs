@@ -58,7 +58,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
             private async Task<string> LoadScript(string scriptName, string script, CancellationToken cancellationToken)
             {
-                var sha1 = await LoadScript(script, cancellationToken);
+                var sha1 = await LoadScript(script, cancellationToken).ConfigureAwait(false);
                 ScriptNameToShaKey[scriptName] = sha1;
                 return sha1;
             }
