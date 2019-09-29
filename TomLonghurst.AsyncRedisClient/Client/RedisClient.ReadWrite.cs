@@ -189,17 +189,14 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
         }
 
-        internal async ValueTask Write(IRedisCommand command)
+        internal ValueTask<FlushResult> Write(IRedisCommand command)
         {
             _written++;
             var encodedCommandList = command.EncodedCommandList;
 
             LastAction = "Writing Bytes";
-            
-            foreach (var encodedCommand in encodedCommandList)
-            {
-                await _pipeWriter.WriteAsync(encodedCommand);
-            }
+
+            return _pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray());
         }
 
         
