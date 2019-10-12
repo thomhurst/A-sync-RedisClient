@@ -13,14 +13,14 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
         protected void StartBacklogProcessor()
         {
-//            BacklogWorkerThread = new Thread(async state => await ((RedisClient) state).ProcessBacklog())
-//            {
-//                Name = $"{nameof(RedisClient)}",
-//                Priority = ThreadPriority.Normal,
-//                IsBackground = true
-//            };
-//                
-//            BacklogWorkerThread.Start(this);
+            BacklogWorkerThread = new Thread(async state => await ((RedisClient) state).ProcessBacklog())
+            {
+                Name = $"{nameof(RedisClient)}",
+                Priority = ThreadPriority.Normal,
+                IsBackground = true
+            };
+                
+            BacklogWorkerThread.Start(this);
         }
 
         internal async Task ProcessBacklog()
@@ -32,6 +32,11 @@ namespace TomLonghurst.AsyncRedisClient.Client
                     return;
                 }
                 
+                if (!IsConnected)
+                {
+                    await TryConnectAsync(CancellationToken.None).ConfigureAwait(false);
+                }
+
                 var backlogItems = _backlog.DequeueAll();
 
                 // Items cancelled will be taken care of by the CancellationToken.Register in the SendOrQueue method
@@ -40,11 +45,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 var pipelinedCommand = validItems
                     .Select(backlogItem => backlogItem.RedisCommand).ToList()
                     .ToPipelinedCommand();
-
-                if (!IsConnected)
-                {
-                    await TryConnectAsync(CancellationToken.None).ConfigureAwait(false);
-                }
 
                 try
                 {

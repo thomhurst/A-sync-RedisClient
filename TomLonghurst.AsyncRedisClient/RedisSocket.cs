@@ -5,6 +5,7 @@ namespace TomLonghurst.AsyncRedisClient
     internal class RedisSocket : Socket
     {
         internal bool IsDisposed { get; private set; }
+        public bool IsClosed { get; private set; }
 
         ~RedisSocket()
         {
@@ -22,6 +23,12 @@ namespace TomLonghurst.AsyncRedisClient
 
         internal RedisSocket(SocketType socketType, ProtocolType protocolType) : base(socketType, protocolType)
         {
+        }
+
+        public new void Close()
+        {
+            IsClosed = true;
+            base.Close();
         }
 
         protected override void Dispose(bool disposing)

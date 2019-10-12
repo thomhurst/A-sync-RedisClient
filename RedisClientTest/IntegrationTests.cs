@@ -484,7 +484,6 @@ namespace RedisClientTest
         // Needs Access to Socket (which is private) to Close it
         [Test]
         [Repeat(2)]
-        [Ignore("")]
         public async Task Disconnected()
         {
             var client = await _redisManager.GetRedisClientAsync();
@@ -494,14 +493,7 @@ namespace RedisClientTest
             
             client.Socket.Close();
 
-            try
-            {
-                await client.StringGetAsync("DisconnectTest");
-            }
-            catch (Exception e)
-            {
-                // Swallow 
-            }
+            await Task.Delay(1000);
             
             var result = await client.StringGetAsync("DisconnectTest");
             

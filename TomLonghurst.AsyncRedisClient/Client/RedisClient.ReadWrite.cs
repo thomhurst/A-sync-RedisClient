@@ -85,14 +85,14 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
             Interlocked.Increment(ref _outStandingOperations);
 
-            return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
+//            return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
             
-//            if (isReconnectionAttempt)
-//            {
-//                return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
-//            }
-//
-//            return QueueToBacklog(command, resultProcessor, cancellationToken);
+            if (isReconnectionAttempt)
+            {
+                return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
+            }
+
+            return QueueToBacklog(command, resultProcessor, cancellationToken);
         }
 
         private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, ResultProcessor<T> resultProcessor,

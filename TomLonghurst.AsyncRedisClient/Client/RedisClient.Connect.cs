@@ -46,7 +46,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             [MethodImpl(MethodImplOptions.Synchronized)]
             get
             {
-                if (_socket == null || _socket.IsDisposed || !_socket.Connected)
+                if (_socket == null || _socket.IsDisposed || !_socket.Connected || _socket.IsClosed)
                 {
                     _isConnected = false;
                 }
