@@ -18,23 +18,12 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             private readonly RedisClient _redisClient;
 
-            internal const string MultiSetExpire = "MultiSetExpire";
-            
-            internal readonly Dictionary<string, string> ScriptNameToShaKey = new Dictionary<string, string>();
+            internal LuaScript MultiExpireScript;
+            internal LuaScript MultiSetexScript;
 
-            internal Lazy<Task<string>> LazyMultiExpireLuaScript;
-            
             internal ScriptCommands(RedisClient redisClient)
             {
                 _redisClient = redisClient;
-                CreateLazyScripts();
-            }
-
-            private void CreateLazyScripts()
-            {
-                LazyMultiExpireLuaScript = new Lazy<Task<string>>(async () => await LoadScript(MultiSetExpire,
-                    $"for i, name in ipairs(KEYS) do redis.call(\"EXPIRE\", name, ARGV[1]); end",
-                    CancellationToken.None).ConfigureAwait(false));
             }
 
             public async Task FlushScripts(CancellationToken cancellationToken)
@@ -45,7 +34,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 }, cancellationToken).ConfigureAwait(false);
             }
 
-            public async Task<string> LoadScript(string script, CancellationToken cancellationToken)
+            public async Task<LuaScript> LoadScript(string script, CancellationToken cancellationToken)
             {
                 var command = RedisCommand.From(Commands.Script, Commands.Load, script.ToRedisEncoded());
                 var scriptResponse = await _redisClient.RunWithTimeout(async token =>
@@ -53,22 +42,13 @@ namespace TomLonghurst.AsyncRedisClient.Client
                     return await _redisClient.SendOrQueueAsync(command, _redisClient.DataResultProcessor, token);
                 }, cancellationToken).ConfigureAwait(false);
                 
-                return scriptResponse;
+                return new LuaScript(_redisClient, scriptResponse);
             }
 
-            private async Task<string> LoadScript(string scriptName, string script, CancellationToken cancellationToken)
+            internal async Task<RawResult> EvalSha(string sha1Hash, IEnumerable<string> keys, IEnumerable<string> arguments, CancellationToken cancellationToken)
             {
-                var sha1 = await LoadScript(script, cancellationToken).ConfigureAwait(false);
-                ScriptNameToShaKey[scriptName] = sha1;
-                return sha1;
-            }
-
-            public async Task<RawResult> EvalSha(string sha1Hash, IEnumerable<string> keys, IEnumerable<string> arguments, CancellationToken cancellationToken)
-            {
-                var scriptHash = ScriptNameToShaKey.ContainsKey(sha1Hash) ? ScriptNameToShaKey[sha1Hash] : sha1Hash;
-                
                 var keysList = keys.ToList();
-                var command = RedisCommand.FromScript(Commands.EvalSha, scriptHash.ToRedisEncoded(), keysList, arguments);
+                var command = RedisCommand.FromScript(Commands.EvalSha, sha1Hash.ToRedisEncoded(), keysList, arguments);
 
                 var scriptResult = await _redisClient.RunWithTimeout(async token =>
                     {

@@ -1,11 +1,10 @@
+using System.Buffers;
 using System.Threading.Tasks;
 
 namespace TomLonghurst.AsyncRedisClient.Client
 {
     public partial class RedisClient
     {
-        //private DedicatedScheduler _backlogScheduler = new DedicatedScheduler(workerCount: 1);
-
         protected RedisClient()
         {
             CreateCommandClasses();

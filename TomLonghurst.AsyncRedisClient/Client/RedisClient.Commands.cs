@@ -209,23 +209,21 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             await RunWithTimeout(async token =>
             {
-                var encodedKeysAndValues = new List<IRedisEncodable>();
                 var redisKeyValues = keyValuePairs.ToList();
-                foreach (var keyValuePair in redisKeyValues)
-                {
-                    encodedKeysAndValues.Add(keyValuePair.Key.ToRedisEncoded());
-                    encodedKeysAndValues.Add(keyValuePair.Value.ToRedisEncoded());
-                }
-
-                var setCommand = RedisCommand.From(Commands.MSet, encodedKeysAndValues);
-                await SendOrQueueAsync(setCommand, SuccessResultProcessor, token);
 
                 var keys = redisKeyValues.Select(value => value.Key).ToList();
-                var arguments = new List<string> { timeToLiveInSeconds.ToString() };
+                var arguments = new List<string> { timeToLiveInSeconds.ToString() }.Concat(redisKeyValues.Select(value => value.Value));
 
-                var expireTask = Scripts.EvalSha(await Scripts.LazyMultiExpireLuaScript.Value,
-                    keys,
-                    arguments, CancellationToken.None);
+                if (Scripts.MultiSetexScript == null)
+                {
+                    Scripts.MultiSetexScript = await Scripts.LoadScript(
+                        "for i=1, #KEYS do " +
+                        "redis.call(\"SETEX\", KEYS[i], ARGV[1], ARGV[i+1]); " +
+                        "end",
+                        cancellationToken);
+                }
+
+                var expireTask = Scripts.MultiSetexScript.ExecuteAsync(keys, arguments, cancellationToken);
 
                 if (awaitOptions == AwaitOptions.AwaitCompletion)
                 {
@@ -359,6 +357,38 @@ namespace TomLonghurst.AsyncRedisClient.Client
             {
                 var command = RedisCommand.From(Commands.Expire, key.ToRedisEncoded(), seconds.ToRedisEncoded());
                 return await SendOrQueueAsync(command, IntegerResultProcessor, token);
+            }, cancellationToken).ConfigureAwait(false);
+        }
+
+        public ValueTask ExpireAsync(IEnumerable<string> keys,
+            int timeToLiveInSeconds, 
+            AwaitOptions awaitOptions)
+        {
+            return ExpireAsync(keys, timeToLiveInSeconds, awaitOptions, new CancellationToken());
+        }
+
+        public async ValueTask ExpireAsync(IEnumerable<string> keys,
+            int timeToLiveInSeconds, 
+            AwaitOptions awaitOptions,
+            CancellationToken cancellationToken)
+        {
+            await RunWithTimeout(async token =>
+            {
+                var arguments = new List<string> { timeToLiveInSeconds.ToString() };
+
+                if (Scripts.MultiExpireScript == null)
+                {
+                    Scripts.MultiExpireScript = await Scripts.LoadScript(
+                        "for i, name in ipairs(KEYS) do redis.call(\"EXPIRE\", name, ARGV[1]); end",
+                        cancellationToken);
+                }
+
+                var expireTask = Scripts.MultiExpireScript.ExecuteAsync(keys, arguments, cancellationToken);
+
+                if (awaitOptions == AwaitOptions.AwaitCompletion)
+                {
+                    await expireTask;
+                }
             }, cancellationToken).ConfigureAwait(false);
         }
 
