@@ -339,14 +339,45 @@ namespace RedisClientTest
             var client = await TomLonghurstRedisClient;
             await client.StringSetAsync(new List<RedisKeyValue>
                 {
-                    {new RedisKeyValue("BlahTTL1", "Blah1")},
-                    {new RedisKeyValue("BlahTTL2", "Blah2")},
-                    {new RedisKeyValue("BlahTTL3", "Blah3")},
-                    {new RedisKeyValue("BlahTTL4", "Blah4")},
-                    {new RedisKeyValue("BlahTTL5", "Blah5")},
+                    new RedisKeyValue("BlahTTL1", "Blah1"),
+                    new RedisKeyValue("BlahTTL2", "Blah2"),
+                    new RedisKeyValue("BlahTTL3", "Blah3"),
+                    new RedisKeyValue("BlahTTL4", "Blah4"),
+                    new RedisKeyValue("BlahTTL5", "Blah5")
                 },
                 120,
                 AwaitOptions.AwaitCompletion);
+
+            var ttl = await client.TimeToLiveAsync("BlahTTL1");
+            Assert.That(ttl, Is.Positive.And.LessThanOrEqualTo(125));
+        }
+        
+        [Test]
+        [Repeat(2)]
+        public async Task MultipleExpire()
+        {
+            var client = await TomLonghurstRedisClient;
+            await client.StringSetAsync(new List<RedisKeyValue>
+                {
+                    new RedisKeyValue("BlahExpire1", "Blah1"),
+                    new RedisKeyValue("BlahExpire2", "Blah2"),
+                    new RedisKeyValue("BlahExpire3", "Blah3"),
+                    new RedisKeyValue("BlahExpire4", "Blah4"),
+                    new RedisKeyValue("BlahExpire5", "Blah5")
+                },
+                AwaitOptions.AwaitCompletion);
+
+            await client.ExpireAsync(new List<string>
+            {
+                "BlahExpire1",
+                "BlahExpire2",
+                "BlahExpire3",
+                "BlahExpire4",
+                "BlahExpire5"
+            }, 120, AwaitOptions.AwaitCompletion);
+
+            var ttl = await client.TimeToLiveAsync("BlahExpire1");
+            Assert.That(ttl, Is.Positive.And.LessThanOrEqualTo(125));
         }
 
         [Test]
