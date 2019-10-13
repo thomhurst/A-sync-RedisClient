@@ -171,7 +171,7 @@ namespace RedisClientTest
         }
         
         [Ignore("")]
-       [TestCase(TestClient.StackExchange)]
+        [TestCase(TestClient.StackExchange)]
         [TestCase(TestClient.TomLonghurst)]
         public async Task PerformanceTest(TestClient testClient)
         {
@@ -235,6 +235,60 @@ namespace RedisClientTest
             }
 
             await Task.WhenAll(tasks);
+        }
+
+        [TestCase(TestClient.StackExchange)]
+        [TestCase(TestClient.TomLonghurst)]
+        public async Task PerformanceTest2(TestClient testClient)
+        {
+            var tasks = new List<Task>();
+            if (testClient == TestClient.StackExchange)
+            {
+                var stackExchange = (await ConnectionMultiplexer.ConnectAsync(new ConfigurationOptions
+                {
+                    EndPoints = {{TestInformation.Host, TestInformation.Port}},
+                    Password = TestInformation.Password,
+                    Ssl = true
+                })).GetDatabase(0);
+
+                await stackExchange.StringSetAsync("SingleKey", "123", TimeSpan.FromSeconds(120));
+
+                var stackExchangeRedisClientStopwatch = Stopwatch.StartNew();
+
+                for (var i = 0; i < 200; i++)
+                {
+                    tasks.Add(stackExchange.StringGetAsync("SingleKey"));
+                }
+
+                await Task.WhenAll(tasks);
+
+                stackExchangeRedisClientStopwatch.Stop();
+                var stackExchangeRedisClientStopwatchTimeTaken =
+                    stackExchangeRedisClientStopwatch.ElapsedMilliseconds;
+                Console.WriteLine($"Time Taken: {stackExchangeRedisClientStopwatchTimeTaken} ms");
+            }
+            else
+            {
+                var client = await TomLonghurstRedisClient;
+                await client.StringSetAsync("SingleKey",
+                    "123",
+                    120,
+                    AwaitOptions.AwaitCompletion);
+
+                var tomLonghurstRedisClientStopwatch = Stopwatch.StartNew();
+
+                for (var i = 0; i < 200; i++)
+                {
+                    tasks.Add(client.StringGetAsync("SingleKey"));
+                }
+                
+                await Task.WhenAll(tasks);
+
+                tomLonghurstRedisClientStopwatch.Stop();
+                var tomLonghurstRedisClientStopwatchTimeTaken =
+                    tomLonghurstRedisClientStopwatch.ElapsedMilliseconds;
+                Console.WriteLine($"Time Taken: {tomLonghurstRedisClientStopwatchTimeTaken} ms");
+            }
         }
 
         [Test]
