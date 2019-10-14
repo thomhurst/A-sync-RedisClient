@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Models;
 using TomLonghurst.AsyncRedisClient.Pipes;
@@ -118,7 +119,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             {
                 await RunWithTimeout(async token =>
                 {
-                    LastAction = "Reconnecting";
+                    LastAction = LastActionConstants.Reconnecting;
                     await ConnectAsync(token);
                 }, cancellationToken);
             }
@@ -136,7 +137,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 return;
             }
 
-            LastAction = "Waiting for Connecting lock to be free";
+            LastAction = LastActionConstants.WaitingForConnectingLock;
             await _connectSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
 
             if (IsConnected)
@@ -147,7 +148,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             
             try
             {
-                LastAction = "Connecting";
+                LastAction = LastActionConstants.Connecting;
                 Interlocked.Increment(ref _reconnectAttempts);
 
                 _socket = new RedisSocket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
@@ -193,7 +194,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                         ClientConfig.CertificateSelectionCallback,
                         EncryptionPolicy.RequireEncryption);
 
-                    LastAction = "Authenticating SSL Stream as Client";
+                    LastAction = LastActionConstants.AuthenticatingSSLStreamAsClient;
                     await _sslStream.AuthenticateAsClientAsync(ClientConfig.Host).ConfigureAwait(false);
 
                     if (!_sslStream.IsEncrypted)
@@ -202,13 +203,13 @@ namespace TomLonghurst.AsyncRedisClient.Client
                         throw new SecurityException($"Could not establish an encrypted connection to Redis - {ClientConfig.Host}");
                     }
 
-                    LastAction = "Creating SSL Stream Pipe";
+                    LastAction = LastActionConstants.CreatingSSLStreamPipe;
                     _pipeWriter = PipeWriter.Create(_sslStream, new StreamPipeWriterOptions(leaveOpen: true));
                     _pipeReader = PipeReader.Create(_sslStream, new StreamPipeReaderOptions(leaveOpen: true));
                 }
                 else
                 {
-                    LastAction = "Creating Socket Pipe";
+                    LastAction = LastActionConstants.CreatingSocketPipe;
                     _socketPipe = SocketPipe.GetDuplexPipe(_socket, redisPipeOptions.SendOptions, redisPipeOptions.ReceiveOptions);
                     _pipeWriter = _socketPipe.Output;
                     _pipeReader = _socketPipe.Input;
@@ -216,19 +217,19 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
                 if (!string.IsNullOrEmpty(ClientConfig.Password))
                 {
-                    LastAction = "Authorizing";
+                    LastAction = LastActionConstants.Authorizing;
                     await Authorize(cancellationToken);
                 }
 
                 if (ClientConfig.Db != 0)
                 {
-                    LastAction = "Selecting Database";
+                    LastAction = LastActionConstants.SelectingDatabase;
                     await SelectDb(cancellationToken);
                 }
 
                 if (ClientConfig.ClientName != null)
                 {
-                    LastAction = "Setting Client Name";
+                    LastAction = LastActionConstants.SettingClientName;
                     await SetClientNameAsync(cancellationToken);
                 }
 
@@ -302,7 +303,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             _disposed = true;
             DisposeNetwork();
-            LastAction = "Disposing Client";
+            LastAction = LastActionConstants.DisposingClient;
             _connectSemaphoreSlim?.Dispose();
             _sendAndReceiveSemaphoreSlim?.Dispose();
             _backlog?.Dispose();
@@ -312,7 +313,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         private void DisposeNetwork()
         {
             IsConnected = false;
-            LastAction = "Disposing Network";
+            LastAction = LastActionConstants.DisposingNetwork;
             _pipeReader?.CompleteAsync();
             _pipeWriter?.CompleteAsync();
             _socket?.Close();

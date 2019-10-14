@@ -54,7 +54,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
         {
             SetMembers(redisClient, pipeReader, cancellationToken);
 
-            LastAction = "Starting ResultProcessor.Processor";
+            LastAction = LastActionConstants.StartingResultProcessor;
             return await Process();
         }
 
@@ -101,7 +101,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
                 throw new RedisDataException("ReadResult is completed and buffer is empty starting ReadData");
             }
 
-            LastAction = "Reading Data in ReadData";
+            LastAction = LastActionConstants.ReadingDataInReadData;
             ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken).ConfigureAwait(false);
 
             var buffer = ReadResult.Buffer;
@@ -119,7 +119,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
             buffer.CopyTo(dataByteStorage.Slice(0, (int) bytesReceived).Span);
 
-            LastAction = "Advancing Buffer in ReadData Loop";
+            LastAction = LastActionConstants.AdvancingBufferInReadDataLoop;
             if (bytesReceived >= byteSizeOfData)
             {
                 alreadyReadToLineTerminator = TryAdvanceToLineTerminator(ref buffer);
@@ -142,7 +142,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
                     throw new RedisDataException("ReadResult is cancelled reading in loop in ReadData");
                 }
 
-                LastAction = "Reading Data in ReadData Loop";
+                LastAction = LastActionConstants.ReadingDataInReadDataLoop;
                 ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken).ConfigureAwait(false);
 
                 buffer = ReadResult.Buffer.Slice(ReadResult.Buffer.Start,
@@ -166,7 +166,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
             if (!alreadyReadToLineTerminator)
             {
-                LastAction = "Reading Data in ReadData Loop";
+                LastAction = LastActionConstants.ReadingDataInReadDataLoop;
                 ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken).ConfigureAwait(false);
 
                 await PipeReader.AdvanceToLineTerminator(ReadResult, CancellationToken);
@@ -210,8 +210,8 @@ namespace TomLonghurst.AsyncRedisClient.Models
         protected async ValueTask<ReadOnlySequence<byte>> ReadLine()
         {
             ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken);
-         
-            LastAction = "Finding End of Line Position";
+
+            LastAction = LastActionConstants.FindingEndOfLinePosition;
             var endOfLinePosition = ReadResult.Buffer.GetEndOfLinePosition();
             if (endOfLinePosition != null)
             {
@@ -231,11 +231,11 @@ namespace TomLonghurst.AsyncRedisClient.Models
             var endOfLinePosition = ReadResult.Buffer.GetEndOfLinePosition();
             if (endOfLinePosition == null)
             {
-                LastAction = "Reading until End of Line found";
+                LastAction = LastActionConstants.ReadingUntilEndOfLinePositionFound;
 
                 ReadResult = await PipeReader.ReadUntilEndOfLineFound(ReadResult, CancellationToken);
 
-                LastAction = "Finding End of Line Position";
+                LastAction = LastActionConstants.FindingEndOfLinePosition;
                 endOfLinePosition = ReadResult.Buffer.GetEndOfLinePosition();
             }
 

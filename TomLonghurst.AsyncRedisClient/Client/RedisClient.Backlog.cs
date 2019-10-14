@@ -11,19 +11,12 @@ namespace TomLonghurst.AsyncRedisClient.Client
     {
         private readonly BlockingQueue<IBacklog> _backlog = new BlockingQueue<IBacklog>();
 
-        protected void StartBacklogProcessor()
+        private void StartBacklogProcessor()
         {
-            BacklogWorkerThread = new Thread(async state => await ((RedisClient) state).ProcessBacklog())
-            {
-                Name = $"{nameof(RedisClient)}",
-                Priority = ThreadPriority.Normal,
-                IsBackground = true
-            };
-                
-            BacklogWorkerThread.Start(this);
+            Task.Run(ProcessBacklog);
         }
 
-        internal async Task ProcessBacklog()
+        private async Task ProcessBacklog()
         {
             while (true)
             {

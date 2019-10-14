@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Helpers;
 using TomLonghurst.AsyncRedisClient.Models;
@@ -34,19 +35,21 @@ namespace TomLonghurst.AsyncRedisClient.Client
         private PipeReader _pipeReader;
         private PipeWriter _pipeWriter;
 
-        private Thread BacklogWorkerThread;
-
         private string _lastAction;
+        public static bool Debug;
 
         internal string LastAction
         {
-            get { return _lastAction; }
+            get => _lastAction ?? "Please set RedisClient.Debug to true to populate this field.";
             set
             {
 #if DEBUG
                 Console.WriteLine($"Last Action: {value}");
 #endif
-                _lastAction = value;
+                if (Debug)
+                {
+                    _lastAction = value;
+                }
             }
         }
 
@@ -75,7 +78,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 #if DEBUG
             if (cancellationToken.IsCancellationRequested)
             {
-                LastAction = "Throwing Cancelled Exception due to Cancelled Token";
+                LastAction = LastActionConstants.ThrowingCancelledException;
             }
 #endif
             cancellationToken.ThrowIfCancellationRequested();
@@ -83,7 +86,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             Interlocked.Increment(ref _outStandingOperations);
 
 //            return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
-            
+//            
             if (isReconnectionAttempt)
             {
                 return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
@@ -100,7 +103,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor, this, _pipeReader));
 
             cancellationToken.Register(() => taskCompletionSource.TrySetCanceled(cancellationToken));
-
+            
             return new ValueTask<T>(taskCompletionSource.Task);
         }
 
@@ -164,7 +167,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             _written++;
             var encodedCommandList = command.EncodedCommandList;
 
-            LastAction = "Writing Bytes";
+            LastAction = LastActionConstants.WritingBytes;
 
             return _pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray());
         }
