@@ -1,6 +1,6 @@
 namespace TomLonghurst.AsyncRedisClient.Models.RequestModels
 {
-    public class RedisKeyFieldValue
+    public struct RedisKeyFieldValue
     {
         public string Key { get; }
         public string Field { get; }

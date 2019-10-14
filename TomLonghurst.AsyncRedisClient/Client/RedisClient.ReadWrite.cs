@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Linq;
@@ -13,9 +12,7 @@ using TomLonghurst.AsyncRedisClient.Models.Backlog;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
 using TomLonghurst.AsyncRedisClient.Extensions;
 using TomLonghurst.AsyncRedisClient.Pipes;
-#if NETSTANDARD2_0
-using System.Linq;
-#else
+#if !NETSTANDARD2_0
 using System.Buffers;
 #endif
 

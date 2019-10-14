@@ -6,7 +6,7 @@ using TomLonghurst.AsyncRedisClient.Models.Commands;
 
 namespace TomLonghurst.AsyncRedisClient.Models.Backlog
 {
-    public class BacklogItem<T> : IBacklogItem<T>
+    public struct BacklogItem<T> : IBacklogItem<T>
     {
         public Client.RedisClient RedisClient { get; set; }
         public PipeReader PipeReader { get; set; }

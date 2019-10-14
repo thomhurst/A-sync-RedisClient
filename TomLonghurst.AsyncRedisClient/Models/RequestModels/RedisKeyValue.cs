@@ -3,7 +3,7 @@ using TomLonghurst.AsyncRedisClient.Constants;
 
 namespace TomLonghurst.AsyncRedisClient.Models.RequestModels
 {
-    public class RedisKeyValue
+    public struct RedisKeyValue
     {
         public string Key { get; }
         public string Value { get; }

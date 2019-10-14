@@ -60,8 +60,7 @@ namespace TomLonghurst.AsyncRedisClient.Pipes
                 receivePipeOptions.ReaderScheduler.Schedule(
                     async obj => await ((SocketPipe) obj).CopyFromSocketToReadPipe().ConfigureAwait(false), this);
             }
-
-
+            
             if (write)
             {
                 _writePipe = new Pipe(sendPipeOptions);
