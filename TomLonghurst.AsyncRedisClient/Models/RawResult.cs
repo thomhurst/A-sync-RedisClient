@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace TomLonghurst.AsyncRedisClient.Models
 {
-    public class RawResult
+    public struct RawResult
     {
         private readonly object _rawResult;
 

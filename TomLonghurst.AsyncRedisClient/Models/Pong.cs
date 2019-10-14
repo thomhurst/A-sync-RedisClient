@@ -2,7 +2,7 @@ using System;
 
 namespace TomLonghurst.AsyncRedisClient.Models
 {
-    public class Pong
+    public struct Pong
     {
         public TimeSpan TimeTaken { get; }
         public string Message { get; }

@@ -3,22 +3,12 @@ using TomLonghurst.AsyncRedisClient.Constants;
 
 namespace TomLonghurst.AsyncRedisClient.Models
 {
-    public class RedisValue<T>
+    public struct StringRedisValue
     {
-        public T Value { get; protected set; }
-        public virtual bool HasValue => !Equals(Value,default(T));
+        public string Value { get; }
+        public bool HasValue => !string.IsNullOrEmpty(Value);
 
-        internal RedisValue(T value)
-        {
-            Value = value;
-        }
-    }
-
-    public class StringRedisValue : RedisValue<string>
-    {
-        public override bool HasValue => !string.IsNullOrEmpty(Value);
-
-        internal StringRedisValue(string value) : base(value)
+        internal StringRedisValue(string value)
         {
             if (value?.AsSpan().Contains(StringConstants.EncodedNewLine.AsSpan(), StringComparison.Ordinal) == true)
             {
