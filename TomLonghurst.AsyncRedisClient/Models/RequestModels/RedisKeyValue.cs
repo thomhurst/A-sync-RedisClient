@@ -11,14 +11,7 @@ namespace TomLonghurst.AsyncRedisClient.Models.RequestModels
         public RedisKeyValue(string key, string value)
         {
             Key = key;
-            if (value?.AsSpan().Contains(StringConstants.NewLine.AsSpan(), StringComparison.Ordinal) == true)
-            {
-                Value = value.Replace(StringConstants.NewLine, StringConstants.EncodedNewLine);
-            }
-            else
-            {
-                Value = value;
-            }
+            Value = value;
         }
     }
 }

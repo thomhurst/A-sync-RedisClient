@@ -10,14 +10,7 @@ namespace TomLonghurst.AsyncRedisClient.Models
 
         internal StringRedisValue(string value)
         {
-            if (value?.AsSpan().Contains(StringConstants.EncodedNewLine.AsSpan(), StringComparison.Ordinal) == true)
-            {
-                Value = value.Replace(StringConstants.EncodedNewLine, StringConstants.NewLine);
-            }
-            else
-            {
-                Value = value;
-            }
+            Value = value;
         }
     }
 }
