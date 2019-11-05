@@ -12,6 +12,7 @@ using TomLonghurst.AsyncRedisClient.Models;
 using TomLonghurst.AsyncRedisClient.Models.Backlog;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
 using TomLonghurst.AsyncRedisClient.Extensions;
+using TomLonghurst.AsyncRedisClient.Models.ResultProcessors;
 using TomLonghurst.AsyncRedisClient.Pipes;
 #if !NETSTANDARD2_0
 using System.Buffers;
@@ -69,7 +70,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
         
         internal ValueTask<T> SendOrQueueAsync<T>(IRedisCommand command,
-            ResultProcessor<T> resultProcessor,
+            AbstractResultProcessor<T> abstractResultProcessor,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
         {
@@ -87,27 +88,27 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
 //            return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
 //            
-            if (isReconnectionAttempt)
+            if (isReconnectionAttempt || _isBusy)
             {
-                return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
+                return SendAndReceiveAsync(command, abstractResultProcessor, cancellationToken, isReconnectionAttempt);
             }
 
-            return QueueToBacklog(command, resultProcessor, cancellationToken);
+            return QueueToBacklog(command, abstractResultProcessor, cancellationToken);
         }
 
-        private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, ResultProcessor<T> resultProcessor,
+        private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, AbstractResultProcessor<T> abstractResultProcessor,
             CancellationToken cancellationToken)
         {
             var taskCompletionSource = new TaskCompletionSource<T>();
 
-            _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, resultProcessor, this, _pipeReader));
+            _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, abstractResultProcessor, this, _pipeReader));
 
             cancellationToken.Register(() => taskCompletionSource.TrySetCanceled(cancellationToken));
             
             return new ValueTask<T>(taskCompletionSource.Task);
         }
 
-        internal async ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command, ResultProcessor<T> resultProcessor,
+        internal async ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command, AbstractResultProcessor<T> abstractResultProcessor,
             CancellationToken cancellationToken, bool isReconnectionAttempt)
         {
             _isBusy = true;
@@ -131,7 +132,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
                 await Write(command).ConfigureAwait(false);
 
-                return await resultProcessor.Start(this, _pipeReader, cancellationToken);
+                return await abstractResultProcessor.Start(this, _pipeReader, cancellationToken);
             }
             catch (Exception innerException)
             {

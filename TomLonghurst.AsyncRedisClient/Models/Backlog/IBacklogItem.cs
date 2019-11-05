@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
+using TomLonghurst.AsyncRedisClient.Models.ResultProcessors;
 
 namespace TomLonghurst.AsyncRedisClient.Models.Backlog
 {
@@ -18,6 +19,6 @@ namespace TomLonghurst.AsyncRedisClient.Models.Backlog
     {
         TaskCompletionSource<T> TaskCompletionSource { get; }
         
-        ResultProcessor<T> ResultProcessor { get; }
+        AbstractResultProcessor<T> AbstractResultProcessor { get; }
     }
 }

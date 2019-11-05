@@ -30,7 +30,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             {
                 await _redisClient.RunWithTimeout(async token =>
                 {
-                    await _redisClient.SendOrQueueAsync(Commands.ScriptFlush, _redisClient.SuccessResultProcessor, token);
+                    await _redisClient.SendOrQueueAsync(Commands.ScriptFlush, _redisClient.SuccessAbstractAbstractResultProcessor, token);
                 }, cancellationToken).ConfigureAwait(false);
             }
 
@@ -39,7 +39,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 var command = RedisCommand.From(Commands.Script, Commands.Load, script.ToRedisEncoded());
                 var scriptResponse = await _redisClient.RunWithTimeout(async token =>
                 {
-                    return await _redisClient.SendOrQueueAsync(command, _redisClient.DataResultProcessor, token);
+                    return await _redisClient.SendOrQueueAsync(command, _redisClient.DataAbstractAbstractResultProcessor, token);
                 }, cancellationToken).ConfigureAwait(false);
                 
                 return new LuaScript(_redisClient, scriptResponse);
@@ -52,7 +52,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
                 var scriptResult = await _redisClient.RunWithTimeout(async token =>
                     {
-                        return await _redisClient.SendOrQueueAsync(command, _redisClient.GenericResultProcessor, token);
+                        return await _redisClient.SendOrQueueAsync(command, _redisClient.GenericAbstractAbstractResultProcessor, token);
                     },
                     cancellationToken).ConfigureAwait(false);
                 

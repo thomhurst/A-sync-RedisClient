@@ -3,6 +3,7 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
+using TomLonghurst.AsyncRedisClient.Models.ResultProcessors;
 
 namespace TomLonghurst.AsyncRedisClient.Models.Backlog
 {
@@ -27,8 +28,7 @@ namespace TomLonghurst.AsyncRedisClient.Models.Backlog
         {
             try
             {
-                // TODO Cancellation Token
-                var result = await ResultProcessor.Start(RedisClient, PipeReader, CancellationToken);
+                var result = await AbstractResultProcessor.Start(RedisClient, PipeReader, CancellationToken);
                 TaskCompletionSource.TrySetResult(result);
             }
             catch (OperationCanceledException)
@@ -44,14 +44,14 @@ namespace TomLonghurst.AsyncRedisClient.Models.Backlog
         }
 
         public TaskCompletionSource<T> TaskCompletionSource { get; }
-        public ResultProcessor<T> ResultProcessor { get; }
+        public AbstractResultProcessor<T> AbstractResultProcessor { get; }
 
-        public BacklogItem(IRedisCommand redisCommand, CancellationToken cancellationToken, TaskCompletionSource<T> taskCompletionSource, ResultProcessor<T> resultProcessor, Client.RedisClient redisClient, PipeReader pipe)
+        public BacklogItem(IRedisCommand redisCommand, CancellationToken cancellationToken, TaskCompletionSource<T> taskCompletionSource, AbstractResultProcessor<T> abstractResultProcessor, Client.RedisClient redisClient, PipeReader pipe)
         {
             RedisCommand = redisCommand;
             CancellationToken = cancellationToken;
             TaskCompletionSource = taskCompletionSource;
-            ResultProcessor = resultProcessor;
+            AbstractResultProcessor = abstractResultProcessor;
             RedisClient = redisClient;
             PipeReader = pipe;
         }
