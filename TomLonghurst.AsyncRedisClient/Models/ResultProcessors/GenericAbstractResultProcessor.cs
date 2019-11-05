@@ -5,7 +5,7 @@ using TomLonghurst.AsyncRedisClient.Extensions;
 
 namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
 {
-    public class GenericAbstractAbstractResultProcessor : AbstractResultProcessor<RawResult>
+    public class GenericResultProcessor : AbstractResultProcessor<RawResult>
     {
         internal override async ValueTask<RawResult> Process()
         {
@@ -25,31 +25,31 @@ namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
 
             if (firstChar == ByteConstants.Asterix)
             {
-                var processor = RedisClient.ArrayAbstractAbstractResultProcessor;
+                var processor = RedisClient.ArrayResultProcessor;
                 processor.SetMembers(RedisClient, PipeReader, ReadResult, CancellationToken);
                 result = await processor.Process();
             }
             else if (firstChar == ByteConstants.Plus)
             {
-                var processor = RedisClient.WordAbstractAbstractResultProcessor;
+                var processor = RedisClient.WordResultProcessor;
                 processor.SetMembers(RedisClient, PipeReader, ReadResult, CancellationToken);
                 result = await processor.Process();
             }
             else if (firstChar == ByteConstants.Colon)
             {
-                var processor = RedisClient.IntegerAbstractAbstractResultProcessor;
+                var processor = RedisClient.IntegerResultProcessor;
                 processor.SetMembers(RedisClient, PipeReader, ReadResult, CancellationToken);
                 result = await processor.Process();
             }
             else if (firstChar == ByteConstants.Dollar)
             {
-                var processor = RedisClient.DataAbstractAbstractResultProcessor;
+                var processor = RedisClient.DataResultProcessor;
                 processor.SetMembers(RedisClient, PipeReader, ReadResult, CancellationToken);
                 result = await processor.Process();
             }
             else
             {
-                var processor = RedisClient.EmptyAbstractAbstractResultProcessor;
+                var processor = RedisClient.EmptyResultProcessor;
                 processor.SetMembers(RedisClient, PipeReader, ReadResult, CancellationToken);
                 result = await processor.Process();
             }

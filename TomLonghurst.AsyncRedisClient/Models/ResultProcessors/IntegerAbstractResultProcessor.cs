@@ -6,7 +6,7 @@ using TomLonghurst.AsyncRedisClient.Helpers;
 
 namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
 {
-    public class IntegerAbstractAbstractResultProcessor : AbstractResultProcessor<int>
+    public class IntegerResultProcessor : AbstractResultProcessor<int>
     {
         internal override async ValueTask<int> Process()
         {

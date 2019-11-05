@@ -7,7 +7,7 @@ using TomLonghurst.AsyncRedisClient.Helpers;
 
 namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
 {
-    public class ArrayAbstractAbstractResultProcessor : AbstractResultProcessor<IEnumerable<StringRedisValue>>
+    public class ArrayResultProcessor : AbstractResultProcessor<IEnumerable<StringRedisValue>>
     {
         internal override async ValueTask<IEnumerable<StringRedisValue>> Process()
         {

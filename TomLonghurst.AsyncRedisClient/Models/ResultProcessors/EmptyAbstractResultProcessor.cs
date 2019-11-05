@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 
 namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
 {
-    public class EmptyAbstractAbstractResultProcessor : AbstractResultProcessor<object>
+    public class EmptyResultProcessor : AbstractResultProcessor<object>
     {
         internal override ValueTask<object> Process()
         {

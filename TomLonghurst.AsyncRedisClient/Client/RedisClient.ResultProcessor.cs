@@ -5,14 +5,14 @@ namespace TomLonghurst.AsyncRedisClient.Client
 {
     public partial class RedisClient
     {
-        internal GenericAbstractAbstractResultProcessor GenericAbstractAbstractResultProcessor => new GenericAbstractAbstractResultProcessor(); 
-        internal EmptyAbstractAbstractResultProcessor EmptyAbstractAbstractResultProcessor => new EmptyAbstractAbstractResultProcessor();
-        internal SuccessAbstractAbstractResultProcessor SuccessAbstractAbstractResultProcessor => new SuccessAbstractAbstractResultProcessor();
-        internal DataAbstractAbstractResultProcessor DataAbstractAbstractResultProcessor => new DataAbstractAbstractResultProcessor();
-        internal IntegerAbstractAbstractResultProcessor IntegerAbstractAbstractResultProcessor => new IntegerAbstractAbstractResultProcessor();
-        internal FloatAbstractAbstractResultProcessor FloatAbstractAbstractResultProcessor => new FloatAbstractAbstractResultProcessor();
-        internal ArrayAbstractAbstractResultProcessor ArrayAbstractAbstractResultProcessor => new ArrayAbstractAbstractResultProcessor();
-        internal WordAbstractAbstractResultProcessor WordAbstractAbstractResultProcessor => new WordAbstractAbstractResultProcessor();
+        internal GenericResultProcessor GenericResultProcessor => new GenericResultProcessor(); 
+        internal EmptyResultProcessor EmptyResultProcessor => new EmptyResultProcessor();
+        internal SuccessResultProcessor SuccessResultProcessor => new SuccessResultProcessor();
+        internal DataResultProcessor DataResultProcessor => new DataResultProcessor();
+        internal IntegerResultProcessor IntegerResultProcessor => new IntegerResultProcessor();
+        internal FloatResultProcessor FloatResultProcessor => new FloatResultProcessor();
+        internal ArrayResultProcessor ArrayResultProcessor => new ArrayResultProcessor();
+        internal WordResultProcessor WordResultProcessor => new WordResultProcessor();
 
     }
 

@@ -4,7 +4,7 @@ using TomLonghurst.AsyncRedisClient.Extensions;
 
 namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
 {
-    public class FloatAbstractAbstractResultProcessor : AbstractResultProcessor<float>
+    public class FloatResultProcessor : AbstractResultProcessor<float>
     {
         internal override async ValueTask<float> Process()
         {
