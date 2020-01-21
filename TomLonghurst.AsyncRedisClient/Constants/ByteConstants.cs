@@ -1,7 +1,3 @@
-using System.Collections.ObjectModel;
-using System.Linq;
-using TomLonghurst.AsyncRedisClient.Extensions;
-
 namespace TomLonghurst.AsyncRedisClient.Constants
 {
     public static class ByteConstants

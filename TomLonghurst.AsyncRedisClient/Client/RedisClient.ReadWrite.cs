@@ -8,14 +8,13 @@ using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Helpers;
-using TomLonghurst.AsyncRedisClient.Models;
 using TomLonghurst.AsyncRedisClient.Models.Backlog;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
 using TomLonghurst.AsyncRedisClient.Extensions;
 using TomLonghurst.AsyncRedisClient.Models.ResultProcessors;
 using TomLonghurst.AsyncRedisClient.Pipes;
 #if !NETSTANDARD2_0
-using System.Buffers;
+
 #endif
 
 namespace TomLonghurst.AsyncRedisClient.Client

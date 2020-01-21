@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Pipelines;
 using System.Linq;
@@ -14,7 +13,6 @@ using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Models;
 using TomLonghurst.AsyncRedisClient.Pipes;
-using TomLonghurst.AsyncRedisClient.Extensions;
 
 namespace TomLonghurst.AsyncRedisClient.Client
 {

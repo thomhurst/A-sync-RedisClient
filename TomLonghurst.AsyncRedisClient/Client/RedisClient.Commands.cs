@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Compression;
 using TomLonghurst.AsyncRedisClient.Constants;
-using TomLonghurst.AsyncRedisClient.Enums;
 using TomLonghurst.AsyncRedisClient.Models;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
 using TomLonghurst.AsyncRedisClient.Models.RequestModels;
@@ -106,28 +105,25 @@ namespace TomLonghurst.AsyncRedisClient.Client
         }
 
         public Task StringSetAsync(string key, string value, int timeToLiveInSeconds,
-            ICompression compression,
-            AwaitOptions awaitOptions)
+            ICompression compression)
         {
-            return StringSetAsync(new RedisKeyValue(key, value), timeToLiveInSeconds, compression, awaitOptions);
+            return StringSetAsync(new RedisKeyValue(key, value), timeToLiveInSeconds, compression);
         }
 
-        private Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds, ICompression compression, AwaitOptions awaitOptions)
+        private Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds, ICompression compression)
         {
-            return StringSetAsync(redisKeyValue, timeToLiveInSeconds, compression, awaitOptions, CancellationToken.None);
+            return StringSetAsync(redisKeyValue, timeToLiveInSeconds, compression, CancellationToken.None);
         }
 
         public Task StringSetAsync(string key, string value, int timeToLiveInSeconds,
             ICompression compression,
-            AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-            return StringSetAsync(new RedisKeyValue(key, value), timeToLiveInSeconds, compression, awaitOptions, cancellationToken);
+            return StringSetAsync(new RedisKeyValue(key, value), timeToLiveInSeconds, compression, cancellationToken);
         }
         
         private async Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds,
             ICompression compression,
-            AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
             await RunWithTimeout(async token =>
@@ -137,31 +133,27 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 var command = RedisCommand.From(Commands.SetEx, redisKeyValue.Key.ToRedisEncoded(),
                     timeToLiveInSeconds.ToRedisEncoded(), value.ToRedisEncoded());
                
-                var task = SendOrQueueAsync(command, SuccessResultProcessor, token);
+                await SendOrQueueAsync(command, SuccessResultProcessor, token);
                 
-                if (awaitOptions == AwaitOptions.AwaitCompletion)
-                {
-                    await task;
-                }
             }, cancellationToken).ConfigureAwait(false);
         }
 
-        public Task StringSetAsync(string key, string value, ICompression compression, AwaitOptions awaitOptions)
+        public Task StringSetAsync(string key, string value, ICompression compression)
         {
-            return StringSetAsync(new RedisKeyValue(key, value), compression, awaitOptions);
+            return StringSetAsync(new RedisKeyValue(key, value), compression);
         }
         
-        private Task StringSetAsync(RedisKeyValue redisKeyValue, ICompression compression, AwaitOptions awaitOptions)
+        private Task StringSetAsync(RedisKeyValue redisKeyValue, ICompression compression)
         {
-            return StringSetAsync(redisKeyValue, compression, awaitOptions, CancellationToken.None);
+            return StringSetAsync(redisKeyValue, compression, CancellationToken.None);
         }
 
-        public Task StringSetAsync(string key, string value, ICompression compression, AwaitOptions awaitOptions, CancellationToken cancellationToken)
+        public Task StringSetAsync(string key, string value, ICompression compression, CancellationToken cancellationToken)
         {
-            return StringSetAsync(new RedisKeyValue(key, value), compression, awaitOptions, cancellationToken);
+            return StringSetAsync(new RedisKeyValue(key, value), compression, cancellationToken);
         }
         
-        private async Task StringSetAsync(RedisKeyValue redisKeyValue, ICompression compression, AwaitOptions awaitOptions,
+        private async Task StringSetAsync(RedisKeyValue redisKeyValue, ICompression compression,
             CancellationToken cancellationToken)
         {
             await RunWithTimeout(async token =>
@@ -169,23 +161,19 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 var value = await compression.CompressAsync(redisKeyValue.Value);
                 var command = RedisCommand.From(Commands.Set, redisKeyValue.Key.ToRedisEncoded(),
                     value.ToRedisEncoded());
-                var task = SendOrQueueAsync(command, SuccessResultProcessor, token);
+                await SendOrQueueAsync(command, SuccessResultProcessor, token);
                 
-                if (awaitOptions == AwaitOptions.AwaitCompletion)
-                {
-                    await task;
-                }
             }, cancellationToken).ConfigureAwait(false);
         }
 
         public Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
-            ICompression compression, AwaitOptions awaitOptions)
+            ICompression compression)
         {
-            return StringSetAsync(keyValuePairs, compression, awaitOptions, CancellationToken.None);
+            return StringSetAsync(keyValuePairs, compression, CancellationToken.None);
         }
 
         public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
-            ICompression compression, AwaitOptions awaitOptions,
+            ICompression compression,
             CancellationToken cancellationToken)
         {
             await RunWithTimeout(async token =>
@@ -199,25 +187,21 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 }
                 
                 var command = RedisCommand.From(Commands.MSet, encodedKeysAndValues);
-                var task = SendOrQueueAsync(command, SuccessResultProcessor, token);
+                await SendOrQueueAsync(command, SuccessResultProcessor, token);
                 
-                if (awaitOptions == AwaitOptions.AwaitCompletion)
-                {
-                    await task;
-                }
             }, cancellationToken).ConfigureAwait(false);
         }
         
         public Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs, 
             int timeToLiveInSeconds, 
-            ICompression compression, AwaitOptions awaitOptions)
+            ICompression compression)
         {
-            return StringSetAsync(keyValuePairs, timeToLiveInSeconds, compression, awaitOptions, CancellationToken.None);
+            return StringSetAsync(keyValuePairs, timeToLiveInSeconds, compression, CancellationToken.None);
         }
 
         public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
             int timeToLiveInSeconds, 
-            ICompression compression, AwaitOptions awaitOptions,
+            ICompression compression,
             CancellationToken cancellationToken)
         {
             await RunWithTimeout(async token =>
@@ -237,47 +221,35 @@ namespace TomLonghurst.AsyncRedisClient.Client
                         cancellationToken);
                 }
 
-                var expireTask = Scripts.MultiSetexScript.ExecuteAsync(keys, arguments, cancellationToken);
-
-                if (awaitOptions == AwaitOptions.AwaitCompletion)
-                {
-                    await expireTask;
-                }
+                await Scripts.MultiSetexScript.ExecuteAsync(keys, arguments, cancellationToken);
+                
             }, cancellationToken).ConfigureAwait(false);
         }
 
-        public Task DeleteKeyAsync(string key,
-            AwaitOptions awaitOptions)
+        public Task DeleteKeyAsync(string key)
         {
-            return DeleteKeyAsync(key, awaitOptions, CancellationToken.None);
+            return DeleteKeyAsync(key, CancellationToken.None);
         }
 
         public Task DeleteKeyAsync(string key,
-            AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
-            return DeleteKeyAsync(new[] { key }, awaitOptions, cancellationToken);
+            return DeleteKeyAsync(new[] { key }, cancellationToken);
         }
 
-        public Task DeleteKeyAsync(IEnumerable<string> keys,
-            AwaitOptions awaitOptions)
+        public Task DeleteKeyAsync(IEnumerable<string> keys)
         {
-            return DeleteKeyAsync(keys, awaitOptions, CancellationToken.None);
+            return DeleteKeyAsync(keys, CancellationToken.None);
         }
 
         public async Task DeleteKeyAsync(IEnumerable<string> keys,
-            AwaitOptions awaitOptions,
             CancellationToken cancellationToken)
         {
             await RunWithTimeout(async token => 
             {
                 var command = RedisCommand.From(Commands.Del, keys.ToRedisEncoded());
-                var task = SendOrQueueAsync(command, IntegerResultProcessor, token);
-
-                if (awaitOptions == AwaitOptions.AwaitCompletion)
-                {
-                    await task;
-                }
+                await SendOrQueueAsync(command, IntegerResultProcessor, token);
+                
             }, cancellationToken).ConfigureAwait(false);
         }
 
@@ -375,15 +347,13 @@ namespace TomLonghurst.AsyncRedisClient.Client
         }
 
         public ValueTask ExpireAsync(IEnumerable<string> keys,
-            int timeToLiveInSeconds, 
-            AwaitOptions awaitOptions)
+            int timeToLiveInSeconds)
         {
-            return ExpireAsync(keys, timeToLiveInSeconds, awaitOptions, new CancellationToken());
+            return ExpireAsync(keys, timeToLiveInSeconds, new CancellationToken());
         }
 
         public async ValueTask ExpireAsync(IEnumerable<string> keys,
-            int timeToLiveInSeconds, 
-            AwaitOptions awaitOptions,
+            int timeToLiveInSeconds,
             CancellationToken cancellationToken)
         {
             await RunWithTimeout(async token =>
@@ -397,12 +367,8 @@ namespace TomLonghurst.AsyncRedisClient.Client
                         cancellationToken);
                 }
 
-                var expireTask = Scripts.MultiExpireScript.ExecuteAsync(keys, arguments, cancellationToken);
-
-                if (awaitOptions == AwaitOptions.AwaitCompletion)
-                {
-                    await expireTask;
-                }
+                await Scripts.MultiExpireScript.ExecuteAsync(keys, arguments, cancellationToken);
+                
             }, cancellationToken).ConfigureAwait(false);
         }
 

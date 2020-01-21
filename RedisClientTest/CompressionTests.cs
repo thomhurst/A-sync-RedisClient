@@ -1,8 +1,6 @@
-using System.IO;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using TomLonghurst.AsyncRedisClient.Compression;
-using TomLonghurst.AsyncRedisClient.Enums;
 
 namespace RedisClientTest
 {
@@ -15,8 +13,8 @@ namespace RedisClientTest
             {
                 await (await TomLonghurstRedisClient).StringSetAsync("NoCompression",
                     _largeValueJson,
-                    CompressionType.None,
-                    AwaitOptions.AwaitCompletion);
+                    CompressionType.None);
+                
                 var result =
                     await (await TomLonghurstRedisClient).StringGetAsync("NoCompression", CompressionType.None);
 
@@ -33,8 +31,7 @@ namespace RedisClientTest
             {
                 await (await TomLonghurstRedisClient).StringSetAsync("Brotli",
                     _largeValueJson,
-                    CompressionType.Brotli,
-                    AwaitOptions.AwaitCompletion);
+                    CompressionType.Brotli);
                 var result = await (await TomLonghurstRedisClient).StringGetAsync("Brotli", CompressionType.Brotli);
 
                 Assert.That(result.Value, Is.EqualTo(_largeValueJson));
@@ -50,8 +47,7 @@ namespace RedisClientTest
             {
                 await (await TomLonghurstRedisClient).StringSetAsync("Gzip",
                     _largeValueJson,
-                    CompressionType.GZip,
-                    AwaitOptions.AwaitCompletion);
+                    CompressionType.GZip);
                 var result = await (await TomLonghurstRedisClient).StringGetAsync("Gzip", CompressionType.GZip);
 
                 Assert.That(result.Value, Is.EqualTo(_largeValueJson));
@@ -67,8 +63,7 @@ namespace RedisClientTest
             {
                 await (await TomLonghurstRedisClient).StringSetAsync("LZ4",
                     _largeValueJson,
-                    CompressionType.LZ4,
-                    AwaitOptions.AwaitCompletion);
+                    CompressionType.LZ4);
                 var result = await (await TomLonghurstRedisClient).StringGetAsync("LZ4", CompressionType.LZ4);
 
                 Assert.That(result.Value, Is.EqualTo(_largeValueJson));

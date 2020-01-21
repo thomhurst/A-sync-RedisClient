@@ -1,5 +1,4 @@
 using System;
-using TomLonghurst.AsyncRedisClient.Helpers;
 
 namespace TomLonghurst.AsyncRedisClient.Exceptions
 {

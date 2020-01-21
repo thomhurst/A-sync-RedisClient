@@ -5,8 +5,6 @@ using System.Threading.Tasks;
 using RedisClientTest;
 using TomLonghurst.AsyncRedisClient.Client;
 using TomLonghurst.AsyncRedisClient.Compression;
-using TomLonghurst.AsyncRedisClient.Enums;
-using TomLonghurst.AsyncRedisClient.Extensions;
 
 namespace TestConsoleApp
 {
@@ -99,8 +97,7 @@ namespace TestConsoleApp
             {
                 var (key, value) = TestData.PickRandom();
                 
-                await (await _redisManager.GetRedisClientAsync()).StringSetAsync(key, value, 120, CompressionType.None,
-                    AwaitOptions.FireAndForget);
+                await (await _redisManager.GetRedisClientAsync()).StringSetAsync(key, value, 120, CompressionType.None);
             }
         } 
         

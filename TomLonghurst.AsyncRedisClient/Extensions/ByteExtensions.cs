@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using TomLonghurst.AsyncRedisClient.Models;
 
 namespace TomLonghurst.AsyncRedisClient.Extensions
 {
