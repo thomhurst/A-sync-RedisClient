@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Versioning;
@@ -9,36 +10,14 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using StackExchange.Redis;
 using TomLonghurst.AsyncRedisClient.Client;
+using TomLonghurst.AsyncRedisClient.Compression;
 using TomLonghurst.AsyncRedisClient.Enums;
 using TomLonghurst.AsyncRedisClient.Models.RequestModels;
 
 namespace RedisClientTest
 {
-    public class Tests
+    public class Tests : TestBase
     {
-        private RedisClientManager _redisManager;
-        private RedisClientConfig _config;
-        private Task<RedisClient> TomLonghurstRedisClient => _redisManager.GetRedisClientAsync();
-
-        // To test, create a Test Information static class to store your Host, Port and Password for your Test Redis Server
-        [OneTimeSetUp]
-        public void OneTimeSetup()
-        {
-            _config = new RedisClientConfig(TestInformation.Host, TestInformation.Port,
-                TestInformation.Password)
-            {
-                Ssl = true
-            };
-            _redisManager = new RedisClientManager(_config, 1);
-            _redisManager.GetAllRedisClients();
-        }
-
-        [SetUp]
-        public void BeforeTest()
-        {
-            Console.WriteLine($"Process ID: {Process.GetCurrentProcess().Id}");
-        }
-
         [TestCase("value with a space")]
         [TestCase("value with two  spaces")]
         [TestCase("value")]
@@ -47,8 +26,8 @@ namespace RedisClientTest
         [Repeat(2)]
         public async Task Values(string value)
         {
-            await (await TomLonghurstRedisClient).StringSetAsync("key", value, AwaitOptions.AwaitCompletion);
-            var redisValue = await (await TomLonghurstRedisClient).StringGetAsync("key");
+            await (await TomLonghurstRedisClient).StringSetAsync("key", value, CompressionType.None, AwaitOptions.AwaitCompletion);
+            var redisValue = await (await TomLonghurstRedisClient).StringGetAsync("key", CompressionType.None);
             
             Assert.That(redisValue.Value, Is.EqualTo(value));
         }
@@ -64,15 +43,15 @@ namespace RedisClientTest
                 new RedisKeyValue("key3", "value with a space3")
             };
             
-            await (await TomLonghurstRedisClient).StringSetAsync(data, AwaitOptions.AwaitCompletion);
+            await (await TomLonghurstRedisClient).StringSetAsync(data, CompressionType.None, AwaitOptions.AwaitCompletion);
             
-            var redisValue1 = await (await TomLonghurstRedisClient).StringGetAsync("key1");
+            var redisValue1 = await (await TomLonghurstRedisClient).StringGetAsync("key1", CompressionType.None);
             Assert.That(redisValue1.Value, Is.EqualTo("value with a space1"));
             
-            var redisValue2 = await (await TomLonghurstRedisClient).StringGetAsync("key2");
+            var redisValue2 = await (await TomLonghurstRedisClient).StringGetAsync("key2", CompressionType.None);
             Assert.That(redisValue2.Value, Is.EqualTo("value with a space2"));
             
-            var redisValue3 = await (await TomLonghurstRedisClient).StringGetAsync("key3");
+            var redisValue3 = await (await TomLonghurstRedisClient).StringGetAsync("key3", CompressionType.None);
             Assert.That(redisValue3.Value, Is.EqualTo("value with a space3"));
         }
 
@@ -91,8 +70,8 @@ namespace RedisClientTest
         public async Task LargeValue(string key, string filename)
         {
             var largeValueJson = await File.ReadAllTextAsync(filename);
-            await (await TomLonghurstRedisClient).StringSetAsync(key, largeValueJson, AwaitOptions.AwaitCompletion);
-            var result = await (await TomLonghurstRedisClient).StringGetAsync(key);
+            await (await TomLonghurstRedisClient).StringSetAsync(key, largeValueJson, CompressionType.None, AwaitOptions.AwaitCompletion);
+            var result = await (await TomLonghurstRedisClient).StringGetAsync(key, CompressionType.None);
             await (await TomLonghurstRedisClient).ExpireAsync(key, 120);
             
             Assert.AreEqual(largeValueJson, result.Value);
@@ -134,13 +113,13 @@ namespace RedisClientTest
                             
                             await Time("Set", async delegate
                             {
-                                await client.StringSetAsync($"MemoryTestKey{i1}", largeJsonContents, 120,
+                                await client.StringSetAsync($"MemoryTestKey{i1}", largeJsonContents, 120, CompressionType.None,
                                     AwaitOptions.AwaitCompletion);
                             });
 
                             await Time("Get", async delegate
                             {
-                                var result = await client.StringGetAsync($"MemoryTestKey{i1}");
+                                var result = await client.StringGetAsync($"MemoryTestKey{i1}", CompressionType.None);
                                 Assert.That(result.Value, Is.EqualTo(largeJsonContents));
                             });
 
@@ -187,7 +166,7 @@ namespace RedisClientTest
                         {
                             EndPoints = {{TestInformation.Host, TestInformation.Port}},
                             Password = TestInformation.Password,
-                            Ssl = false
+                            Ssl = true
                         })).GetDatabase(0);
 
                         await stackExchange.StringSetAsync("SingleKey", "123", TimeSpan.FromSeconds(120));
@@ -211,7 +190,7 @@ namespace RedisClientTest
                     {
                         await (await TomLonghurstRedisClient).StringSetAsync("SingleKey",
                             "123",
-                            120,
+                            120, CompressionType.GZip,
                             AwaitOptions.AwaitCompletion);
 
                         for (var outer = 0; outer < 5; outer++)
@@ -220,7 +199,7 @@ namespace RedisClientTest
 
                             for (var i = 0; i < 200; i++)
                             {
-                                var redisValue = await (await TomLonghurstRedisClient).StringGetAsync("SingleKey");
+                                var redisValue = await (await TomLonghurstRedisClient).StringGetAsync("SingleKey", CompressionType.GZip);
                             }
 
                             tomLonghurstRedisClientStopwatch.Stop();
@@ -235,6 +214,8 @@ namespace RedisClientTest
             }
 
             await Task.WhenAll(tasks);
+            
+            await (await TomLonghurstRedisClient).ExpireAsync("SingleKey", 30);
         }
 
         [TestCase(TestClient.StackExchange)]
@@ -272,14 +253,14 @@ namespace RedisClientTest
                 var client = await TomLonghurstRedisClient;
                 await client.StringSetAsync("SingleKey",
                     "123",
-                    120,
+                    120, CompressionType.None,
                     AwaitOptions.AwaitCompletion);
 
                 var tomLonghurstRedisClientStopwatch = Stopwatch.StartNew();
 
                 for (var i = 0; i < 200; i++)
                 {
-                    tasks.Add(client.StringGetAsync("SingleKey"));
+                    tasks.Add(client.StringGetAsync("SingleKey", CompressionType.None));
                 }
                 
                 await Task.WhenAll(tasks);
@@ -288,7 +269,77 @@ namespace RedisClientTest
                 var tomLonghurstRedisClientStopwatchTimeTaken =
                     tomLonghurstRedisClientStopwatch.ElapsedMilliseconds;
                 Console.WriteLine($"Time Taken: {tomLonghurstRedisClientStopwatchTimeTaken} ms");
+                
+                await (await TomLonghurstRedisClient).ExpireAsync("SingleKey", 30);
             }
+        }
+        
+        [TestCase(TestClient.StackExchange)]
+        [TestCase(TestClient.TomLonghurst)]
+        public async Task PerformanceTest3(TestClient testClient)
+        {
+            var tasks = new List<Task>();
+
+            for (var taskCount = 0; taskCount < 5; taskCount++)
+            {
+                var task = Task.Run(async () =>
+                {
+                    if (testClient == TestClient.StackExchange)
+                    {
+                        var stackExchange = (await ConnectionMultiplexer.ConnectAsync(new ConfigurationOptions
+                        {
+                            EndPoints = {{TestInformation.Host, TestInformation.Port}},
+                            Password = TestInformation.Password,
+                            Ssl = true
+                        })).GetDatabase(0);
+
+                        await stackExchange.StringSetAsync("SingleKey", _largeValueJson, TimeSpan.FromSeconds(120));
+
+                        for (var outer = 0; outer < 5; outer++)
+                        {
+                            var stackExchangeRedisClientStopwatch = Stopwatch.StartNew();
+
+                            for (var i = 0; i < 100; i++)
+                            {
+                                var redisValue = await stackExchange.StringGetAsync("SingleKey");
+                            }
+
+                            stackExchangeRedisClientStopwatch.Stop();
+                            var stackExchangeRedisClientStopwatchTimeTaken =
+                                stackExchangeRedisClientStopwatch.ElapsedMilliseconds;
+                            Console.WriteLine($"Time Taken: {stackExchangeRedisClientStopwatchTimeTaken} ms");
+                        }
+                    }
+                    else
+                    {
+                        await (await TomLonghurstRedisClient).StringSetAsync("SingleKey",
+                            _largeValueJson,
+                            120, CompressionType.GZip,
+                            AwaitOptions.AwaitCompletion);
+
+                        for (var outer = 0; outer < 5; outer++)
+                        {
+                            var tomLonghurstRedisClientStopwatch = Stopwatch.StartNew();
+
+                            for (var i = 0; i < 100; i++)
+                            {
+                                var redisValue = await (await TomLonghurstRedisClient).StringGetAsync("SingleKey", CompressionType.GZip);
+                            }
+
+                            tomLonghurstRedisClientStopwatch.Stop();
+                            var tomLonghurstRedisClientStopwatchTimeTaken =
+                                tomLonghurstRedisClientStopwatch.ElapsedMilliseconds;
+                            Console.WriteLine($"Time Taken: {tomLonghurstRedisClientStopwatchTimeTaken} ms");
+                        }
+                    }
+                });
+                
+                tasks.Add(task);
+            }
+
+            await Task.WhenAll(tasks);
+            
+            await (await TomLonghurstRedisClient).ExpireAsync("SingleKey", 30);
         }
 
         [Test]
@@ -300,22 +351,22 @@ namespace RedisClientTest
             var pong = await (await TomLonghurstRedisClient).Ping();
             Assert.AreEqual(true, pong.IsSuccessful);
             
-            var getDoesntExist = (await (await TomLonghurstRedisClient).StringGetAsync(new [] { "Blah1", "Blah2" })).ToList();
+            var getDoesntExist = (await (await TomLonghurstRedisClient).StringGetAsync(new [] { "Blah1", "Blah2" }, CompressionType.None)).ToList();
             Assert.That(getDoesntExist.Count, Is.EqualTo(2));
             Assert.That(getDoesntExist.Count(value => value.HasValue), Is.EqualTo(0));
             
-            await (await TomLonghurstRedisClient).StringSetAsync("TestyMcTestFace", "123", 120, AwaitOptions.FireAndForget);
-            await (await TomLonghurstRedisClient).StringSetAsync("TestyMcTestFace2", "1234", 120, AwaitOptions.FireAndForget);
-            await (await TomLonghurstRedisClient).StringSetAsync("TestyMcTestFace3", "12345", 120, AwaitOptions.FireAndForget);
+            await (await TomLonghurstRedisClient).StringSetAsync("TestyMcTestFace", "123", 120, CompressionType.None, AwaitOptions.FireAndForget);
+            await (await TomLonghurstRedisClient).StringSetAsync("TestyMcTestFace2", "1234", 120, CompressionType.None, AwaitOptions.FireAndForget);
+            await (await TomLonghurstRedisClient).StringSetAsync("TestyMcTestFace3", "12345", 120, CompressionType.None, AwaitOptions.FireAndForget);
             
-            var getValue = await (await TomLonghurstRedisClient).StringGetAsync(new [] { "TestyMcTestFace", "TestyMcTestFace2", "TestyMcTestFace3" });
+            var getValue = await (await TomLonghurstRedisClient).StringGetAsync(new [] { "TestyMcTestFace", "TestyMcTestFace2", "TestyMcTestFace3" }, CompressionType.None);
             Assert.That(getValue.Count(), Is.EqualTo(3));
             
-            var getValueSingle = await (await TomLonghurstRedisClient).StringGetAsync("TestyMcTestFace");
+            var getValueSingle = await (await TomLonghurstRedisClient).StringGetAsync("TestyMcTestFace", CompressionType.None);
             Assert.That(getValueSingle.Value, Is.EqualTo("123"));
 
             
-            await (await TomLonghurstRedisClient).StringSetAsync("KeyExists", "123", AwaitOptions.AwaitCompletion);
+            await (await TomLonghurstRedisClient).StringSetAsync("KeyExists", "123", CompressionType.None, AwaitOptions.AwaitCompletion);
             var keyExistsFalse = await (await TomLonghurstRedisClient).KeyExistsAsync("KeyDoesntExist");
             Assert.That(keyExistsFalse, Is.EqualTo(false));
             var keyExistsTrue = await (await TomLonghurstRedisClient).KeyExistsAsync("KeyExists");
@@ -341,7 +392,7 @@ namespace RedisClientTest
         [Repeat(2)]
         public async Task GetNonExistingKey()
         {
-            var nonExistingKey = await (await TomLonghurstRedisClient).StringGetAsync("Blah1");
+            var nonExistingKey = await (await TomLonghurstRedisClient).StringGetAsync("Blah1", CompressionType.None);
             Assert.That(nonExistingKey.HasValue, Is.False);
         }
         
@@ -349,7 +400,7 @@ namespace RedisClientTest
         [Repeat(2)]
         public async Task GetNonExistingKeys()
         {
-            var nonExistingKeys = (await (await TomLonghurstRedisClient).StringGetAsync(new [] { "Blah1", "Blah2" })).ToList();
+            var nonExistingKeys = (await (await TomLonghurstRedisClient).StringGetAsync(new [] { "Blah1", "Blah2" }, CompressionType.None)).ToList();
             Assert.That(nonExistingKeys.Count, Is.EqualTo(2));
             Assert.That(nonExistingKeys.Count(value => value.HasValue), Is.EqualTo(0));
         }
@@ -358,8 +409,8 @@ namespace RedisClientTest
         [Repeat(2)]
         public async Task GetExistingKeyAmongstNonExistingKeys()
         {
-            await (await TomLonghurstRedisClient).StringSetAsync("Exists", "123", 30, AwaitOptions.AwaitCompletion);
-            var values = (await (await TomLonghurstRedisClient).StringGetAsync(new [] { "Blah1", "Blah2", "Exists", "Blah4", "Blah5" })).ToList();
+            await (await TomLonghurstRedisClient).StringSetAsync("Exists", "123", 30, CompressionType.None, AwaitOptions.AwaitCompletion);
+            var values = (await (await TomLonghurstRedisClient).StringGetAsync(new [] { "Blah1", "Blah2", "Exists", "Blah4", "Blah5" }, CompressionType.None)).ToList();
             Assert.That(values.Count, Is.EqualTo(5));
             Assert.That(values.Count(value => value.HasValue), Is.EqualTo(1));
         }
@@ -368,12 +419,12 @@ namespace RedisClientTest
         [Repeat(2)]
         public async Task SetGetDeleteSingleKey()
         {
-            await (await TomLonghurstRedisClient).StringSetAsync("SingleKey", "123", AwaitOptions.AwaitCompletion);
-            var redisValue = await (await TomLonghurstRedisClient).StringGetAsync("SingleKey");
+            await (await TomLonghurstRedisClient).StringSetAsync("SingleKey", "123", CompressionType.None, AwaitOptions.AwaitCompletion);
+            var redisValue = await (await TomLonghurstRedisClient).StringGetAsync("SingleKey", CompressionType.None);
             Assert.That(redisValue.Value, Is.EqualTo("123"));
             
             await (await TomLonghurstRedisClient).DeleteKeyAsync("SingleKey", AwaitOptions.AwaitCompletion);
-            redisValue = await (await TomLonghurstRedisClient).StringGetAsync("SingleKey");
+            redisValue = await (await TomLonghurstRedisClient).StringGetAsync("SingleKey", CompressionType.None);
             Assert.That(redisValue.HasValue, Is.EqualTo(false));
         }
 
@@ -381,8 +432,8 @@ namespace RedisClientTest
         [Repeat(2)]
         public async Task SetGetSingleKeyWithTtl()
         {
-            await (await TomLonghurstRedisClient).StringSetAsync("SingleKeyWithTtl", "123", 30, AwaitOptions.AwaitCompletion);
-            var redisValue = await (await TomLonghurstRedisClient).StringGetAsync("SingleKeyWithTtl");
+            await (await TomLonghurstRedisClient).StringSetAsync("SingleKeyWithTtl", "123", 30, CompressionType.None, AwaitOptions.AwaitCompletion);
+            var redisValue = await (await TomLonghurstRedisClient).StringGetAsync("SingleKeyWithTtl", CompressionType.None);
             Assert.That(redisValue.Value, Is.EqualTo("123"));
         }
 
@@ -399,7 +450,7 @@ namespace RedisClientTest
                     new RedisKeyValue("BlahTTL4", "Blah4"),
                     new RedisKeyValue("BlahTTL5", "Blah5")
                 },
-                120,
+                120, CompressionType.None,
                 AwaitOptions.AwaitCompletion);
 
             var ttl = await client.TimeToLiveAsync("BlahTTL1");
@@ -418,7 +469,7 @@ namespace RedisClientTest
                     new RedisKeyValue("BlahExpire3", "Blah3"),
                     new RedisKeyValue("BlahExpire4", "Blah4"),
                     new RedisKeyValue("BlahExpire5", "Blah5")
-                },
+                }, CompressionType.None,
                 AwaitOptions.AwaitCompletion);
 
             await client.ExpireAsync(new List<string>
@@ -445,8 +496,8 @@ namespace RedisClientTest
                 new RedisKeyValue("MultiKey3", "3")
             };
             
-            await (await TomLonghurstRedisClient).StringSetAsync(keyValues, AwaitOptions.AwaitCompletion);
-            var redisValues = (await (await TomLonghurstRedisClient).StringGetAsync(new [] { "MultiKey1", "MultiKey2", "MultiKey3" })).ToList();
+            await (await TomLonghurstRedisClient).StringSetAsync(keyValues, CompressionType.None, AwaitOptions.AwaitCompletion);
+            var redisValues = (await (await TomLonghurstRedisClient).StringGetAsync(new [] { "MultiKey1", "MultiKey2", "MultiKey3" }, CompressionType.None)).ToList();
             Assert.That(redisValues.Count(), Is.EqualTo(3));
             Assert.That(redisValues[0].Value, Is.EqualTo("1"));
             Assert.That(redisValues[1].Value, Is.EqualTo("2"));
@@ -463,13 +514,13 @@ namespace RedisClientTest
             {
                 "Pipeline1", "Pipeline2", "Pipeline3", "Pipeline4", "Pipeline5", "Pipeline6", "Pipeline7", "Pipeline8"
             };
-            var results = keys.Select(key => tomLonghurstRedisClient.StringSetAsync(key, "123", 30, AwaitOptions.FireAndForget));
+            var results = keys.Select(key => tomLonghurstRedisClient.StringSetAsync(key, "123", 30, CompressionType.None, AwaitOptions.FireAndForget));
             
             await Task.WhenAll(results);
 
             foreach (var key in keys)
             {
-                var value = await tomLonghurstRedisClient.StringGetAsync(key);
+                var value = await tomLonghurstRedisClient.StringGetAsync(key, CompressionType.None);
                 Assert.That(value.Value, Is.EqualTo("123"));
             }
         }
@@ -498,8 +549,8 @@ namespace RedisClientTest
                 new RedisKeyValue("MultiKeyWithTtl3", "3")
             };
             
-            await (await TomLonghurstRedisClient).StringSetAsync(keyValues, 120, awaitOptions);
-            var redisValues = (await (await TomLonghurstRedisClient).StringGetAsync(new [] { "MultiKeyWithTtl1", "MultiKeyWithTtl2", "MultiKeyWithTtl3" })).ToList();
+            await (await TomLonghurstRedisClient).StringSetAsync(keyValues, 120, CompressionType.None, awaitOptions);
+            var redisValues = (await (await TomLonghurstRedisClient).StringGetAsync(new [] { "MultiKeyWithTtl1", "MultiKeyWithTtl2", "MultiKeyWithTtl3" }, CompressionType.None)).ToList();
             Assert.That(redisValues.Count, Is.EqualTo(3));
             Assert.That(redisValues[0].Value, Is.EqualTo("1"));
             Assert.That(redisValues[1].Value, Is.EqualTo("2"));
@@ -519,7 +570,7 @@ namespace RedisClientTest
         [Repeat(2)]
         public async Task KeyExists()
         {
-            await (await TomLonghurstRedisClient).StringSetAsync("KeyExistsCheck", "123", 30, AwaitOptions.AwaitCompletion);
+            await (await TomLonghurstRedisClient).StringSetAsync("KeyExistsCheck", "123", 30, CompressionType.None, AwaitOptions.AwaitCompletion);
             var exists = await (await TomLonghurstRedisClient).KeyExistsAsync("KeyExistsCheck");
             var doesntExist = await (await TomLonghurstRedisClient).KeyExistsAsync("KeyDoesntExistsCheck");
             
@@ -541,15 +592,15 @@ namespace RedisClientTest
         public async Task Disconnected()
         {
             var client = await _redisManager.GetRedisClientAsync();
-            await client.StringSetAsync("DisconnectTest", "123", 120, AwaitOptions.AwaitCompletion);
-            var redisValue = await client.StringGetAsync("DisconnectTest");
+            await client.StringSetAsync("DisconnectTest", "123", 120, CompressionType.None, AwaitOptions.AwaitCompletion);
+            var redisValue = await client.StringGetAsync("DisconnectTest", CompressionType.None);
             Assert.AreEqual("123", redisValue.Value);
             
             client.Socket.Close();
 
             await Task.Delay(1000);
             
-            var result = await client.StringGetAsync("DisconnectTest");
+            var result = await client.StringGetAsync("DisconnectTest", CompressionType.None);
             
             Assert.AreEqual("123", result.Value);
         }
@@ -559,7 +610,7 @@ namespace RedisClientTest
         {
             var result =
                 await (await TomLonghurstRedisClient).StringGetAsync(
-                    "SummaryProduct_V3_1022864315_1724593328_COM_GBP_UK_en-GB_");
+                    "SummaryProduct_V3_1022864315_1724593328_COM_GBP_UK_en-GB_", CompressionType.None);
             
             Console.Write(result);
         }
@@ -574,13 +625,13 @@ namespace RedisClientTest
             var client3 = await _redisManager.GetRedisClientAsync();
             
             var resultTask =
-                client1.StringGetAsync(keys);
+                client1.StringGetAsync(keys, CompressionType.None);
             
             var result2Task =
-                client2.StringGetAsync(keys);
+                client2.StringGetAsync(keys, CompressionType.None);
             
             var result3Task =
-                client3.StringGetAsync(keys);
+                client3.StringGetAsync(keys, CompressionType.None);
 
             var result = await Task.WhenAll(resultTask, result2Task, result3Task);
 
@@ -689,7 +740,7 @@ namespace RedisClientTest
         [Repeat(2)]
         public async Task Expire()
         {
-            await (await TomLonghurstRedisClient).StringSetAsync("ExpireKey", "123", AwaitOptions.AwaitCompletion);
+            await (await TomLonghurstRedisClient).StringSetAsync("ExpireKey", "123", CompressionType.None, AwaitOptions.AwaitCompletion);
             var ttl = await (await TomLonghurstRedisClient).TimeToLiveAsync("ExpireKey");
             Assert.That(ttl, Is.EqualTo(-1));
             
@@ -710,7 +761,7 @@ namespace RedisClientTest
         [Repeat(2)]
         public async Task ExpireAt()
         {
-            await (await TomLonghurstRedisClient).StringSetAsync("ExpireKeyDateTime", "123", AwaitOptions.AwaitCompletion);
+            await (await TomLonghurstRedisClient).StringSetAsync("ExpireKeyDateTime", "123", CompressionType.None, AwaitOptions.AwaitCompletion);
             await (await TomLonghurstRedisClient).ExpireAtAsync("ExpireKeyDateTime", DateTimeOffset.Now.AddSeconds(30));
             var ttl = await (await TomLonghurstRedisClient).TimeToLiveAsync("ExpireKeyDateTime");
             Assert.That(ttl, Is.LessThanOrEqualTo(33));

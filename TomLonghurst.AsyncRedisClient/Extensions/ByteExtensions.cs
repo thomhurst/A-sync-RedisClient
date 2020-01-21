@@ -14,9 +14,9 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
         }
         
         
-        internal static IEnumerable<StringRedisValue> ToRedisValues(this IEnumerable<byte[]> bytesArray)
+        internal static IEnumerable<string> ToStringsFromUtf8(this IEnumerable<byte[]> bytesArray)
         {
-            return bytesArray.Select(bytes => new StringRedisValue(bytes.FromUtf8()));
+            return bytesArray.Select(bytes => bytes.FromUtf8());
         }
     }
 }

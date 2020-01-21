@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Client;
+using TomLonghurst.AsyncRedisClient.Compression;
 using TomLonghurst.AsyncRedisClient.Models;
 
 namespace TomLonghurst.AsyncRedisClient.Extensions
@@ -11,15 +12,15 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
         
         // TODO Finish this
         
-        public static Task<StringRedisValue> StringGetAsync(this Task<RedisClient> redisClient, string key)
+        public static Task<StringRedisValue> StringGetAsync(this Task<RedisClient> redisClient, string key, ICompression compression)
         {
-            return StringGetAsync(redisClient, key, CancellationToken.None);
+            return StringGetAsync(redisClient, key, compression, CancellationToken.None);
         }
 
-        public static async Task<StringRedisValue> StringGetAsync(this Task<RedisClient> redisClient, string key, CancellationToken cancellationToken)
+        public static async Task<StringRedisValue> StringGetAsync(this Task<RedisClient> redisClient, string key, ICompression compression, CancellationToken cancellationToken)
         {
             var client = await GetClient(redisClient);
-            return await client.StringGetAsync(key, cancellationToken).ConfigureAwait(false);
+            return await client.StringGetAsync(key, compression, cancellationToken).ConfigureAwait(false);
         }
 
         private static async Task<RedisClient> GetClient(Task<RedisClient> redisClient)

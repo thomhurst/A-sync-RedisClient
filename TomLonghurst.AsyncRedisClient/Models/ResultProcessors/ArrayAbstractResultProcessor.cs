@@ -7,9 +7,9 @@ using TomLonghurst.AsyncRedisClient.Helpers;
 
 namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
 {
-    public class ArrayResultProcessor : AbstractResultProcessor<IEnumerable<StringRedisValue>>
+    public class ArrayResultProcessor : AbstractResultProcessor<IEnumerable<string>>
     {
-        internal override async ValueTask<IEnumerable<StringRedisValue>> Process()
+        internal override async ValueTask<IEnumerable<string>> Process()
         {
             var line = await ReadLine();
 
@@ -30,7 +30,7 @@ namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
                 results[i] = (await ReadData()).ToArray();
             }
 
-            return results.ToRedisValues();
+            return results.ToStringsFromUtf8();
         }
     }
 }
