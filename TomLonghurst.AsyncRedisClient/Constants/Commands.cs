@@ -2,8 +2,6 @@
 // ReSharper disable IdentifierTypo
 
 using System.Collections.Generic;
-using TomLonghurst.AsyncRedisClient.Models.Commands;
-using TomLonghurst.AsyncRedisClient.Extensions;
 
 namespace TomLonghurst.AsyncRedisClient.Constants
 {

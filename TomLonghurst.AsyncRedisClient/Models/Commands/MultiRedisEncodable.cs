@@ -10,29 +10,24 @@ namespace TomLonghurst.AsyncRedisClient.Models.Commands
         private StringBuilder _stringBuilder;
         public string AsString => _stringBuilder.ToString();
         
-        private MultiRedisEncodable(IEnumerable<string> stringCommands)
+        private MultiRedisEncodable(IEnumerable<IRedisEncodable> commands)
         {
             _stringBuilder = new StringBuilder();
-            foreach (var stringCommand in stringCommands)
+            foreach (var stringCommand in commands)
             {
                 _stringBuilder.Append(stringCommand);
                 _stringBuilder.Append("\r\n");
             }
         }
 
-        public byte[] GetEncodedCommand()
+        public IEnumerable<byte> GetEncodedCommand()
         {
             return AsString.ToUtf8BytesWithTerminator();
         }
 
-        public static MultiRedisEncodable From(IEnumerable<string> stringCommands)
+        public static MultiRedisEncodable From(IEnumerable<IRedisEncodable> stringCommands)
         {
             return new MultiRedisEncodable(stringCommands);
-        }
-        
-        public static MultiRedisEncodable From(IEnumerable<IRedisEncodable> commands)
-        {
-            return From(commands.Select(c => c.AsString));
         }
     }
 }

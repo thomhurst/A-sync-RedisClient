@@ -168,7 +168,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
             LastAction = LastActionConstants.WritingBytes;
 
-            return _pipeWriter.WriteAsync(command.GetEncodedCommand());
+            return _pipeWriter.WriteAsync(command.GetEncodedCommand().ToArray());
         }
 
         

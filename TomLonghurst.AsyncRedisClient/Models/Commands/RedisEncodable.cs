@@ -1,20 +1,32 @@
 using System.Collections.Generic;
+using System.Linq;
 using TomLonghurst.AsyncRedisClient.Extensions;
 
 namespace TomLonghurst.AsyncRedisClient.Models.Commands
 {
     public struct RedisEncodable : IRedisEncodable
     {
-        public string AsString { get; }
+        private string[] StringCommands { get; }
         
-        private RedisEncodable(string stringCommand)
+        public string AsString => string.Join(" ", StringCommands);
+        
+        private RedisEncodable(params string[] stringCommands)
         {
-            AsString = stringCommand;
+            StringCommands = stringCommands;
         }
 
-        public byte[] GetEncodedCommand()
+        public IEnumerable<byte> GetEncodedCommand()
         {
-            return AsString.ToUtf8BytesWithTerminator();
+            var _encodedCommand = new List<byte[]> {$"*{StringCommands.Length}".ToUtf8BytesWithTerminator()};
+
+            foreach (var stringCommands in StringCommands)
+            {
+                var bytes = stringCommands.ToUtf8BytesWithTerminator();
+                _encodedCommand.Add($"${bytes.Length - 2}".ToUtf8BytesWithTerminator());
+                _encodedCommand.Add(bytes);
+            }
+
+            return _encodedCommand.SelectMany(ec => ec);
         }
 
         public static RedisEncodable From(string stringCommand)
