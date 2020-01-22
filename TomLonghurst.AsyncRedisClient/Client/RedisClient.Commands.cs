@@ -274,7 +274,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             return await RunWithTimeout(async token =>
             {
-                var command = RedisEncodable.From(Commands.IncrBy, key.ToRedisEncoded(), amount.ToRedisEncoded());
+                var command = RedisEncodable.From($"{Commands.IncrBy} {key} {amount}");
                 return await SendOrQueueAsync(command, IntegerResultProcessor, token);
             }, cancellationToken).ConfigureAwait(false);
         }
@@ -288,7 +288,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             return await RunWithTimeout(async token =>
             {
-                var command = RedisEncodable.From(Commands.IncrByFloat, key.ToRedisEncoded(), amount.ToRedisEncoded());
+                var command = RedisEncodable.From($"{Commands.IncrByFloat} {key} {amount}");
                 return await SendOrQueueAsync(command, FloatResultProcessor, token);
             }, cancellationToken).ConfigureAwait(false);
         }
@@ -302,7 +302,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             return await RunWithTimeout(async token =>
             {
-                var command = RedisEncodable.From(Commands.Decr, key.ToRedisEncoded());
+                var command = RedisEncodable.From($"{Commands.Decr} {key}");
                 return await SendOrQueueAsync(command, IntegerResultProcessor, token);
             }, cancellationToken).ConfigureAwait(false);
         }
@@ -316,7 +316,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             return await RunWithTimeout(async token =>
             {
-                var command = RedisEncodable.From(Commands.DecrBy, key.ToRedisEncoded(), amount.ToRedisEncoded());
+                var command = RedisEncodable.From($"{Commands.DecrBy} {key} {amount}");
                 return await SendOrQueueAsync(command, IntegerResultProcessor, token);
             }, cancellationToken).ConfigureAwait(false);
         }
@@ -330,7 +330,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             await RunWithTimeout(async token =>
             {
-                var command = RedisEncodable.From(Commands.Expire, key.ToRedisEncoded(), seconds.ToRedisEncoded());
+                var command = RedisEncodable.From($"{Commands.Expire} {key} {seconds}");
                 return await SendOrQueueAsync(command, IntegerResultProcessor, token);
             }, cancellationToken).ConfigureAwait(false);
         }
@@ -370,7 +370,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             await RunWithTimeout(async token =>
             {
-                var command = RedisEncodable.From(Commands.ExpireAt, key.ToRedisEncoded(), dateTime.ToUnixTimeSeconds().ToRedisEncoded());
+                var command = RedisEncodable.From($"{Commands.ExpireAt} {key} {dateTime.ToUnixTimeSeconds()}");
                 return await SendOrQueueAsync(command, IntegerResultProcessor, token);
             }, cancellationToken).ConfigureAwait(false);
         }
@@ -384,7 +384,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             await RunWithTimeout(async token =>
             {
-                var command = RedisEncodable.From(Commands.Persist, key.ToRedisEncoded());
+                var command = RedisEncodable.From($"{Commands.Persist} {key}");
                 return await SendOrQueueAsync(command, IntegerResultProcessor, token);
             }, cancellationToken).ConfigureAwait(false);
         }
@@ -398,7 +398,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             return await RunWithTimeout(async token =>
             {
-                var command = RedisEncodable.From(Commands.Ttl, key.ToRedisEncoded());
+                var command = RedisEncodable.From($"{Commands.Ttl} {key}");
                 return await SendOrQueueAsync(command, IntegerResultProcessor, token);
             }, cancellationToken).ConfigureAwait(false);
         }
