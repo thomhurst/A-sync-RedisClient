@@ -30,13 +30,13 @@ namespace TomLonghurst.AsyncRedisClient.Client
             {
                 await _redisClient.RunWithTimeout(async token =>
                 {
-                    await _redisClient.SendOrQueueAsync(Commands.ScriptFlush, _redisClient.SuccessResultProcessor, token);
+                    await _redisClient.SendOrQueueAsync(RedisEncodable.From(Commands.ScriptFlush), _redisClient.SuccessResultProcessor, token);
                 }, cancellationToken).ConfigureAwait(false);
             }
 
             public async Task<LuaScript> LoadScript(string script, CancellationToken cancellationToken)
             {
-                var command = RedisCommand.From(Commands.Script, Commands.Load, script.ToRedisEncoded());
+                var command = RedisEncodable.From($"{Commands.Script} {Commands.Load} {script}");
                 var scriptResponse = await _redisClient.RunWithTimeout(async token =>
                 {
                     return await _redisClient.SendOrQueueAsync(command, _redisClient.DataResultProcessor, token);
@@ -48,7 +48,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             internal async Task<RawResult> EvalSha(string sha1Hash, IEnumerable<string> keys, IEnumerable<string> arguments, CancellationToken cancellationToken)
             {
                 var keysList = keys.ToList();
-                var command = RedisCommand.FromScript(Commands.EvalSha, sha1Hash.ToRedisEncoded(), keysList, arguments);
+                var command = RedisEncodable.FromScript(Commands.EvalSha, sha1Hash, keysList, arguments);
 
                 var scriptResult = await _redisClient.RunWithTimeout(async token =>
                     {

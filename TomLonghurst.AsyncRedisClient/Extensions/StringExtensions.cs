@@ -89,26 +89,22 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
             return value.Split(new[] {delimiter}, StringSplitOptions.RemoveEmptyEntries);
         }
 
-        internal static IRedisCommand ToFireAndForgetCommand(this IEnumerable<RedisCommand> commands)
+        internal static IRedisEncodable ToFireAndForgetCommand(this IEnumerable<IRedisEncodable> commands)
         {
             var enumerable = commands.ToList();
             if (enumerable.Count > 1)
             {
-                var clientReplyOff = RedisCommand.From("CLIENT".ToRedisEncoded(),
-                    "REPLY".ToRedisEncoded(),
-                    "OFF".ToRedisEncoded());
+                var clientReplyOff = RedisEncodable.From("CLIENT REPLY OFF");
 
-                var fireAndForgetCommands = new List<RedisCommand> { clientReplyOff };
+                var fireAndForgetCommands = new List<IRedisEncodable> { clientReplyOff };
                 
                 fireAndForgetCommands.AddRange(enumerable);
-                
-                var clientReplyOn = RedisCommand.From("CLIENT".ToRedisEncoded(),
-                    "REPLY".ToRedisEncoded(),
-                    "ON".ToRedisEncoded());
-            
+
+                var clientReplyOn = RedisEncodable.From("CLIENT REPLY ON");
+
                 fireAndForgetCommands.Add(clientReplyOn);
                 
-                return MultiRedisCommand.From(fireAndForgetCommands);
+                return MultiRedisEncodable.From(fireAndForgetCommands);
             }
             else
             {
@@ -116,21 +112,9 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
             }
         }
         
-        internal static IRedisCommand ToPipelinedCommand(this IEnumerable<IRedisCommand> commands)
+        internal static IRedisEncodable ToPipelinedCommand(this IEnumerable<IRedisEncodable> commands)
         {
-            var enumerable = commands.ToList();
-            if (enumerable.Count > 1)
-            {
-                var fireAndForgetCommands = new List<IRedisCommand>();
-                
-                fireAndForgetCommands.AddRange(enumerable);
-
-                return MultiRedisCommand.From(fireAndForgetCommands);
-            }
-            else
-            {
-                return enumerable.First();
-            }
+            return MultiRedisEncodable.From(commands);
         }
     }
 }

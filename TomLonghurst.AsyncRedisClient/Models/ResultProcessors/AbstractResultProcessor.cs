@@ -38,7 +38,7 @@ namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
 
     public abstract class AbstractResultProcessor<T> : AbstractResultProcessor
     {
-        public IRedisCommand LastCommand
+        public IRedisEncodable LastCommand
         {
             get => RedisClient.LastCommand;
             set => RedisClient.LastCommand = value;

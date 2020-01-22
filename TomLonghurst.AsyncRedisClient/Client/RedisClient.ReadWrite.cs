@@ -68,7 +68,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         }
 
         
-        internal ValueTask<T> SendOrQueueAsync<T>(IRedisCommand command,
+        internal ValueTask<T> SendOrQueueAsync<T>(IRedisEncodable command,
             AbstractResultProcessor<T> abstractResultProcessor,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
@@ -95,7 +95,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             return QueueToBacklog(command, abstractResultProcessor, cancellationToken);
         }
 
-        private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, AbstractResultProcessor<T> abstractResultProcessor,
+        private ValueTask<T> QueueToBacklog<T>(IRedisEncodable command, AbstractResultProcessor<T> abstractResultProcessor,
             CancellationToken cancellationToken)
         {
             var taskCompletionSource = new TaskCompletionSource<T>();
@@ -107,7 +107,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             return new ValueTask<T>(taskCompletionSource.Task);
         }
 
-        internal async ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command, AbstractResultProcessor<T> abstractResultProcessor,
+        internal async ValueTask<T> SendAndReceiveAsync<T>(IRedisEncodable command, AbstractResultProcessor<T> abstractResultProcessor,
             CancellationToken cancellationToken, bool isReconnectionAttempt)
         {
             _isBusy = true;
@@ -162,14 +162,13 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
         }
 
-        internal ValueTask<FlushResult> Write(IRedisCommand command)
+        internal ValueTask<FlushResult> Write(IRedisEncodable command)
         {
             _written++;
-            var encodedCommandList = command.EncodedCommandList;
 
             LastAction = LastActionConstants.WritingBytes;
 
-            return _pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray());
+            return _pipeWriter.WriteAsync(command.GetEncodedCommand());
         }
 
         

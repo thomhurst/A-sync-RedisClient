@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Constants;
+using TomLonghurst.AsyncRedisClient.Models.Commands;
 
 namespace TomLonghurst.AsyncRedisClient.Client
 {
@@ -27,7 +28,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             {
                 return await _redisClient.RunWithTimeout(async token =>
                 {
-                    return await _redisClient.SendOrQueueAsync(Commands.ClusterInfo, _redisClient.DataResultProcessor, token);
+                    return await _redisClient.SendOrQueueAsync(RedisEncodable.From(Commands.ClusterInfo), _redisClient.DataResultProcessor, token);
                 }, cancellationToken).ConfigureAwait(false);
             }
         }

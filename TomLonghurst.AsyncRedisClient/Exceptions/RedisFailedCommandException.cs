@@ -4,7 +4,7 @@ namespace TomLonghurst.AsyncRedisClient.Exceptions
 {
     public class RedisFailedCommandException : RedisRecoverableException
     {
-        public RedisFailedCommandException(string message, IRedisCommand lastCommand)
+        public RedisFailedCommandException(string message, IRedisEncodable lastCommand)
         {
             Message = $"{message}\nLast Command: {lastCommand.AsString}";
         }
