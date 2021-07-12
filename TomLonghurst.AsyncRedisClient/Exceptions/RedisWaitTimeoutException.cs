@@ -16,7 +16,7 @@ namespace TomLonghurst.AsyncRedisClient.Exceptions
             get
             {
                 ApplicationStats.GetThreadPoolStats(out var ioThreadStats, out var workerThreadStats);
-                return $"Client {_redisClient.ClientId}\n{workerThreadStats}\n{ioThreadStats}\nLast Command: {_redisClient.LastCommand.AsString}\nLast Action: {_redisClient.LastAction}";
+                return $"Client {_redisClient.ClientId}\n{workerThreadStats}\n{ioThreadStats}";
             }
         }
     }

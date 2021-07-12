@@ -119,7 +119,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
             {
                 await RunWithTimeout(async token =>
                 {
-                    LastAction = LastActionConstants.Reconnecting;
                     await ConnectAsync(token);
                 }, cancellationToken);
             }
@@ -136,19 +135,21 @@ namespace TomLonghurst.AsyncRedisClient.Client
             {
                 return;
             }
-
-            LastAction = LastActionConstants.WaitingForConnectingLock;
+            
             await _connectSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
 
             if (IsConnected)
             {
-                _connectSemaphoreSlim.Release();
+                if (_connectSemaphoreSlim.CurrentCount != 1)
+                {
+                    _connectSemaphoreSlim.Release();
+                }
+
                 return;
             }
             
             try
             {
-                LastAction = LastActionConstants.Connecting;
                 Interlocked.Increment(ref _reconnectAttempts);
 
                 _socket = new RedisSocket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
@@ -194,7 +195,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
                         ClientConfig.CertificateSelectionCallback,
                         EncryptionPolicy.RequireEncryption);
 
-                    LastAction = LastActionConstants.AuthenticatingSSLStreamAsClient;
                     await _sslStream.AuthenticateAsClientAsync(ClientConfig.Host).ConfigureAwait(false);
 
                     if (!_sslStream.IsEncrypted)
@@ -203,13 +203,11 @@ namespace TomLonghurst.AsyncRedisClient.Client
                         throw new SecurityException($"Could not establish an encrypted connection to Redis - {ClientConfig.Host}");
                     }
 
-                    LastAction = LastActionConstants.CreatingSSLStreamPipe;
                     _pipeWriter = PipeWriter.Create(_sslStream, new StreamPipeWriterOptions(leaveOpen: true));
                     _pipeReader = PipeReader.Create(_sslStream, new StreamPipeReaderOptions(leaveOpen: true));
                 }
                 else
                 {
-                    LastAction = LastActionConstants.CreatingSocketPipe;
                     _socketPipe = SocketPipe.GetDuplexPipe(_socket, redisPipeOptions.SendOptions, redisPipeOptions.ReceiveOptions);
                     _pipeWriter = _socketPipe.Output;
                     _pipeReader = _socketPipe.Input;
@@ -217,19 +215,16 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
                 if (!string.IsNullOrEmpty(ClientConfig.Password))
                 {
-                    LastAction = LastActionConstants.Authorizing;
                     await Authorize(cancellationToken);
                 }
 
                 if (ClientConfig.Db != 0)
                 {
-                    LastAction = LastActionConstants.SelectingDatabase;
                     await SelectDb(cancellationToken);
                 }
 
                 if (ClientConfig.ClientName != null)
                 {
-                    LastAction = LastActionConstants.SettingClientName;
                     await SetClientNameAsync(cancellationToken);
                 }
 
@@ -303,7 +298,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             _disposed = true;
             DisposeNetwork();
-            LastAction = LastActionConstants.DisposingClient;
             _connectSemaphoreSlim?.Dispose();
             _sendAndReceiveSemaphoreSlim?.Dispose();
             _backlog?.Dispose();
@@ -313,7 +307,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
         private void DisposeNetwork()
         {
             IsConnected = false;
-            LastAction = LastActionConstants.DisposingNetwork;
             _pipeReader?.CompleteAsync();
             _pipeWriter?.CompleteAsync();
             _socket?.Close();

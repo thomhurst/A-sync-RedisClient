@@ -39,21 +39,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
         private string _lastAction;
         public static bool Debug;
 
-        internal string LastAction
-        {
-            get => _lastAction ?? "Please set RedisClient.Debug to true to populate this field.";
-            set
-            {
-#if DEBUG
-                Console.WriteLine($"Last Action: {value}");
-#endif
-                if (Debug)
-                {
-                    _lastAction = value;
-                }
-            }
-        }
-
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
         public DateTime LastUsed { get; internal set; }
@@ -76,12 +61,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             LastUsed = DateTime.Now;
             
-#if DEBUG
-            if (cancellationToken.IsCancellationRequested)
-            {
-                LastAction = LastActionConstants.ThrowingCancelledException;
-            }
-#endif
             cancellationToken.ThrowIfCancellationRequested();
 
             Interlocked.Increment(ref _outStandingOperations);
@@ -167,8 +146,6 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             _written++;
             var encodedCommandList = command.EncodedCommandList;
-
-            LastAction = LastActionConstants.WritingBytes;
 
             return _pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray());
         }
