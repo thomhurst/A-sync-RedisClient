@@ -3,19 +3,17 @@ using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Helpers;
-using TomLonghurst.AsyncRedisClient.Models;
 using TomLonghurst.AsyncRedisClient.Models.Backlog;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
 using TomLonghurst.AsyncRedisClient.Extensions;
 using TomLonghurst.AsyncRedisClient.Models.ResultProcessors;
 using TomLonghurst.AsyncRedisClient.Pipes;
 #if !NETSTANDARD2_0
-using System.Buffers;
 #endif
 
 namespace TomLonghurst.AsyncRedisClient.Client
@@ -150,15 +148,13 @@ namespace TomLonghurst.AsyncRedisClient.Client
             return _pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray());
         }
 
-        
-        internal async ValueTask<T> RunWithTimeout<T>(Func<CancellationToken, ValueTask<T>> action,
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private async ValueTask<T> RunWithTimeout<T>(Func<CancellationToken, ValueTask<T>> action,
             CancellationToken originalCancellationToken)
         {
             originalCancellationToken.ThrowIfCancellationRequested();
             
-            var cancellationTokenWithTimeout =
-                CancellationTokenHelper.CancellationTokenWithTimeout(ClientConfig.Timeout,
-                    originalCancellationToken);
+            var cancellationTokenWithTimeout = CancellationTokenHelper.CancellationTokenWithTimeout(ClientConfig.Timeout, originalCancellationToken);
 
             var stopwatch = Stopwatch.StartNew();
 
