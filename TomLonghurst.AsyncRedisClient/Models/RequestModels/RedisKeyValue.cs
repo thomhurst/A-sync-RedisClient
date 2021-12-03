@@ -1,6 +1,3 @@
-using System;
-using TomLonghurst.AsyncRedisClient.Constants;
-
 namespace TomLonghurst.AsyncRedisClient.Models.RequestModels
 {
     public struct RedisKeyValue

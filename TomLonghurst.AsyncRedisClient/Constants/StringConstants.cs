@@ -1,5 +1,3 @@
-using System;
-
 namespace TomLonghurst.AsyncRedisClient.Constants
 {
     public static class StringConstants

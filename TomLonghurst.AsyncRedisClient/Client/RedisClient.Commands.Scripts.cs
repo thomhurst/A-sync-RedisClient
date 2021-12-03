@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Extensions;
 using TomLonghurst.AsyncRedisClient.Models;
-using TomLonghurst.AsyncRedisClient.Models.Commands;
 
 namespace TomLonghurst.AsyncRedisClient.Client
 {
@@ -36,7 +35,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
             public async Task<LuaScript> LoadScript(string script, CancellationToken cancellationToken)
             {
-                var command = RedisCommand.From(Commands.Script, Commands.Load, script.ToRedisEncoded());
+                var command = $"{Commands.Script} {Commands.Load} {script}";
                 var scriptResponse = await _redisClient.RunWithTimeout(async token =>
                 {
                     return await _redisClient.SendOrQueueAsync(command, _redisClient.DataResultProcessor, token);
@@ -48,7 +47,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             internal async Task<RawResult> EvalSha(string sha1Hash, IEnumerable<string> keys, IEnumerable<string> arguments, CancellationToken cancellationToken)
             {
                 var keysList = keys.ToList();
-                var command = RedisCommand.FromScript(Commands.EvalSha, sha1Hash.ToRedisEncoded(), keysList, arguments);
+                var command = $"{Commands.EvalSha} {sha1Hash} {keysList} {arguments}";
 
                 var scriptResult = await _redisClient.RunWithTimeout(async token =>
                     {

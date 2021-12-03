@@ -1,6 +1,3 @@
-using System.Buffers;
-using System.Threading.Tasks;
-
 namespace TomLonghurst.AsyncRedisClient.Client
 {
     public partial class RedisClient

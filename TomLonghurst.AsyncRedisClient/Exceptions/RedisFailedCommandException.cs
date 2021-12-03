@@ -1,12 +1,10 @@
-using TomLonghurst.AsyncRedisClient.Models.Commands;
-
 namespace TomLonghurst.AsyncRedisClient.Exceptions
 {
     public class RedisFailedCommandException : RedisRecoverableException
     {
-        public RedisFailedCommandException(string message, IRedisCommand lastCommand)
+        public RedisFailedCommandException(string message, string lastCommand)
         {
-            Message = $"{message}\nLast Command: {lastCommand.AsString}";
+            Message = $"{message}\nLast Command: {lastCommand}";
         }
 
         public override string Message { get; }

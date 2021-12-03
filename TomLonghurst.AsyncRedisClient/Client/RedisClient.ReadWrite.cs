@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO.Pipelines;
-using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -9,7 +8,6 @@ using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Helpers;
 using TomLonghurst.AsyncRedisClient.Models.Backlog;
-using TomLonghurst.AsyncRedisClient.Models.Commands;
 using TomLonghurst.AsyncRedisClient.Extensions;
 using TomLonghurst.AsyncRedisClient.Models.ResultProcessors;
 using TomLonghurst.AsyncRedisClient.Pipes;
@@ -52,7 +50,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         }
 
         
-        internal ValueTask<T> SendOrQueueAsync<T>(IRedisCommand command,
+        internal ValueTask<T> SendOrQueueAsync<T>(string command,
             AbstractResultProcessor<T> abstractResultProcessor,
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
@@ -73,7 +71,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             return QueueToBacklog(command, abstractResultProcessor, cancellationToken);
         }
 
-        private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, AbstractResultProcessor<T> abstractResultProcessor,
+        private ValueTask<T> QueueToBacklog<T>(string command, AbstractResultProcessor<T> abstractResultProcessor,
             CancellationToken cancellationToken)
         {
             var taskCompletionSource = new TaskCompletionSource<T>();
@@ -85,7 +83,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             return new ValueTask<T>(taskCompletionSource.Task);
         }
 
-        internal async ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command, AbstractResultProcessor<T> abstractResultProcessor,
+        internal async ValueTask<T> SendAndReceiveAsync<T>(string command, AbstractResultProcessor<T> abstractResultProcessor,
             CancellationToken cancellationToken, bool isReconnectionAttempt)
         {
             _isBusy = true;
@@ -140,12 +138,15 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
         }
 
-        internal ValueTask<FlushResult> Write(IRedisCommand command)
+        private ValueTask<FlushResult> Write(string command)
+        {
+            return Write(RedisCommandConverter.ConvertSingleCommand(command));
+        }
+        
+        private ValueTask<FlushResult> Write(ReadOnlyMemory<byte> bytes)
         {
             _written++;
-            var encodedCommandList = command.EncodedCommandList;
-
-            return _pipeWriter.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray());
+            return _pipeWriter.WriteAsync(bytes);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
