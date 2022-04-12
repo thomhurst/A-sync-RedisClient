@@ -13,12 +13,12 @@ namespace TomLonghurst.AsyncRedisClient.Models
             _hash = hash;
         }
 
-        public Task<RawResult> ExecuteAsync(IEnumerable<string> keys, IEnumerable<string> arguments)
+        public Task<RawResult> ExecuteAsync(IReadOnlyList<string> keys, IEnumerable<string> arguments)
         {
             return ExecuteAsync(keys, arguments, CancellationToken.None);
         }
 
-        public Task<RawResult> ExecuteAsync(IEnumerable<string> keys, IEnumerable<string> arguments, CancellationToken cancellationToken)
+        public Task<RawResult> ExecuteAsync(IReadOnlyList<string> keys, IEnumerable<string> arguments, CancellationToken cancellationToken)
         {
             return _redisClient.Scripts.EvalSha(_hash, keys, arguments, cancellationToken);
         }

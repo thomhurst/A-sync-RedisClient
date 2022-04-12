@@ -341,7 +341,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                         cancellationToken);
                 }
 
-                await Scripts.MultiExpireScript.ExecuteAsync(keys, arguments, cancellationToken);
+                await Scripts.MultiExpireScript.ExecuteAsync(keys is IReadOnlyList<string> stringList ? stringList : keys.ToList(), arguments, cancellationToken);
             }, cancellationToken).ConfigureAwait(false);
         }
 

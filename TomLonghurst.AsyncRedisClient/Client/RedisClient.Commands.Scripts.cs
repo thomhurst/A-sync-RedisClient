@@ -1,5 +1,6 @@
 using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Extensions;
+using TomLonghurst.AsyncRedisClient.Helpers;
 using TomLonghurst.AsyncRedisClient.Models;
 
 namespace TomLonghurst.AsyncRedisClient.Client
@@ -41,11 +42,10 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 return new LuaScript(_redisClient, scriptResponse);
             }
 
-            internal async Task<RawResult> EvalSha(string sha1Hash, IEnumerable<string> keys, IEnumerable<string> arguments, CancellationToken cancellationToken)
+            internal async Task<RawResult> EvalSha(string sha1Hash, IReadOnlyList<string> keys, IEnumerable<string> arguments, CancellationToken cancellationToken)
             {
-                var keysList = keys.ToList();
-                var command = RedisEncoder.EncodeCommand(Commands.EvalSha, sha1Hash.AsReadOnlyByteMemory(),
-                    keysList.ToString().AsReadOnlyByteMemory(), arguments.ToString().AsReadOnlyByteMemory());
+                var command = RedisEncoder.EncodeCommand(Commands.EvalSha, sha1Hash.AsReadOnlyByteMemory(), keys.Count.AsReadOnlyByteMemory(),
+                    keys.Select(x => x.AsReadOnlyByteMemory()).Concat(arguments.Select(x => x.AsReadOnlyByteMemory())).ToArray());
 
                 var scriptResult = await _redisClient.RunWithTimeout(async token =>
                     {

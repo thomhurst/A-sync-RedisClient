@@ -128,8 +128,6 @@ public class RedisEncoder
     {
         var endArray = furtherMemorySegments.SelectMany(furtherMemorySegment =>
         {
-            var segmentDigitCount = furtherMemorySegment.Length.GetDigitCount();
-
             return ReadOnlyMemoryConcatenator.Concatenate(Commands.DollarSymbol,
                 furtherMemorySegment.Length.AsReadOnlyByteMemory(),
                 Commands.LineTerminator,
@@ -147,5 +145,71 @@ public class RedisEncoder
             Commands.LineTerminator).ToArray();
 
         return startArray.Concat(endArray).ToArray();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ReadOnlyMemory<byte> EncodeCommand(ReadOnlyMemory<byte> memory1, ReadOnlyMemory<byte> memory2, ReadOnlyMemory<byte>[] furtherMemorySegments)
+    {
+        var endArray = furtherMemorySegments.SelectMany(furtherMemorySegment =>
+        {
+            return ReadOnlyMemoryConcatenator.Concatenate(Commands.DollarSymbol,
+                furtherMemorySegment.Length.AsReadOnlyByteMemory(),
+                Commands.LineTerminator,
+                furtherMemorySegment,
+                Commands.LineTerminator).ToArray();
+        });
+
+        var arrayPart1 = ReadOnlyMemoryConcatenator.Concatenate(Commands.AsterixSymbol,
+            (2 + furtherMemorySegments.Length).AsReadOnlyByteMemory(),
+            Commands.LineTerminator,
+            Commands.DollarSymbol,
+            memory1.Length.AsReadOnlyByteMemory(),
+            Commands.LineTerminator,
+            memory1,
+            Commands.LineTerminator).ToArray();
+
+        var arrayPart2 = ReadOnlyMemoryConcatenator.Concatenate(Commands.DollarSymbol,
+            memory2.Length.AsReadOnlyByteMemory(),
+            Commands.LineTerminator,
+            memory2,
+            Commands.LineTerminator).ToArray();
+
+        return arrayPart1.Concat(arrayPart2).Concat(endArray).ToArray();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ReadOnlyMemory<byte> EncodeCommand(ReadOnlyMemory<byte> memory1, ReadOnlyMemory<byte> memory2, ReadOnlyMemory<byte> memory3, ReadOnlyMemory<byte>[] furtherMemorySegments)
+    {
+        var endArray = furtherMemorySegments.SelectMany(furtherMemorySegment =>
+        {
+            return ReadOnlyMemoryConcatenator.Concatenate(Commands.DollarSymbol,
+                furtherMemorySegment.Length.AsReadOnlyByteMemory(),
+                Commands.LineTerminator,
+                furtherMemorySegment,
+                Commands.LineTerminator).ToArray();
+        });
+
+        var arrayPart1 = ReadOnlyMemoryConcatenator.Concatenate(Commands.AsterixSymbol,
+            (3 + furtherMemorySegments.Length).AsReadOnlyByteMemory(),
+            Commands.LineTerminator,
+            Commands.DollarSymbol,
+            memory1.Length.AsReadOnlyByteMemory(),
+            Commands.LineTerminator,
+            memory1,
+            Commands.LineTerminator).ToArray();
+
+        var arrayPart2 = ReadOnlyMemoryConcatenator.Concatenate(Commands.DollarSymbol,
+            memory2.Length.AsReadOnlyByteMemory(),
+            Commands.LineTerminator,
+            memory2,
+            Commands.LineTerminator).ToArray();
+        
+        var arrayPart3 = ReadOnlyMemoryConcatenator.Concatenate(Commands.DollarSymbol,
+            memory3.Length.AsReadOnlyByteMemory(),
+            Commands.LineTerminator,
+            memory3,
+            Commands.LineTerminator).ToArray();
+
+        return arrayPart1.Concat(arrayPart2).Concat(arrayPart3).Concat(endArray).ToArray();
     }
 }
