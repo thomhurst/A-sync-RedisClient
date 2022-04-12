@@ -21,7 +21,7 @@ namespace RedisClientTest
 
         // To test, create a Test Information static class to store your Host, Port and Password for your Test Redis Server
         [OneTimeSetUp]
-        public void OneTimeSetup()
+        public async Task OneTimeSetup()
         {
             _config = new RedisClientConfig(TestInformation.Host, TestInformation.Port,
                 TestInformation.Password)
@@ -29,7 +29,11 @@ namespace RedisClientTest
                 Ssl = false
             };
             _redisManager = new RedisClientManager(_config, 1);
-            _redisManager.GetAllRedisClients();
+            var clients = _redisManager.GetAllRedisClients();
+            foreach (var redisClient in clients)
+            {
+                await redisClient.ConnectAsync();
+            }
         }
 
         [SetUp]

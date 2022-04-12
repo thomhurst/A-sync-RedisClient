@@ -202,10 +202,14 @@ namespace TomLonghurst.AsyncRedisClient.Client
             return DeleteKeyAsync(key, CancellationToken.None);
         }
 
-        public Task DeleteKeyAsync(string key,
+        public async Task DeleteKeyAsync(string key,
             CancellationToken cancellationToken)
         {
-            return DeleteKeyAsync(new[] { key }, cancellationToken);
+            await RunWithTimeout(async token => 
+            {
+                var command = RedisEncoder.EncodeCommand(Commands.Del, key.AsReadOnlyByteMemory());
+                await SendOrQueueAsync(command, IntegerResultProcessor, token);
+            }, cancellationToken).ConfigureAwait(false);
         }
 
         public Task DeleteKeyAsync(IEnumerable<string> keys)

@@ -20,7 +20,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
             for (var i = 0; i < redisClientPoolSize; i++)
             {
-                _redisClients.Add(RedisClient.ConnectAsync(clientConfig));
+                _redisClients.Add(RedisClient.Create(clientConfig));
             }
         }
 

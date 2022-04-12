@@ -88,12 +88,22 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
         }
 
-        internal static RedisClient ConnectAsync(RedisClientConfig redisClientConfig)
+        public Task ConnectAsync()
         {
-            return ConnectAsync(redisClientConfig, CancellationToken.None);
+            return ConnectAsync(CancellationToken.None);
+        }
+        
+        public async Task ConnectAsync(CancellationToken cancellationToken)
+        {
+            await TryConnectAsync(cancellationToken);
+        }
+        
+        internal static RedisClient Create(RedisClientConfig redisClientConfig)
+        {
+            return Create(redisClientConfig, CancellationToken.None);
         }
 
-        internal static RedisClient ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
+        internal static RedisClient Create(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
         {
             var redisClient = new RedisClient(redisClientConfig);
             _ = Task.Run(() => redisClient.TryConnectAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
@@ -111,7 +121,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             {
                 await RunWithTimeout(async token =>
                 {
-                    await ConnectAsync(token);
+                    await Create(token);
                 }, cancellationToken);
             }
             catch (Exception innerException)
@@ -121,7 +131,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
         }
         
-        private async Task ConnectAsync(CancellationToken cancellationToken)
+        private async Task Create(CancellationToken cancellationToken)
         {
             if (IsConnected)
             {
