@@ -60,7 +60,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
 //            return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
 //            
-            if (isReconnectionAttempt || _isBusy)
+            if (isReconnectionAttempt || !_isBusy)
             {
                 return SendAndReceiveAsync(command, abstractResultProcessor, cancellationToken, isReconnectionAttempt);
             }
