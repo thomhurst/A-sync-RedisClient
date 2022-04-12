@@ -1,11 +1,11 @@
-﻿using TomLonghurst.AsyncRedisClient.Extensions;
+﻿using System.Collections.Immutable;
 
 namespace TomLonghurst.AsyncRedisClient.Client
 {
     public class RedisClientManager
     {
         public RedisClientConfig ClientConfig { get; }
-        private readonly List<Task<RedisClient>> _redisClients;
+        private readonly List<RedisClient> _redisClients;
 
         public RedisClientManager(RedisClientConfig clientConfig, int redisClientPoolSize)
         {
@@ -14,7 +14,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 throw new ArgumentOutOfRangeException(nameof(redisClientPoolSize), "Pool size must be 1 or more");
             }
 
-            _redisClients = new List<Task<RedisClient>>(redisClientPoolSize);
+            _redisClients = new List<RedisClient>(redisClientPoolSize);
 
             ClientConfig = clientConfig;
 
@@ -28,48 +28,34 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             if (_redisClients.Count == 1)
             {
-                return await _redisClients.First().ConfigureAwait(false);
+                return _redisClients.First();
             }
 
-            var redisClientsLoaded = _redisClients.Where(x => x.IsCompleted).ToList();
-
-            if (redisClientsLoaded.Count != _redisClients.Count)
-            {
-                return await _redisClients.WhenAny(x => x.IsConnected).ConfigureAwait(false)
-                    ?? await Task.WhenAny(_redisClients).Unwrap().ConfigureAwait(false);
-            }
-
-            var orderByLeastOutstandingOperations = (await Task.WhenAll(_redisClients).ConfigureAwait(false)).OrderBy(client => client.OutstandingOperations).ToList();
-                
-            var connectedClient = orderByLeastOutstandingOperations.FirstOrDefault(client => client.IsConnected);
-
-            return connectedClient ?? orderByLeastOutstandingOperations.First();
+            return _redisClients.Where(x => x.IsConnected)
+                       .OrderBy(x => x.OutstandingOperations)
+                       .FirstOrDefault()
+                   ?? _redisClients.First();
         }
 
         private void SetConnectionCallbacks()
         {
-            foreach (var redisClient in _redisClients)
+            foreach (var client in _redisClients)
             {
-                redisClient.ContinueWith(task =>
+                if (client.OnConnectionFailed == null)
                 {
-                    var client = task.Result;
+                    client.OnConnectionFailed = OnConnectionFailed;
+                }
 
-                    if (client.OnConnectionFailed == null)
-                    {
-                        client.OnConnectionFailed = OnConnectionFailed;
-                    }
-
-                    if (client.OnConnectionEstablished == null)
-                    {
-                        client.OnConnectionEstablished = OnConnectionEstablished;
-                    }
-                });
+                if (client.OnConnectionEstablished == null)
+                {
+                    client.OnConnectionEstablished = OnConnectionEstablished;
+                }
             }
         }
 
-        public async Task<RedisClient[]> GetAllRedisClients()
+        public ImmutableArray<RedisClient> GetAllRedisClients()
         {
-            return await Task.WhenAll(_redisClients.Select(task => task));
+            return _redisClients.ToImmutableArray();
         }
 
         private Func<RedisClient, Task> _onConnectionEstablished;
