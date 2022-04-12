@@ -26,24 +26,24 @@ public static class MemoryExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlyMemory<byte> AsReadOnlyByteMemory(this int value)
     {
-        return value.ToString().AsReadOnlyByteMemory();
+        return value.AsReadOnlyByteMemory();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlyMemory<byte> AsReadOnlyByteMemory(this long value)
     {
-        return value.ToString().AsReadOnlyByteMemory();
+        return value.AsReadOnlyByteMemory();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlyMemory<byte> AsReadOnlyByteMemory(this float value)
     {
-        return value.ToString().AsReadOnlyByteMemory();
+        return value.AsReadOnlyByteMemory();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlyMemory<byte> AsReadOnlyByteMemory(this double value)
     {
-        return value.ToString().AsReadOnlyByteMemory();
+        return value.AsReadOnlyByteMemory();
     }
 }
