@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.IO.Pipelines;
+using System.Text;
 using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Extensions;
@@ -34,7 +35,7 @@ namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
 
     public abstract class AbstractResultProcessor<T> : AbstractResultProcessor
     {
-        public string LastCommand
+        public ReadOnlyMemory<byte> LastCommand
         {
             get => RedisClient.LastCommand;
             set => RedisClient.LastCommand = value;
@@ -69,7 +70,7 @@ namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
 
                 if (firstChar == ByteConstants.Dash)
                 {
-                    throw new RedisFailedCommandException(stringLine, LastCommand);
+                    throw new RedisFailedCommandException(stringLine, Encoding.UTF8.GetString(LastCommand.ToArray()));
                 }
 
                 throw new UnexpectedRedisResponseException($"Unexpected reply: {stringLine}");

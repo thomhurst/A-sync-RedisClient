@@ -4,7 +4,7 @@ namespace TomLonghurst.AsyncRedisClient.Models.Backlog
 {
     public interface IBacklog
     {
-        string RedisCommand { get; }
+        ReadOnlyMemory<byte> RedisCommand { get; }
         CancellationToken CancellationToken { get; }
         void SetCancelled();
         void SetException(Exception exception);

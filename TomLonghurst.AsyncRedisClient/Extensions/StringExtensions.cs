@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text;
+using TomLonghurst.AsyncRedisClient.Client;
 using TomLonghurst.AsyncRedisClient.Constants;
 
 namespace TomLonghurst.AsyncRedisClient.Extensions
@@ -88,9 +89,9 @@ namespace TomLonghurst.AsyncRedisClient.Extensions
             return value.Split(new[] {delimiter}, StringSplitOptions.RemoveEmptyEntries);
         }
 
-        internal static byte[] ToPipelinedCommand(this IEnumerable<string> commands)
+        internal static byte[] ToPipelinedCommand(this IEnumerable<ReadOnlyMemory<byte>> commands)
         {
-            return commands.SelectMany(RedisCommandConverter.ConvertSingleCommand).ToArray();
+            return commands.SelectMany(x => RedisEncoder.EncodeCommand(x).ToArray()).ToArray();
         }
 
         internal static string ToWords(this IEnumerable<string> strings) => string.Join(" ", strings);

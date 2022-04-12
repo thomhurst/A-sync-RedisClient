@@ -1,4 +1,6 @@
-﻿namespace TomLonghurst.AsyncRedisClient.Helpers;
+﻿using TomLonghurst.AsyncRedisClient.Extensions;
+
+namespace TomLonghurst.AsyncRedisClient.Helpers;
 
 public class ReadOnlyMemoryConcatenator
 {
@@ -122,6 +124,21 @@ public class ReadOnlyMemoryConcatenator
         memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length, memory8.Length));
         memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length + memory8.Length, memory9.Length));
         memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length + memory8.Length + memory9.Length, memory10.Length));
+        return array;
+    }
+
+    public static ReadOnlyMemory<byte> Concatenate(params ReadOnlyMemory<byte>[] memorySegments)
+    {
+        var byteCount = memorySegments.Select(x => x.Length).Sum();
+        var array = new byte[byteCount].AsMemory();
+
+        var written = 0;
+        foreach (var memorySegment in memorySegments)
+        {
+            memorySegment.CopyTo(array, written);
+            written += memorySegment.Length;
+        }
+
         return array;
     }
 }

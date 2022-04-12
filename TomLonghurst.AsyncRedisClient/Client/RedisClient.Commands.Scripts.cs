@@ -1,4 +1,5 @@
 using TomLonghurst.AsyncRedisClient.Constants;
+using TomLonghurst.AsyncRedisClient.Extensions;
 using TomLonghurst.AsyncRedisClient.Models;
 
 namespace TomLonghurst.AsyncRedisClient.Client
@@ -23,13 +24,15 @@ namespace TomLonghurst.AsyncRedisClient.Client
             {
                 await _redisClient.RunWithTimeout(async token =>
                 {
-                    await _redisClient.SendOrQueueAsync(Commands.ScriptFlush, _redisClient.SuccessResultProcessor, token);
+                    var command = RedisEncoder.EncodeCommand(Commands.Script, Commands.Flush);
+                    
+                    await _redisClient.SendOrQueueAsync(command, _redisClient.SuccessResultProcessor, token);
                 }, cancellationToken).ConfigureAwait(false);
             }
 
             public async Task<LuaScript> LoadScript(string script, CancellationToken cancellationToken)
             {
-                var command = $"{Commands.Script} {Commands.Load} {script}";
+                var command = RedisEncoder.EncodeCommand(Commands.Script, Commands.Load, script.AsReadOnlyByteMemory());
                 var scriptResponse = await _redisClient.RunWithTimeout(async token =>
                 {
                     return await _redisClient.SendOrQueueAsync(command, _redisClient.DataResultProcessor, token);
@@ -41,7 +44,8 @@ namespace TomLonghurst.AsyncRedisClient.Client
             internal async Task<RawResult> EvalSha(string sha1Hash, IEnumerable<string> keys, IEnumerable<string> arguments, CancellationToken cancellationToken)
             {
                 var keysList = keys.ToList();
-                var command = $"{Commands.EvalSha} {sha1Hash} {keysList} {arguments}";
+                var command = RedisEncoder.EncodeCommand(Commands.EvalSha, sha1Hash.AsReadOnlyByteMemory(),
+                    keysList.ToString().AsReadOnlyByteMemory(), arguments.ToString().AsReadOnlyByteMemory());
 
                 var scriptResult = await _redisClient.RunWithTimeout(async token =>
                     {

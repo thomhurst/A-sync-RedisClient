@@ -1,3 +1,4 @@
+using System.Text;
 using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Extensions;
@@ -17,7 +18,7 @@ namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
                 var line = await ReadLine();
                 var redisResponse = line.AsString();
                 PipeReader.AdvanceTo(line.End);
-                throw new RedisFailedCommandException(redisResponse, RedisClient.LastCommand);
+                throw new RedisFailedCommandException(redisResponse, Encoding.UTF8.GetString(RedisClient.LastCommand.ToArray()));
             }
 
             object result;

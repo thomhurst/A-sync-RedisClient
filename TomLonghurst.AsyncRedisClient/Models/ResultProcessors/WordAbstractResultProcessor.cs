@@ -1,3 +1,4 @@
+using System.Text;
 using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Extensions;
@@ -18,7 +19,7 @@ namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
                 
                 if (line.ItemAt(0) == ByteConstants.Dash)
                 {
-                    throw new RedisFailedCommandException(stringLine, LastCommand);
+                    throw new RedisFailedCommandException(stringLine, Encoding.UTF8.GetString(LastCommand.ToArray()));
                 }
                 
                 throw new UnexpectedRedisResponseException(stringLine);

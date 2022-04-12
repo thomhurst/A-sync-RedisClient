@@ -35,7 +35,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                         .ToList();
 
                     var pipelinedCommand = validItems
-                        .Select(backlogItem => backlogItem.RedisCommand).ToList()
+                        .Select(backlogItem => backlogItem.RedisCommand)
                         .ToPipelinedCommand();
 
                     try
