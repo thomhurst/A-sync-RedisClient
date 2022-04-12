@@ -24,7 +24,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             }
         }
 
-        public RedisClient GetRedisClientAsync()
+        public RedisClient GetRedisClient()
         {
             if (_redisClients.Count == 1)
             {
