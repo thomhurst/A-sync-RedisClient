@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using TomLonghurst.AsyncRedisClient.Extensions;
+﻿using TomLonghurst.AsyncRedisClient.Extensions;
 
 namespace TomLonghurst.AsyncRedisClient.Client
 {
     public class RedisClientManager
     {
         public RedisClientConfig ClientConfig { get; }
-        private readonly List<Task<RedisClient>> _redisClients = new List<Task<RedisClient>>();
+        private readonly List<Task<RedisClient>> _redisClients;
 
         public RedisClientManager(RedisClientConfig clientConfig, int redisClientPoolSize)
         {
@@ -17,6 +13,8 @@ namespace TomLonghurst.AsyncRedisClient.Client
             {
                 throw new ArgumentOutOfRangeException(nameof(redisClientPoolSize), "Pool size must be 1 or more");
             }
+
+            _redisClients = new List<Task<RedisClient>>(redisClientPoolSize);
 
             ClientConfig = clientConfig;
 

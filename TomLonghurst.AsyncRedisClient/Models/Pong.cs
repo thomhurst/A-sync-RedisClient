@@ -1,5 +1,3 @@
-using System;
-
 namespace TomLonghurst.AsyncRedisClient.Models
 {
     public struct Pong

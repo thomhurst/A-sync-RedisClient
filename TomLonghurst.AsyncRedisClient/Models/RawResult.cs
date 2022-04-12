@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace TomLonghurst.AsyncRedisClient.Models
 {
     public struct RawResult

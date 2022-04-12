@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Extensions;
 

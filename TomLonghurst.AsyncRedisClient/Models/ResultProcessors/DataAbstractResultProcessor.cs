@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Extensions;
 
 namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors

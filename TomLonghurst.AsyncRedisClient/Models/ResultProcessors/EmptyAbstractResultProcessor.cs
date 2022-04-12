@@ -1,5 +1,3 @@
-using System.Threading.Tasks;
-
 namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
 {
     public class EmptyResultProcessor : AbstractResultProcessor<object>

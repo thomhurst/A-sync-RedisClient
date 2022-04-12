@@ -1,8 +1,5 @@
-using System;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 
 namespace TomLonghurst.AsyncRedisClient.Extensions

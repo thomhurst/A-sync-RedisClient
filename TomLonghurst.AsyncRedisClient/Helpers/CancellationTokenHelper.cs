@@ -1,7 +1,4 @@
-﻿using System;
-using System.Threading;
-
-namespace TomLonghurst.AsyncRedisClient.Helpers
+﻿namespace TomLonghurst.AsyncRedisClient.Helpers
 {
     public static class CancellationTokenHelper
     {

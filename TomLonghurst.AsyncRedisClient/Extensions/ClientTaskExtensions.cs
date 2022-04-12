@@ -1,5 +1,3 @@
-using System.Threading;
-using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Client;
 using TomLonghurst.AsyncRedisClient.Models;
 

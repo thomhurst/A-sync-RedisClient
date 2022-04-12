@@ -1,9 +1,6 @@
 ﻿// ReSharper disable InconsistentNaming
 // ReSharper disable IdentifierTypo
 
-using System.Collections.Generic;
-using TomLonghurst.AsyncRedisClient.Extensions;
-
 namespace TomLonghurst.AsyncRedisClient.Constants
 {
     internal static class Commands

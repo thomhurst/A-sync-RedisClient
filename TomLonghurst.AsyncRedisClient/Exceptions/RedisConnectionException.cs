@@ -1,5 +1,3 @@
-using System;
-
 namespace TomLonghurst.AsyncRedisClient.Exceptions
 {
     public class RedisConnectionException : RedisNonRecoverableException

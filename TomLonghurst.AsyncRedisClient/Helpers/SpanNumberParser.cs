@@ -1,6 +1,4 @@
-using System;
 using System.Buffers;
-using System.Linq;
 using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Extensions;
 

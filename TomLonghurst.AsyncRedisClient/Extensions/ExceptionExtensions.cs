@@ -1,5 +1,3 @@
-using System;
-
 namespace TomLonghurst.AsyncRedisClient.Extensions
 {
     internal static class ExceptionExtensions

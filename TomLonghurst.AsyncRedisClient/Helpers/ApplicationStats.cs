@@ -1,5 +1,3 @@
-using System.Threading;
-
 namespace TomLonghurst.AsyncRedisClient.Helpers
 {
     public static class ApplicationStats

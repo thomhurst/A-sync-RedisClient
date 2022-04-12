@@ -1,10 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Constants;
-using TomLonghurst.AsyncRedisClient.Extensions;
 using TomLonghurst.AsyncRedisClient.Models;
 
 namespace TomLonghurst.AsyncRedisClient.Client
