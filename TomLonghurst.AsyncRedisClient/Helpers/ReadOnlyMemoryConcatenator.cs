@@ -18,7 +18,7 @@ public class ReadOnlyMemoryConcatenator
         var array = new byte[memory1.Length + memory2.Length + memory3.Length].AsMemory();
         memory1.CopyTo(array.Slice(0, memory1.Length));
         memory2.CopyTo(array.Slice(memory1.Length, memory2.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
+        memory3.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
         return array;
     }
 
@@ -28,8 +28,8 @@ public class ReadOnlyMemoryConcatenator
         var array = new byte[memory1.Length + memory2.Length + memory3.Length + memory4.Length].AsMemory();
         memory1.CopyTo(array.Slice(0, memory1.Length));
         memory2.CopyTo(array.Slice(memory1.Length, memory2.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length, memory4.Length));
+        memory3.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
+        memory4.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length, memory4.Length));
         return array;
     }
 
@@ -39,9 +39,9 @@ public class ReadOnlyMemoryConcatenator
         var array = new byte[memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length].AsMemory();
         memory1.CopyTo(array.Slice(0, memory1.Length));
         memory2.CopyTo(array.Slice(memory1.Length, memory2.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length, memory4.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length, memory5.Length));
+        memory3.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
+        memory4.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length, memory4.Length));
+        memory5.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length, memory5.Length));
         return array;
     }
 
@@ -52,10 +52,10 @@ public class ReadOnlyMemoryConcatenator
         var array = new byte[memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length].AsMemory();
         memory1.CopyTo(array.Slice(0, memory1.Length));
         memory2.CopyTo(array.Slice(memory1.Length, memory2.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length, memory4.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length, memory5.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length, memory6.Length));
+        memory3.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
+        memory4.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length, memory4.Length));
+        memory5.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length, memory5.Length));
+        memory6.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length, memory6.Length));
         return array;
     }
 
@@ -66,11 +66,11 @@ public class ReadOnlyMemoryConcatenator
         var array = new byte[memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length].AsMemory();
         memory1.CopyTo(array.Slice(0, memory1.Length));
         memory2.CopyTo(array.Slice(memory1.Length, memory2.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length, memory4.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length, memory5.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length, memory6.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length, memory7.Length));
+        memory3.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
+        memory4.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length, memory4.Length));
+        memory5.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length, memory5.Length));
+        memory6.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length, memory6.Length));
+        memory7.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length, memory7.Length));
         return array;
     }
 
@@ -81,12 +81,12 @@ public class ReadOnlyMemoryConcatenator
         var array = new byte[memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length + memory8.Length].AsMemory();
         memory1.CopyTo(array.Slice(0, memory1.Length));
         memory2.CopyTo(array.Slice(memory1.Length, memory2.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length, memory4.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length, memory5.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length, memory6.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length, memory7.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length, memory8.Length));
+        memory3.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
+        memory4.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length, memory4.Length));
+        memory5.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length, memory5.Length));
+        memory6.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length, memory6.Length));
+        memory7.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length, memory7.Length));
+        memory8.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length, memory8.Length));
         return array;
     }
 
@@ -98,13 +98,13 @@ public class ReadOnlyMemoryConcatenator
         var array = new byte[memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length + memory8.Length + memory9.Length].AsMemory();
         memory1.CopyTo(array.Slice(0, memory1.Length));
         memory2.CopyTo(array.Slice(memory1.Length, memory2.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length, memory4.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length, memory5.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length, memory6.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length, memory7.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length, memory8.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length + memory8.Length, memory9.Length));
+        memory3.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
+        memory4.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length, memory4.Length));
+        memory5.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length, memory5.Length));
+        memory6.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length, memory6.Length));
+        memory7.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length, memory7.Length));
+        memory8.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length, memory8.Length));
+        memory9.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length + memory8.Length, memory9.Length));
         return array;
     }
 
@@ -116,14 +116,14 @@ public class ReadOnlyMemoryConcatenator
         var array = new byte[memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length + memory8.Length + memory9.Length + memory10.Length].AsMemory();
         memory1.CopyTo(array.Slice(0, memory1.Length));
         memory2.CopyTo(array.Slice(memory1.Length, memory2.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length, memory4.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length, memory5.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length, memory6.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length, memory7.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length, memory8.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length + memory8.Length, memory9.Length));
-        memory2.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length + memory8.Length + memory9.Length, memory10.Length));
+        memory3.CopyTo(array.Slice(memory1.Length + memory2.Length, memory3.Length));
+        memory4.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length, memory4.Length));
+        memory5.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length, memory5.Length));
+        memory6.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length, memory6.Length));
+        memory7.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length, memory7.Length));
+        memory8.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length, memory8.Length));
+        memory9.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length + memory8.Length, memory9.Length));
+        memory10.CopyTo(array.Slice(memory1.Length + memory2.Length + memory3.Length + memory4.Length + memory5.Length + memory6.Length + memory7.Length + memory8.Length + memory9.Length, memory10.Length));
         return array;
     }
 

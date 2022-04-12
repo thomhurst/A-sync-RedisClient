@@ -9,13 +9,11 @@ public class RedisEncoder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlyMemory<byte> EncodeCommand(ReadOnlyMemory<byte> memory1)
     {
-        var digitCount = memory1.Length.GetDigitCount();
-
         return ReadOnlyMemoryConcatenator.Concatenate(Commands.AsterixSymbol,
             Commands.Number1,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount),
+            BitConverter.GetBytes(memory1.Length),
             Commands.LineTerminator,
             memory1,
             Commands.LineTerminator);
@@ -24,19 +22,16 @@ public class RedisEncoder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlyMemory<byte> EncodeCommand(ReadOnlyMemory<byte> memory1, ReadOnlyMemory<byte> memory2)
     {
-        var digitCount1 = memory1.Length.GetDigitCount();
-        var digitCount2 = memory2.Length.GetDigitCount();
-
         return ReadOnlyMemoryConcatenator.Concatenate(Commands.AsterixSymbol,
             Commands.Number2,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount1),
+            BitConverter.GetBytes(memory1.Length),
             Commands.LineTerminator,
             memory1,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount2),
+            BitConverter.GetBytes(memory2.Length),
             Commands.LineTerminator,
             memory2,
             Commands.LineTerminator);
@@ -45,25 +40,21 @@ public class RedisEncoder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlyMemory<byte> EncodeCommand(ReadOnlyMemory<byte> memory1, ReadOnlyMemory<byte> memory2, ReadOnlyMemory<byte> memory3)
     {
-        var digitCount1 = memory1.Length.GetDigitCount();
-        var digitCount2 = memory2.Length.GetDigitCount();
-        var digitCount3 = memory3.Length.GetDigitCount();
-
         return ReadOnlyMemoryConcatenator.Concatenate(Commands.AsterixSymbol,
-            Commands.Number2,
+            Commands.Number3,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount1),
+            BitConverter.GetBytes(memory1.Length),
             Commands.LineTerminator,
             memory1,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount2),
+            BitConverter.GetBytes(memory2.Length),
             Commands.LineTerminator,
             memory2,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount3),
+            BitConverter.GetBytes(memory3.Length),
             Commands.LineTerminator,
             memory3,
             Commands.LineTerminator);
@@ -72,31 +63,26 @@ public class RedisEncoder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlyMemory<byte> EncodeCommand(ReadOnlyMemory<byte> memory1, ReadOnlyMemory<byte> memory2, ReadOnlyMemory<byte> memory3, ReadOnlyMemory<byte> memory4)
     {
-        var digitCount1 = memory1.Length.GetDigitCount();
-        var digitCount2 = memory2.Length.GetDigitCount();
-        var digitCount3 = memory3.Length.GetDigitCount();
-        var digitCount4 = memory4.Length.GetDigitCount();
-
         return ReadOnlyMemoryConcatenator.Concatenate(Commands.AsterixSymbol,
-            Commands.Number2,
+            Commands.Number4,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount1),
+            BitConverter.GetBytes(memory1.Length),
             Commands.LineTerminator,
             memory1,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount2),
+            BitConverter.GetBytes(memory2.Length),
             Commands.LineTerminator,
             memory2,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount3),
+            BitConverter.GetBytes(memory3.Length),
             Commands.LineTerminator,
             memory3,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount4),
+            BitConverter.GetBytes(memory4.Length),
             Commands.LineTerminator,
             memory4,
             Commands.LineTerminator);
@@ -105,37 +91,31 @@ public class RedisEncoder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlyMemory<byte> EncodeCommand(ReadOnlyMemory<byte> memory1, ReadOnlyMemory<byte> memory2, ReadOnlyMemory<byte> memory3, ReadOnlyMemory<byte> memory4, ReadOnlyMemory<byte> memory5)
     {
-        var digitCount1 = memory1.Length.GetDigitCount();
-        var digitCount2 = memory2.Length.GetDigitCount();
-        var digitCount3 = memory3.Length.GetDigitCount();
-        var digitCount4 = memory4.Length.GetDigitCount();
-        var digitCount5 = memory5.Length.GetDigitCount();
-
         return ReadOnlyMemoryConcatenator.Concatenate(Commands.AsterixSymbol,
-            Commands.Number2,
+            Commands.Number5,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount1),
+            BitConverter.GetBytes(memory1.Length),
             Commands.LineTerminator,
             memory1,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount2),
+            BitConverter.GetBytes(memory2.Length),
             Commands.LineTerminator,
             memory2,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount3),
+            BitConverter.GetBytes(memory3.Length),
             Commands.LineTerminator,
             memory3,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount4),
+            BitConverter.GetBytes(memory4.Length),
             Commands.LineTerminator,
             memory4,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount5),
+            BitConverter.GetBytes(memory5.Length),
             Commands.LineTerminator,
             memory5,
             Commands.LineTerminator);
@@ -144,8 +124,6 @@ public class RedisEncoder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlyMemory<byte> EncodeCommand(ReadOnlyMemory<byte> memory1, ReadOnlyMemory<byte>[] furtherMemorySegments)
     {
-        var digitCount1 = memory1.Length.GetDigitCount();
-
         var endArray = furtherMemorySegments.SelectMany(furtherMemorySegment =>
         {
             var segmentDigitCount = furtherMemorySegment.Length.GetDigitCount();
@@ -161,7 +139,7 @@ public class RedisEncoder
             BitConverter.GetBytes(1 + furtherMemorySegments.Length),
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            BitConverter.GetBytes(digitCount1),
+            BitConverter.GetBytes(memory1.Length),
             Commands.LineTerminator,
             memory1,
             Commands.LineTerminator).ToArray();
