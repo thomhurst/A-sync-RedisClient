@@ -38,7 +38,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             return await RunWithTimeout(async token =>
             {
-                var pingCommand = Commands.Ping;
+                var pingCommand = RedisEncoder.EncodeCommand(Commands.Ping);
 
                 var sw = Stopwatch.StartNew();
                 var pingResponse = await SendOrQueueAsync(pingCommand, WordResultProcessor, CancellationToken.None);
