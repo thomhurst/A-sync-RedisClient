@@ -84,8 +84,10 @@ namespace TomLonghurst.AsyncRedisClient.Client
             CancellationToken cancellationToken, bool isReconnectionAttempt)
         {
             _isBusy = true;
-            
+
+#if DEBUG
             Log.Debug($"Executing Command: {command}");
+#endif
             LastCommand = command;
 
             Interlocked.Increment(ref _operationsPerformed);
@@ -143,6 +145,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         private ValueTask<FlushResult> Write(ReadOnlyMemory<byte> bytes)
         {
             _written++;
+
             return _pipeWriter.WriteAsync(bytes);
         }
 

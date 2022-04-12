@@ -167,14 +167,18 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
                 if (!_socket.Connected)
                 {
+#if DEBUG
                     Log.Debug("Socket Connect failed");
-
+#endif
+                    
                     DisposeNetwork();
                     return;
                 }
 
+#if DEBUG
                 Log.Debug("Socket Connected");
-
+#endif
+                
                 Stream networkStream = new NetworkStream(_socket);
                 
                 var redisPipeOptions = GetPipeOptions();
