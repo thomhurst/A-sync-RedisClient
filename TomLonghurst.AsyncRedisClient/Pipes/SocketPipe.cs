@@ -11,8 +11,7 @@ namespace TomLonghurst.AsyncRedisClient.Pipes
     public class SocketPipe : IDuplexPipe
     {
         public static SocketPipe GetDuplexPipe(Socket socket, PipeOptions sendPipeOptions,
-            PipeOptions receivePipeOptions)
-            => new SocketPipe(socket, sendPipeOptions, receivePipeOptions, true, true);
+            PipeOptions receivePipeOptions) => new(socket, sendPipeOptions, receivePipeOptions, true, true);
 
         private readonly Socket _innerSocket;
 

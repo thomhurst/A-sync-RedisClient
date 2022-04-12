@@ -15,9 +15,9 @@ namespace TomLonghurst.AsyncRedisClient.Client
 {
     public partial class RedisClient : IDisposable
     {
-        private static readonly Logger Log = new Logger();
+        private static readonly Logger Log = new();
 
-        private readonly SemaphoreSlim _sendAndReceiveSemaphoreSlim = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _sendAndReceiveSemaphoreSlim = new(1, 1);
         
         private long _outStandingOperations;
 

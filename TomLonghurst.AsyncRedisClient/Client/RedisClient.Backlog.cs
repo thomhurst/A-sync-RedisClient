@@ -5,7 +5,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 {
     public partial class RedisClient
     {
-        private readonly BlockingQueue<IBacklog> _backlog = new BlockingQueue<IBacklog>();
+        private readonly BlockingQueue<IBacklog> _backlog = new();
 
         private void StartBacklogProcessor()
         {

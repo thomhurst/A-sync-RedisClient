@@ -4,7 +4,7 @@ namespace TomLonghurst.AsyncRedisClient
 {
     public class BlockingQueue<T> : IDisposable
     {
-        private readonly object _locker = new object();
+        private readonly object _locker = new();
         private readonly ConcurrentQueue<T> _innerQueue;
 
         public int Count => _innerQueue.Count;

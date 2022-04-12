@@ -58,9 +58,9 @@ namespace RedisClientTest
         {
             var data = new List<RedisKeyValue>
             {
-                new RedisKeyValue("key1", "value with a space1"),
-                new RedisKeyValue("key2", "value with a space2"),
-                new RedisKeyValue("key3", "value with a space3")
+                new("key1", "value with a space1"),
+                new("key2", "value with a space2"),
+                new("key3", "value with a space3")
             };
             
             await TomLonghurstRedisClient.StringSetAsync(data);
@@ -389,11 +389,11 @@ namespace RedisClientTest
             var client = TomLonghurstRedisClient;
             await client.StringSetAsync(new List<RedisKeyValue>
                 {
-                    new RedisKeyValue("BlahTTL1", "Blah1"),
-                    new RedisKeyValue("BlahTTL2", "Blah2"),
-                    new RedisKeyValue("BlahTTL3", "Blah3"),
-                    new RedisKeyValue("BlahTTL4", "Blah4"),
-                    new RedisKeyValue("BlahTTL5", "Blah5")
+                    new("BlahTTL1", "Blah1"),
+                    new("BlahTTL2", "Blah2"),
+                    new("BlahTTL3", "Blah3"),
+                    new("BlahTTL4", "Blah4"),
+                    new("BlahTTL5", "Blah5")
                 },
                 120);
 
@@ -408,11 +408,11 @@ namespace RedisClientTest
             var client = TomLonghurstRedisClient;
             await client.StringSetAsync(new List<RedisKeyValue>
                 {
-                    new RedisKeyValue("BlahExpire1", "Blah1"),
-                    new RedisKeyValue("BlahExpire2", "Blah2"),
-                    new RedisKeyValue("BlahExpire3", "Blah3"),
-                    new RedisKeyValue("BlahExpire4", "Blah4"),
-                    new RedisKeyValue("BlahExpire5", "Blah5")
+                    new("BlahExpire1", "Blah1"),
+                    new("BlahExpire2", "Blah2"),
+                    new("BlahExpire3", "Blah3"),
+                    new("BlahExpire4", "Blah4"),
+                    new("BlahExpire5", "Blah5")
                 });
 
             await client.ExpireAsync(new List<string>
@@ -434,9 +434,9 @@ namespace RedisClientTest
         {
             var keyValues = new List<RedisKeyValue>
             {
-                new RedisKeyValue("MultiKey1", "1"),
-                new RedisKeyValue("MultiKey2", "2"),
-                new RedisKeyValue("MultiKey3", "3")
+                new("MultiKey1", "1"),
+                new("MultiKey2", "2"),
+                new("MultiKey3", "3")
             };
             
             await TomLonghurstRedisClient.StringSetAsync(keyValues);
@@ -496,9 +496,9 @@ namespace RedisClientTest
         {
             var keyValues = new List<RedisKeyValue>
             {
-                new RedisKeyValue("MultiKeyWithTtl1", "1"),
-                new RedisKeyValue("MultiKeyWithTtl2", "2"),
-                new RedisKeyValue("MultiKeyWithTtl3", "3")
+                new("MultiKeyWithTtl1", "1"),
+                new("MultiKeyWithTtl2", "2"),
+                new("MultiKeyWithTtl3", "3")
             };
             
             await TomLonghurstRedisClient.StringSetAsync(keyValues, 120);

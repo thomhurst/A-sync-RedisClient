@@ -12,8 +12,8 @@ namespace TestConsoleApp
         private static RedisClientManager _redisManager;
         private static RedisClient TomLonghurstRedisClient => _redisManager.GetRedisClient();
         
-        private static readonly List<KeyValuePair<string, string>> TestData = new List<KeyValuePair<string, string>>();
-        private static readonly Dictionary<int, DateTime> _lastActive = new Dictionary<int, DateTime>();
+        private static readonly List<KeyValuePair<string, string>> TestData = new();
+        private static readonly Dictionary<int, DateTime> _lastActive = new();
 
 
         static async Task Main(string[] args)
@@ -100,7 +100,7 @@ namespace TestConsoleApp
             }
         } 
         
-        private static readonly Random Random = new Random();
+        private static readonly Random Random = new();
         internal static string CreateString(int stringLength)
         {
             const string allowedChars = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789!@$?_-";
