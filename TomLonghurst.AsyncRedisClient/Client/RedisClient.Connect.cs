@@ -25,7 +25,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
         private RedisSocket _socket;
 
-        public Socket Socket => _socket;
+        internal Socket Socket => _socket;
         
         private SslStream _sslStream;
 
