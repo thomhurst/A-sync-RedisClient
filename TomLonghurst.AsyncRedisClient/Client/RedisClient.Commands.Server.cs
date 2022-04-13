@@ -24,7 +24,8 @@ namespace TomLonghurst.AsyncRedisClient.Client
             {
                 return await  _redisClient.RunWithTimeout(async token =>
                 {
-                    return await _redisClient.SendOrQueueAsync(RedisEncoder.EncodeCommand(Commands.Info), _redisClient.DataResultProcessor, token);
+                    var command = RedisEncoder.EncodeCommand(Commands.Info);
+                    return await _redisClient.SendOrQueueAsync(command, _redisClient.DataResultProcessor, token);
                 }, cancellationToken);
             }
 
@@ -37,7 +38,8 @@ namespace TomLonghurst.AsyncRedisClient.Client
             {
                 return await _redisClient.RunWithTimeout(async token =>
                 {
-                    return await _redisClient.SendOrQueueAsync(RedisEncoder.EncodeCommand(Commands.DbSize), _redisClient.IntegerResultProcessor, token);
+                    var command = RedisEncoder.EncodeCommand(Commands.DbSize);
+                    return await _redisClient.SendOrQueueAsync(command, _redisClient.IntegerResultProcessor, token);
                 }, cancellationToken);
             }
         }

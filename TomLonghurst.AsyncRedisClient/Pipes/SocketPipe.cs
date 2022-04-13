@@ -124,8 +124,8 @@ namespace TomLonghurst.AsyncRedisClient.Pipes
 
         private long _totalBytesSent, _totalBytesReceived;
 
-        //long IMeasuredDuplexPipe.TotalBytesSent => Interlocked.Read(ref _totalBytesSent);
-        //long IMeasuredDuplexPipe.TotalBytesReceived => Interlocked.Read(ref _totalBytesReceived);
+        //long IMeasuredDuplexPipe.TotalBytesSent => Interlocked.Read(_totalBytesSent);
+        //long IMeasuredDuplexPipe.TotalBytesReceived => Interlocked.Read(_totalBytesReceived);
 
         private async Task CopyFromWritePipeToSocket()
         {

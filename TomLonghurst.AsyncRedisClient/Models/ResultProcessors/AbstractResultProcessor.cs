@@ -111,7 +111,7 @@ namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
 
             if (bytesReceived >= byteSizeOfData)
             {
-                alreadyReadToLineTerminator = TryAdvanceToLineTerminator(ref buffer);
+                alreadyReadToLineTerminator = TryAdvanceToLineTerminator(buffer);
             }
             else
             {
@@ -144,7 +144,7 @@ namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
 
                 if (bytesReceived >= byteSizeOfData)
                 {
-                    alreadyReadToLineTerminator = TryAdvanceToLineTerminator(ref buffer);
+                    alreadyReadToLineTerminator = TryAdvanceToLineTerminator(buffer);
                 }
                 else
                 {
@@ -162,7 +162,7 @@ namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
             return dataByteStorage;
         }
 
-        private bool TryAdvanceToLineTerminator(ref ReadOnlySequence<byte> buffer)
+        private bool TryAdvanceToLineTerminator(ReadOnlySequence<byte> buffer)
         {
             var slicedBytes = ReadResult.Buffer.Slice(buffer.End);
             if (slicedBytes.IsEmpty)

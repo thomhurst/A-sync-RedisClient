@@ -53,7 +53,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                         {
                             validItem.SetException(e);
                         }
-                        
+
                         DisposeNetwork();
                     }
                 }

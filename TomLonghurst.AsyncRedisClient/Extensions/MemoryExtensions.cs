@@ -20,7 +20,7 @@ public static class MemoryExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlyMemory<byte> AsReadOnlyByteMemory(this string value)
     {
-        return Encoding.UTF8.GetBytes(value);
+        return value.ToUtf8Bytes();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

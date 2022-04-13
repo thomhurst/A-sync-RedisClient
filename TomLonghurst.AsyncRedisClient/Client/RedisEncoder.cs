@@ -11,11 +11,12 @@ public class RedisEncoder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlyMemory<byte> EncodeCommand(ReadOnlyMemory<byte> memory1)
     {
+        var asReadOnlyByteMemory = memory1.Length.AsReadOnlyByteMemory();
         return ReadOnlyMemoryConcatenator.Concatenate(Commands.AsterixSymbol,
             Commands.Number1,
             Commands.LineTerminator,
             Commands.DollarSymbol,
-            memory1.Length.AsReadOnlyByteMemory(),
+            asReadOnlyByteMemory,
             Commands.LineTerminator,
             memory1,
             Commands.LineTerminator);
@@ -90,38 +91,38 @@ public class RedisEncoder
             Commands.LineTerminator);
     }
     
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ReadOnlyMemory<byte> EncodeCommand(ReadOnlyMemory<byte> memory1, ReadOnlyMemory<byte> memory2, ReadOnlyMemory<byte> memory3, ReadOnlyMemory<byte> memory4, ReadOnlyMemory<byte> memory5)
-    {
-        return ReadOnlyMemoryConcatenator.Concatenate(Commands.AsterixSymbol,
-            Commands.Number5,
-            Commands.LineTerminator,
-            Commands.DollarSymbol,
-            memory1.Length.AsReadOnlyByteMemory(),
-            Commands.LineTerminator,
-            memory1,
-            Commands.LineTerminator,
-            Commands.DollarSymbol,
-            memory2.Length.AsReadOnlyByteMemory(),
-            Commands.LineTerminator,
-            memory2,
-            Commands.LineTerminator,
-            Commands.DollarSymbol,
-            memory3.Length.AsReadOnlyByteMemory(),
-            Commands.LineTerminator,
-            memory3,
-            Commands.LineTerminator,
-            Commands.DollarSymbol,
-            memory4.Length.AsReadOnlyByteMemory(),
-            Commands.LineTerminator,
-            memory4,
-            Commands.LineTerminator,
-            Commands.DollarSymbol,
-            memory5.Length.AsReadOnlyByteMemory(),
-            Commands.LineTerminator,
-            memory5,
-            Commands.LineTerminator);
-    }
+    // [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    // public static ReadOnlyMemory<byte> EncodeCommand(ReadOnlyMemory<byte> memory1, ReadOnlyMemory<byte> memory2, ReadOnlyMemory<byte> memory3, ReadOnlyMemory<byte> memory4, ReadOnlyMemory<byte> memory5)
+    // {
+    //     return ReadOnlyMemoryConcatenator.Concatenate(Commands.AsterixSymbol,
+    //         Commands.Number5,
+    //         Commands.LineTerminator,
+    //         Commands.DollarSymbol,
+    //         memory1.Length.AsReadOnlyByteMemory(),
+    //         Commands.LineTerminator,
+    //         memory1,
+    //         Commands.LineTerminator,
+    //         Commands.DollarSymbol,
+    //         memory2.Length.AsReadOnlyByteMemory(),
+    //         Commands.LineTerminator,
+    //         memory2,
+    //         Commands.LineTerminator,
+    //         Commands.DollarSymbol,
+    //         memory3.Length.AsReadOnlyByteMemory(),
+    //         Commands.LineTerminator,
+    //         memory3,
+    //         Commands.LineTerminator,
+    //         Commands.DollarSymbol,
+    //         memory4.Length.AsReadOnlyByteMemory(),
+    //         Commands.LineTerminator,
+    //         memory4,
+    //         Commands.LineTerminator,
+    //         Commands.DollarSymbol,
+    //         memory5.Length.AsReadOnlyByteMemory(),
+    //         Commands.LineTerminator,
+    //         memory5,
+    //         Commands.LineTerminator);
+    // }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ReadOnlyMemory<byte> EncodeCommand(ReadOnlyMemory<byte> memory1, ReadOnlyMemory<byte>[] furtherMemorySegments)

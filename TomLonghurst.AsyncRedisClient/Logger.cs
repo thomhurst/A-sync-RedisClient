@@ -10,14 +10,6 @@ namespace TomLonghurst.AsyncRedisClient
             }
         }
 
-        internal void Debug(string message)
-        {
-            if (RedisClientSettings.LogLevel >= LogLevel.Debug)
-            {
-                log(message);
-            }
-        }
-
         internal void Error(string message)
         {
             if (RedisClientSettings.LogLevel >= LogLevel.Error)

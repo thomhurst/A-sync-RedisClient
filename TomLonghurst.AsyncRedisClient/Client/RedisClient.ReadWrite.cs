@@ -34,10 +34,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
 
         public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
-        public DateTime LastUsed { get; internal set; }
-
         private Func<RedisTelemetryResult, Task> _telemetryCallback;
-        private int _written;
         private bool _isBusy;
 
         // TODO Make public
@@ -52,14 +49,10 @@ namespace TomLonghurst.AsyncRedisClient.Client
             CancellationToken cancellationToken,
             bool isReconnectionAttempt = false)
         {
-            LastUsed = DateTime.Now;
-            
             cancellationToken.ThrowIfCancellationRequested();
 
             Interlocked.Increment(ref _outStandingOperations);
-
-//            return SendAndReceiveAsync(command, resultProcessor, cancellationToken, isReconnectionAttempt);
-//            
+            
             return SendAndReceiveAsync(command, abstractResultProcessor, cancellationToken, isReconnectionAttempt);
 
             if (isReconnectionAttempt || !_isBusy)
@@ -78,6 +71,8 @@ namespace TomLonghurst.AsyncRedisClient.Client
             _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, abstractResultProcessor, this, _pipeReader));
 
             cancellationToken.Register(() => taskCompletionSource.TrySetCanceled(cancellationToken));
+
+            ProcessBacklog();
             
             return new ValueTask<T>(taskCompletionSource.Task);
         }
@@ -86,10 +81,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
             CancellationToken cancellationToken, bool isReconnectionAttempt)
         {
             _isBusy = true;
-
-#if DEBUG
-            Log.Debug($"Executing Command: {command}");
-#endif
+            
             LastCommand = command;
 
             Interlocked.Increment(ref _operationsPerformed);
@@ -106,7 +98,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
                     await TryConnectAsync(cancellationToken).ConfigureAwait(false);
                 }
 
-                await Write(command).ConfigureAwait(false);
+                await _pipeWriter.WriteAsync(command, cancellationToken).ConfigureAwait(false);
 
                 return await abstractResultProcessor.Start(this, _pipeReader, cancellationToken);
             }
@@ -138,16 +130,10 @@ namespace TomLonghurst.AsyncRedisClient.Client
                 _isBusy = false;
             }
         }
-
-        private ValueTask<FlushResult> Write(string command)
-        {
-            return Write(RedisCommandConverter.ConvertSingleCommand(command));
-        }
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ValueTask<FlushResult> Write(ReadOnlyMemory<byte> bytes)
         {
-            _written++;
-
             return _pipeWriter.WriteAsync(bytes);
         }
 

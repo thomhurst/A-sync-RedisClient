@@ -6,7 +6,7 @@ namespace TomLonghurst.AsyncRedisClient.Client
         {
             CreateCommandClasses();
 
-            StartBacklogProcessor();
+            //StartBacklogProcessor();
         }
 
         private void CreateCommandClasses()

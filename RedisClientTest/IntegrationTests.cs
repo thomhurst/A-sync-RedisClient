@@ -172,7 +172,7 @@ namespace RedisClientTest
             TomLonghurst
         }
         
-        [Ignore("")]
+        //[Ignore("")]
         [TestCase(TestClient.StackExchange)]
         [TestCase(TestClient.TomLonghurst)]
         public async Task PerformanceTest(TestClient testClient)
@@ -217,6 +217,7 @@ namespace RedisClientTest
 
                         for (var outer = 0; outer < 5; outer++)
                         {
+                            await TomLonghurstRedisClient.ConnectAsync();
                             var tomLonghurstRedisClientStopwatch = Stopwatch.StartNew();
 
                             for (var i = 0; i < 200; i++)
