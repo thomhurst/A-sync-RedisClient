@@ -5,7 +5,7 @@ namespace Benchmark;
 public class StackExchangeBenchmarks : StackExchangeClientBase
 {
     [Benchmark]
-    public async Task Redis()
+    public async Task StackExchangeRedis()
     {
         await Client.StringSetAsync("MyKey", "MyValue");
     }

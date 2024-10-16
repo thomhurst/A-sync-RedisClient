@@ -23,11 +23,9 @@ public class Tests : TestBase
     [Before(Test)]
     public async Task Setup()
     {
-        var connectionString = new Uri(RedisContainer.GetConnectionString());
-        
-        _config = new RedisClientConfig(connectionString.Host, connectionString.Port)
+        _config = new RedisClientConfig(Host, Port)
         {
-            Ssl = true
+            Ssl = false
         };
         
         _redisManager = await RedisClientManager.ConnectAsync(_config);

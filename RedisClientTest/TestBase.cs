@@ -5,10 +5,10 @@ namespace RedisClientTest;
 
 public class TestBase
 {
-    [ClassDataSource<RedisContainerFactory>]
+    [ClassDataSource<RedisContainerFactory>(Shared = SharedType.Globally)]
     public required RedisContainerFactory ContainerFactory { get; init; }
 
-    public Uri ConnectionString => new Uri(RedisContainer.GetConnectionString());
+    public Uri ConnectionString => new($"https://{RedisContainer.GetConnectionString()}");
     
     public string Host => ConnectionString.Host;
     
