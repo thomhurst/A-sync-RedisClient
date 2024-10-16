@@ -1,6 +1,6 @@
 ﻿namespace TomLonghurst.AsyncRedisClient;
 
-public class CircularQueue<T>
+public class CircularQueue<T> : IAsyncDisposable
 {
     private readonly Func<Task<T>> _objectGenerator;
     private readonly int _maxPoolSize;
@@ -41,6 +41,24 @@ public class CircularQueue<T>
             }
 
             return index;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await Task.WhenAll(_clients!.Select(DisposeAsync));
+    }
+
+    private async Task DisposeAsync(T t)
+    {
+        if (t is IAsyncDisposable asyncDisposable)
+        {
+            await asyncDisposable.DisposeAsync();
+        }
+
+        if (t is IDisposable disposable)
+        {
+            disposable.Dispose();
         }
     }
 }

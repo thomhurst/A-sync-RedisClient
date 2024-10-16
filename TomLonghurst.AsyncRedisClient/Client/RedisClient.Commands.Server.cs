@@ -4,8 +4,8 @@ namespace TomLonghurst.AsyncRedisClient.Client;
 
 public partial class RedisClient : IDisposable
 {
-    private ServerCommands _serverCommands;
-    public ServerCommands Server => _serverCommands;
+    private ServerCommands? _serverCommands;
+    public ServerCommands? Server => _serverCommands;
     public class ServerCommands
     {
         private readonly RedisClient _redisClient;
@@ -28,12 +28,12 @@ public partial class RedisClient : IDisposable
             }, cancellationToken);
         }
 
-        public Task<int> DBSize()
+        public Task<int> DbSize()
         {
-            return DBSize(CancellationToken.None);
+            return DbSize(CancellationToken.None);
         }
 
-        public async Task<int> DBSize(CancellationToken cancellationToken)
+        public async Task<int> DbSize(CancellationToken cancellationToken)
         {
             return await _redisClient.RunWithTimeout(async token =>
             {

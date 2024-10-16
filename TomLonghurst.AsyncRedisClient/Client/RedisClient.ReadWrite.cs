@@ -26,26 +26,26 @@ public partial class RedisClient : IDisposable
 
     private long _operationsPerformed;
 
-    private SocketPipe _socketPipe;
-    private PipeReader _pipeReader;
-    private PipeWriter _pipeWriter;
+    private SocketPipe? _socketPipe;
+    private PipeReader? _pipeReader;
+    private PipeWriter? _pipeWriter;
     
     public long OperationsPerformed => Interlocked.Read(ref _operationsPerformed);
 
     public DateTime LastUsed { get; internal set; }
 
-    private Func<RedisTelemetryResult, Task> _telemetryCallback;
+    private Func<RedisTelemetryResult, Task>? _telemetryCallback;
     private int _written;
     private bool _isBusy;
 
     // TODO Make public
-    private void SetTelemetryCallback(Func<RedisTelemetryResult, Task> telemetryCallback)
+    private void SetTelemetryCallback(Func<RedisTelemetryResult, Task>? telemetryCallback)
     {
         _telemetryCallback = telemetryCallback;
     }
 
         
-    internal ValueTask<T> SendOrQueueAsync<T>(IRedisCommand command,
+    internal ValueTask<T> SendOrQueueAsync<T>(IRedisCommand? command,
         AbstractResultProcessor<T> abstractResultProcessor,
         CancellationToken cancellationToken,
         bool isReconnectionAttempt = false)
@@ -64,19 +64,19 @@ public partial class RedisClient : IDisposable
         return QueueToBacklog(command, abstractResultProcessor, cancellationToken);
     }
 
-    private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, AbstractResultProcessor<T> abstractResultProcessor,
+    private ValueTask<T> QueueToBacklog<T>(IRedisCommand? command, AbstractResultProcessor<T> abstractResultProcessor,
         CancellationToken cancellationToken)
     {
         var taskCompletionSource = new TaskCompletionSource<T>();
 
-        _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, abstractResultProcessor, this, _pipeReader));
+        _backlog.Enqueue(new BacklogItem<T>(command, cancellationToken, taskCompletionSource, abstractResultProcessor, this, _pipeReader!));
 
         cancellationToken.Register(() => taskCompletionSource.TrySetCanceled(cancellationToken));
             
         return new ValueTask<T>(taskCompletionSource.Task);
     }
 
-    internal async ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command, AbstractResultProcessor<T> abstractResultProcessor,
+    internal async ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand? command, AbstractResultProcessor<T> abstractResultProcessor,
         CancellationToken cancellationToken, bool isReconnectionAttempt)
     {
         _isBusy = true;
@@ -100,7 +100,7 @@ public partial class RedisClient : IDisposable
 
             await Write(command);
 
-            return await abstractResultProcessor.Start(this, _pipeReader, cancellationToken);
+            return await abstractResultProcessor.Start(this, _pipeReader!, new ReadResult(), cancellationToken);
         }
         catch (Exception innerException)
         {
@@ -131,7 +131,7 @@ public partial class RedisClient : IDisposable
         }
     }
 
-    internal ValueTask<FlushResult> Write(IRedisCommand command)
+    internal ValueTask<FlushResult> Write(IRedisCommand? command)
     {
         _written++;
         var encodedCommandList = command.EncodedCommandList;

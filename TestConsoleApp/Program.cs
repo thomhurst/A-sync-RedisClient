@@ -40,7 +40,7 @@ class Program
             Ssl = false
         };
 
-        _redisManager = await RedisClientManager.ConnectAsync(config, 1);
+        _redisManager = await RedisClientManager.ConnectAsync(config);
 
         var tasks = new List<Task>();
 

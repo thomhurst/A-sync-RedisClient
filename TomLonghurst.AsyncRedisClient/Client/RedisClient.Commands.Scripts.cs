@@ -7,8 +7,8 @@ namespace TomLonghurst.AsyncRedisClient.Client;
 
 public partial class RedisClient : IDisposable
 {
-    private ScriptCommands _scriptCommands;
-    public ScriptCommands Scripts => _scriptCommands;
+    private ScriptCommands? _scriptCommands;
+    public ScriptCommands? Scripts => _scriptCommands;
     public class ScriptCommands
     {
         private readonly RedisClient _redisClient;

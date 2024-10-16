@@ -4,12 +4,12 @@ namespace TomLonghurst.AsyncRedisClient.Models.Commands;
 
 public class RedisCommand : IRedisCommand
 {
-    internal readonly IEnumerable<IRedisEncodable> _redisEncodables;
-    internal readonly byte[][] rawBytes;
+    internal readonly IEnumerable<IRedisEncodable> RedisEncodables;
+    internal readonly byte[][] RawBytes;
 
-    private IList<byte[]> _encodedCommand;
+    private byte[][]? _encodedCommand;
 
-    public IList<byte[]> EncodedCommandList
+    public IList<byte[]>? EncodedCommandList
     {
         get
         {
@@ -18,35 +18,42 @@ public class RedisCommand : IRedisCommand
                 return _encodedCommand;
             }
 
-            _encodedCommand = new List<byte[]> {$"*{rawBytes.Length}".ToUtf8BytesWithTerminator()};
-
-            foreach (var rawByte in rawBytes)
-            {
-                _encodedCommand.Add($"${rawByte.Length - 2}".ToUtf8BytesWithTerminator());
-                _encodedCommand.Add(rawByte);
-            }
+            _encodedCommand =
+            [
+                $"*{RawBytes.Length}".ToUtf8BytesWithTerminator(),
+                ..EncodeRawBytes()
+            ];
 
             return _encodedCommand;
         }
     }
 
-    public string AsString => string.Join(" ", _redisEncodables.Select(x => x.AsString));
-
-    private RedisCommand(IEnumerable<IRedisEncodable> redisEncodables)
+    private IEnumerable<byte[]> EncodeRawBytes()
     {
-        _redisEncodables = redisEncodables;
-        rawBytes = redisEncodables.Select(x => x.RedisEncodedBytes).ToArray();
+        foreach (var rawByte in RawBytes)
+        {
+            yield return $"${rawByte.Length - 2}".ToUtf8BytesWithTerminator();
+            yield return rawByte;
+        }
+    }
+
+    public string AsString => string.Join(" ", RedisEncodables.Select(x => x.AsString));
+
+    private RedisCommand(IReadOnlyCollection<IRedisEncodable> redisEncodables)
+    {
+        RedisEncodables = redisEncodables;
+        RawBytes = redisEncodables.Select(x => x.RedisEncodedBytes).ToArray();
     }
         
-    public static RedisCommand From(IEnumerable<IRedisEncodable> redisEncodables)
+    public static RedisCommand From(IReadOnlyCollection<IRedisEncodable> redisEncodables)
     {
         return new RedisCommand(redisEncodables);
     }
         
     private RedisCommand(params IRedisEncodable[] redisEncodables)
     {
-        _redisEncodables = redisEncodables;
-        rawBytes = redisEncodables.Select(x => x.RedisEncodedBytes).ToArray();
+        RedisEncodables = redisEncodables;
+        RawBytes = redisEncodables.Select(x => x.RedisEncodedBytes).ToArray();
     }
         
     public static RedisCommand From(params IRedisEncodable[] redisEncodables)
@@ -56,13 +63,22 @@ public class RedisCommand : IRedisCommand
         
     public static RedisCommand FromScript(IRedisEncodable command, IRedisEncodable scriptOrSha1, List<string> keys, IEnumerable<string> args)
     {
-        return new RedisCommand(new List<IRedisEncodable> { command, scriptOrSha1, keys.Count.ToRedisEncoded() }.Concat(keys.Select(key => key.ToRedisEncoded())).Concat(args.Select(arg => arg.ToRedisEncoded())));
+        IRedisEncodable[] encodables =
+        [
+            command,
+            scriptOrSha1,
+            keys.Count.ToRedisEncoded(),
+            ..keys.Select(key => key.ToRedisEncoded()),
+            ..args.Select(arg => arg.ToRedisEncoded())
+        ];
+        
+        return new RedisCommand(encodables);
     }
 
     private RedisCommand(IRedisEncodable redisEncodable)
     {
-        _redisEncodables = [redisEncodable];
-        rawBytes = [redisEncodable.RedisEncodedBytes];
+        RedisEncodables = [redisEncodable];
+        RawBytes = [redisEncodable.RedisEncodedBytes];
     }
 
     public static RedisCommand From(IRedisEncodable redisEncodable)
@@ -72,6 +88,6 @@ public class RedisCommand : IRedisCommand
 
     public static IRedisCommand From(IRedisEncodable redisEncodable, IEnumerable<IRedisEncodable> redisEncodables)
     {
-        return new RedisCommand(new List<IRedisEncodable> { redisEncodable }.Concat(redisEncodables));
+        return new RedisCommand([redisEncodable, ..redisEncodables]);
     }
 }

@@ -9,8 +9,8 @@ public class LastActionConstants
     internal static readonly string SettingClientName = "Setting Client Name";
         
     internal static readonly string WaitingForConnectingLock = "Waiting for Connecting lock to be free";
-    internal static readonly string AuthenticatingSSLStreamAsClient = "Authenticating SSL Stream as Client";
-    internal static readonly string CreatingSSLStreamPipe = "Creating SSL Stream Pipe";
+    internal static readonly string AuthenticatingSslStreamAsClient = "Authenticating SSL Stream as Client";
+    internal static readonly string CreatingSslStreamPipe = "Creating SSL Stream Pipe";
     internal static readonly string CreatingSocketPipe = "Creating Socket Pipe";
         
     internal static readonly string WritingBytes = "Writing Bytes";

@@ -86,7 +86,7 @@ internal static class StringExtensions
         return value.Split([delimiter], StringSplitOptions.RemoveEmptyEntries);
     }
 
-    internal static IRedisCommand ToFireAndForgetCommand(this IEnumerable<RedisCommand> commands)
+    internal static IRedisCommand? ToFireAndForgetCommand(this IEnumerable<RedisCommand?> commands)
     {
         var enumerable = commands.ToList();
         if (enumerable.Count > 1)
@@ -95,7 +95,7 @@ internal static class StringExtensions
                 "REPLY".ToRedisEncoded(),
                 "OFF".ToRedisEncoded());
 
-            var fireAndForgetCommands = new List<RedisCommand> { clientReplyOff };
+            var fireAndForgetCommands = new List<RedisCommand?> { clientReplyOff };
                 
             fireAndForgetCommands.AddRange(enumerable);
                 
@@ -113,12 +113,12 @@ internal static class StringExtensions
         }
     }
         
-    internal static IRedisCommand ToPipelinedCommand(this IEnumerable<IRedisCommand> commands)
+    internal static IRedisCommand? ToPipelinedCommand(this IEnumerable<IRedisCommand?> commands)
     {
         var enumerable = commands.ToList();
         if (enumerable.Count > 1)
         {
-            var fireAndForgetCommands = new List<IRedisCommand>();
+            var fireAndForgetCommands = new List<IRedisCommand?>();
                 
             fireAndForgetCommands.AddRange(enumerable);
 

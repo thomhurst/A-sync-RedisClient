@@ -30,7 +30,7 @@ public static class RedisEncodableExtensions
         return new RedisEncodable(value.ToString());
     }
         
-    internal static IRedisCommand ToRedisCommand(this string value)
+    internal static IRedisCommand? ToRedisCommand(this string value)
     {
         return RedisCommand.From(new RedisEncodable(value));
     }

@@ -30,7 +30,7 @@ public class Tests : TestBase
             Ssl = true
         };
         
-        _redisManager = await RedisClientManager.ConnectAsync(_config, 1);
+        _redisManager = await RedisClientManager.ConnectAsync(_config);
     }
 
     [Arguments("value with a space")]
@@ -658,7 +658,7 @@ public class Tests : TestBase
     public async Task DBSize()
     {
         var tomLonghurstRedisClient = Client;
-        var dbSize = Client.Server.DBSize();
+        var dbSize = Client.Server.DbSize();
     }
 
     [Test]

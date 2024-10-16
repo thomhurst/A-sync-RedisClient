@@ -32,7 +32,6 @@ public class BlockingQueue<T> : IDisposable
 
     public void EnqueueRange(IEnumerable<T> source)
     {
-        var n = 0;
         foreach (var item in source)
         {
             lock (_locker)
@@ -44,12 +43,10 @@ public class BlockingQueue<T> : IDisposable
                     Monitor.Pulse(_locker);
                 }
             }
-
-            n++;
         }
     }
 
-    public T Dequeue()
+    public T? Dequeue()
     {
         // Used to avoid returning null
         while (true)
@@ -87,7 +84,7 @@ public class BlockingQueue<T> : IDisposable
                 {
                     if (_disposed)
                     {
-                        return default;
+                        return [];
                     }
                         
                     _availableToDequeue++;

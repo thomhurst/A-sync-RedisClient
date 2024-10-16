@@ -1,5 +1,6 @@
 using TomLonghurst.AsyncRedisClient.Models.Backlog;
 using TomLonghurst.AsyncRedisClient.Extensions;
+using TomLonghurst.AsyncRedisClient.Models.Commands;
 
 namespace TomLonghurst.AsyncRedisClient.Client;
 

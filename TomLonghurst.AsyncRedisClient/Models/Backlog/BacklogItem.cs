@@ -8,7 +8,7 @@ public struct BacklogItem<T> : IBacklogItem<T>
 {
     public Client.RedisClient RedisClient { get; set; }
     public PipeReader PipeReader { get; set; }
-    public IRedisCommand RedisCommand { get; }
+    public IRedisCommand? RedisCommand { get; }
     public CancellationToken CancellationToken { get; }
         
     public void SetCancelled()
@@ -25,7 +25,7 @@ public struct BacklogItem<T> : IBacklogItem<T>
     {
         try
         {
-            var result = await AbstractResultProcessor.Start(RedisClient, PipeReader, CancellationToken);
+            var result = await AbstractResultProcessor.Start(RedisClient, PipeReader, new ReadResult(), CancellationToken);
             TaskCompletionSource.TrySetResult(result);
         }
         catch (OperationCanceledException)
@@ -43,7 +43,7 @@ public struct BacklogItem<T> : IBacklogItem<T>
     public TaskCompletionSource<T> TaskCompletionSource { get; }
     public AbstractResultProcessor<T> AbstractResultProcessor { get; }
 
-    public BacklogItem(IRedisCommand redisCommand, CancellationToken cancellationToken, TaskCompletionSource<T> taskCompletionSource, AbstractResultProcessor<T> abstractResultProcessor, Client.RedisClient redisClient, PipeReader pipe)
+    public BacklogItem(IRedisCommand? redisCommand, CancellationToken cancellationToken, TaskCompletionSource<T> taskCompletionSource, AbstractResultProcessor<T> abstractResultProcessor, Client.RedisClient redisClient, PipeReader? pipe)
     {
         RedisCommand = redisCommand;
         CancellationToken = cancellationToken;

@@ -9,7 +9,7 @@ namespace TomLonghurst.AsyncRedisClient.Client;
 
 public partial class RedisClient : IDisposable
 {
-    internal IRedisCommand LastCommand;
+    internal IRedisCommand? LastCommand;
 
     private async ValueTask Authorize(CancellationToken cancellationToken)
     {

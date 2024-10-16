@@ -1,14 +1,21 @@
+using System.IO.Pipelines;
+using TomLonghurst.AsyncRedisClient.Client;
 using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Extensions;
 
 namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors;
 
-public class SuccessResultProcessor : AbstractResultProcessor<object>
+public class SuccessResultProcessor : AbstractResultProcessor<object?>
 {
-    internal override async ValueTask<object> Process()
+    internal override async ValueTask<object?> Process(
+        RedisClient redisClient, 
+        PipeReader pipeReader, 
+        ReadResult readResult,
+        CancellationToken cancellationToken
+    )
     {
-        var line = await ReadLine();
+        var line = await ReadLine(pipeReader, cancellationToken);
 
         if (line.Length < 3 ||
             line.ItemAt(0) != ByteConstants.Plus ||
@@ -16,17 +23,17 @@ public class SuccessResultProcessor : AbstractResultProcessor<object>
             line.ItemAt(2) != ByteConstants.K)
         {
             var stringLine = line.AsStringWithoutLineTerminators();
-            PipeReader.AdvanceTo(line.End);
+            pipeReader.AdvanceTo(line.End);
                 
             if (stringLine[0] == ByteConstants.Dash)
             {
-                throw new RedisFailedCommandException(stringLine, LastCommand);
+                throw new RedisFailedCommandException(stringLine, redisClient.LastCommand);
             }
                 
             throw new UnexpectedRedisResponseException(stringLine);
         }
 
-        PipeReader.AdvanceTo(line.End);
+        pipeReader.AdvanceTo(line.End);
 
         return null;
     }

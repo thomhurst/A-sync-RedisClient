@@ -17,10 +17,6 @@ internal class RedisSocket : Socket
     {
     }
 
-    internal RedisSocket(SocketInformation socketInformation) : base(socketInformation)
-    {
-    }
-
     internal RedisSocket(SocketType socketType, ProtocolType protocolType) : base(socketType, protocolType)
     {
     }

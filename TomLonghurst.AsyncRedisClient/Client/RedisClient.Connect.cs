@@ -21,18 +21,18 @@ public partial class RedisClient : IDisposable
 
     private readonly SemaphoreSlim _connectSemaphoreSlim = new(1, 1);
 
-    public RedisClientConfig ClientConfig { get; }
+    public RedisClientConfig? ClientConfig { get; }
 
-    private RedisSocket _socket;
+    private RedisSocket? _socket;
 
-    public Socket Socket => _socket;
+    public Socket? Socket => _socket;
         
-    private SslStream _sslStream;
+    private SslStream? _sslStream;
 
     private bool _isConnected;
         
-    internal Func<RedisClient, Task> OnConnectionEstablished { get; set; }
-    internal Func<RedisClient, Task> OnConnectionFailed { get; set; }
+    internal Func<RedisClient, Task>? OnConnectionEstablished { get; set; }
+    internal Func<RedisClient, Task>? OnConnectionFailed { get; set; }
         
     public bool IsConnected
     {
@@ -69,7 +69,7 @@ public partial class RedisClient : IDisposable
         }
     }
 
-    protected RedisClient(RedisClientConfig redisClientConfig) : this()
+    protected RedisClient(RedisClientConfig? redisClientConfig) : this()
     {
         ClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
         _connectionChecker = new Timer(CheckConnection, null, 2500, 250);
@@ -88,12 +88,12 @@ public partial class RedisClient : IDisposable
         }
     }
 
-    internal static Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig)
+    internal static Task<RedisClient> ConnectAsync(RedisClientConfig? redisClientConfig)
     {
         return ConnectAsync(redisClientConfig, CancellationToken.None);
     }
 
-    internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
+    internal static async Task<RedisClient> ConnectAsync(RedisClientConfig? redisClientConfig, CancellationToken cancellationToken)
     {
         var redisClient = new RedisClient(redisClientConfig);
         await redisClient.TryConnectAsync(cancellationToken);
@@ -242,7 +242,7 @@ public partial class RedisClient : IDisposable
         }
     }
         
-    private readonly Timer _connectionChecker;
+    private readonly Timer? _connectionChecker;
     private bool _disposed;
 
     private static RedisPipeOptions GetPipeOptions()

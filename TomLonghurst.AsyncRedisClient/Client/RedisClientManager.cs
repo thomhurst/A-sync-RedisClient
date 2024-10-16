@@ -1,21 +1,23 @@
 ﻿namespace TomLonghurst.AsyncRedisClient.Client;
 
-public class RedisClientManager
+public class RedisClientManager : IAsyncDisposable
 {
-    public RedisClientConfig ClientConfig { get; }
+    public RedisClientConfig? ClientConfig { get; }
     private readonly CircularQueue<RedisClient> _redisClients;
 
-    public static async Task<RedisClientManager> ConnectAsync(RedisClientConfig clientConfig, int redisClientPoolSize)
+    public static async Task<RedisClientManager> ConnectAsync(RedisClientConfig? clientConfig)
     {
-        var manager = new RedisClientManager(clientConfig, redisClientPoolSize);
+        var manager = new RedisClientManager(clientConfig);
 
         await manager.InitializeAsync();
         
         return manager;
     }
     
-    private RedisClientManager(RedisClientConfig clientConfig, int redisClientPoolSize)
+    private RedisClientManager(RedisClientConfig? clientConfig)
     {
+        var redisClientPoolSize = clientConfig.PoolSize;
+        
         if (redisClientPoolSize < 1)
         {
             throw new ArgumentOutOfRangeException(nameof(redisClientPoolSize), "Pool size must be 1 or more");
@@ -34,5 +36,10 @@ public class RedisClientManager
     public RedisClient GetRedisClient()
     {
         return _redisClients.Get();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return _redisClients.DisposeAsync();
     }
 }

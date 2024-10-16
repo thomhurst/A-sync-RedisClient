@@ -10,38 +10,29 @@ namespace TomLonghurst.AsyncRedisClient.Pipes;
 
 public class SocketPipe : IDuplexPipe
 {
-    public static SocketPipe GetDuplexPipe(Socket socket, PipeOptions sendPipeOptions,
+    public static SocketPipe GetDuplexPipe(Socket? socket, PipeOptions sendPipeOptions,
         PipeOptions receivePipeOptions) =>
         new(socket, sendPipeOptions, receivePipeOptions, true, true);
 
-    private readonly Socket _innerSocket;
+    private readonly Socket? _innerSocket;
 
-    private readonly Pipe _readPipe;
-    private readonly Pipe _writePipe;
+    private readonly Pipe? _readPipe;
+    private readonly Pipe? _writePipe;
 
     public void Reset()
     {
-        _writePipe.Reset();
-        _readPipe.Reset();
+        _writePipe?.Reset();
+        _readPipe?.Reset();
     }
 
-    public SocketPipe(Socket socket, PipeOptions sendPipeOptions, PipeOptions receivePipeOptions, bool read,
+    private SocketPipe(Socket? socket, PipeOptions? sendPipeOptions, PipeOptions? receivePipeOptions, bool read,
         bool write)
     {
-        if (socket == null)
-        {
-            throw new ArgumentNullException(nameof(socket));
-        }
+        ArgumentNullException.ThrowIfNull(socket);
 
-        if (sendPipeOptions == null)
-        {
-            sendPipeOptions = PipeOptions.Default;
-        }
+        sendPipeOptions ??= PipeOptions.Default;
 
-        if (receivePipeOptions == null)
-        {
-            receivePipeOptions = PipeOptions.Default;
-        }
+        receivePipeOptions ??= PipeOptions.Default;
 
         _innerSocket = socket;
 
@@ -54,16 +45,14 @@ public class SocketPipe : IDuplexPipe
         {
             _readPipe = new Pipe(receivePipeOptions);
                 
-            receivePipeOptions.ReaderScheduler.Schedule(
-                async obj => await ((SocketPipe) obj).CopyFromSocketToReadPipe(), this);
+            receivePipeOptions.ReaderScheduler.Schedule(_ => CopyFromSocketToReadPipe(), null);
         }
             
         if (write)
         {
             _writePipe = new Pipe(sendPipeOptions);
                 
-            sendPipeOptions.WriterScheduler.Schedule(
-                async obj => await ((SocketPipe) obj).CopyFromWritePipeToSocket(), this);
+            sendPipeOptions.WriterScheduler.Schedule(_ => CopyFromWritePipeToSocket(), null);
         }
     }
 
@@ -75,8 +64,8 @@ public class SocketPipe : IDuplexPipe
 
     private async Task CopyFromSocketToReadPipe()
     {
-        Exception exception = null;
-        var writer = _readPipe.Writer;
+        Exception? exception = null;
+        var writer = _readPipe!.Writer;
 
         try
         {
@@ -120,18 +109,13 @@ public class SocketPipe : IDuplexPipe
             exception = e;
         }
 
-        writer.Complete(exception);
+        await writer.CompleteAsync(exception);
     }
-
-    private long _totalBytesSent, _totalBytesReceived;
-
-    //long IMeasuredDuplexPipe.TotalBytesSent => Interlocked.Read(ref _totalBytesSent);
-    //long IMeasuredDuplexPipe.TotalBytesReceived => Interlocked.Read(ref _totalBytesReceived);
 
     private async Task CopyFromWritePipeToSocket()
     {
-        Exception exception = null;
-        var reader = _writePipe.Reader;
+        Exception? exception = null;
+        var reader = _writePipe!.Reader;
 
         try
         {
@@ -180,7 +164,7 @@ public class SocketPipe : IDuplexPipe
         }
         finally
         {
-            reader.Complete(exception);
+            await reader.CompleteAsync(exception);
         }
     }
 

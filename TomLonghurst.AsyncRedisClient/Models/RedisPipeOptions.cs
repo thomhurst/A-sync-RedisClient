@@ -2,8 +2,8 @@ using System.IO.Pipelines;
 
 namespace TomLonghurst.AsyncRedisClient.Models;
 
-public class RedisPipeOptions
+public record RedisPipeOptions
 {
-    public PipeOptions SendOptions { get; set; }
-    public PipeOptions ReceiveOptions { get; set; }
+    public PipeOptions? SendOptions { get; init; }
+    public PipeOptions? ReceiveOptions { get; init; }
 }

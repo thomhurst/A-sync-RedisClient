@@ -14,7 +14,7 @@ public static class BufferExtensions
         return buffer.Span.AsString();
     }
 
-    internal static T ItemAt<T>(this ReadOnlySequence<T> buffer, int index)
+    internal static T? ItemAt<T>(this ReadOnlySequence<T> buffer, int index)
     {
         if (buffer.IsEmpty || index > buffer.Length)
         {
@@ -34,7 +34,7 @@ public static class BufferExtensions
     {
         if (buffer.IsEmpty)
         {
-            return null;
+            return string.Empty;
         }
 
         if (buffer.IsSingleSegment)
@@ -55,21 +55,14 @@ public static class BufferExtensions
         return ((ReadOnlySpan<byte>) span).AsString();
     }
 
-    internal static unsafe string AsString(this in ReadOnlySpan<byte> span)
+    internal static string AsString(this in ReadOnlySpan<byte> span)
     {
         if (span.IsEmpty)
         {
-            return null;
+            return string.Empty;
         }
 
-#if !NETSTANDARD2_0
         return Encoding.UTF8.GetString(span);
-#endif
-
-        fixed (byte* ptr = span)
-        {
-            return Encoding.UTF8.GetString(ptr, span.Length);
-        }
     }
 
     internal static async ValueTask<ReadResult> AdvanceToLineTerminator(this PipeReader pipeReader,
@@ -78,7 +71,7 @@ public static class BufferExtensions
         SequencePosition? endOfLinePosition;
         while ((endOfLinePosition = readResult.Buffer.GetEndOfLinePosition()) == null)
         {
-            if (readResult.IsCompleted && readResult.Buffer.IsEmpty)
+            if (readResult is { IsCompleted: true, Buffer.IsEmpty: true })
             {
                 throw new RedisDataException(
                     "ReadResult is completed and buffer is empty. Can't find EOL in AdvanceToLineTerminator");
@@ -103,7 +96,7 @@ public static class BufferExtensions
     {
         while (readResult.Buffer.GetEndOfLinePosition() == null)
         {
-            if (readResult.IsCompleted && readResult.Buffer.IsEmpty)
+            if (readResult is { IsCompleted: true, Buffer.IsEmpty: true })
             {
                 break;
             }
@@ -202,7 +195,7 @@ public static class BufferExtensions
 
     internal static ArraySegment<byte> GetArraySegment(this ReadOnlyMemory<byte> buffer)
     {
-        if (!MemoryMarshal.TryGetArray<byte>(buffer, out var segment))
+        if (!MemoryMarshal.TryGetArray(buffer, out var segment))
         {
             throw new InvalidOperationException("MemoryMarshal.TryGetArray<byte> could not provide an array");
         }

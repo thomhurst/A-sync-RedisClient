@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.IO.Pipelines;
+using TomLonghurst.AsyncRedisClient.Client;
 using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Extensions;
@@ -10,51 +11,36 @@ namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors;
 
 public abstract class AbstractResultProcessor
 {
-    protected Client.RedisClient RedisClient;
-    protected ReadResult ReadResult;
-    protected PipeReader PipeReader;
-    protected CancellationToken CancellationToken;
-
-    internal void SetMembers(Client.RedisClient redisClient, PipeReader pipeReader,
-        CancellationToken cancellationToken)
-    {
-        RedisClient = redisClient;
-        PipeReader = pipeReader;
-        CancellationToken = cancellationToken;
-    }
-
-    internal void SetMembers(Client.RedisClient redisClient, PipeReader pipeReader, ReadResult readResult,
-        CancellationToken cancellationToken)
-    {
-        RedisClient = redisClient;
-        PipeReader = pipeReader;
-        ReadResult = readResult;
-        CancellationToken = cancellationToken;
-    }
 }
 
 public abstract class AbstractResultProcessor<T> : AbstractResultProcessor
 {
-    public IRedisCommand LastCommand
+    internal async ValueTask<T> Start(
+        RedisClient redisClient, 
+        PipeReader pipeReader, 
+        ReadResult readResult,
+        CancellationToken cancellationToken
+    )
     {
-        get => RedisClient.LastCommand;
-        set => RedisClient.LastCommand = value;
+        return await Process(redisClient, pipeReader, readResult, cancellationToken);
     }
 
-    internal async ValueTask<T> Start(Client.RedisClient redisClient, PipeReader pipeReader,
-        CancellationToken cancellationToken)
+    internal abstract ValueTask<T> Process(
+        RedisClient redisClient, 
+        PipeReader pipeReader, 
+        ReadResult readResult,
+        CancellationToken cancellationToken
+    );
+
+
+    protected async ValueTask<Memory<byte>> ReadData(
+        RedisClient redisClient, 
+        PipeReader pipeReader, 
+        ReadResult readResult,
+        CancellationToken cancellationToken
+        )
     {
-        SetMembers(redisClient, pipeReader, cancellationToken);
-
-        return await Process();
-    }
-
-    internal abstract ValueTask<T> Process();
-
-
-    protected async ValueTask<Memory<byte>> ReadData()
-    {
-        var line = await ReadLine();
+        var line = await ReadLine(pipeReader, cancellationToken);
 
         if (line.IsEmpty)
         {
@@ -65,12 +51,12 @@ public abstract class AbstractResultProcessor<T> : AbstractResultProcessor
 
         if (firstChar != ByteConstants.Dollar)
         {
-            var stringLine = line.AsStringWithoutLineTerminators();
-            PipeReader.AdvanceTo(line.End);
+            var stringLine = line.AsStringWithoutLineTerminators() ?? string.Empty;
+            pipeReader.AdvanceTo(line.End);
 
             if (firstChar == ByteConstants.Dash)
             {
-                throw new RedisFailedCommandException(stringLine, LastCommand);
+                throw new RedisFailedCommandException(stringLine, redisClient.LastCommand);
             }
 
             throw new UnexpectedRedisResponseException($"Unexpected reply: {stringLine}");
@@ -80,21 +66,21 @@ public abstract class AbstractResultProcessor<T> : AbstractResultProcessor
 
         var byteSizeOfData = SpanNumberParser.Parse(line);
 
-        PipeReader.AdvanceTo(line.End);
+        pipeReader.AdvanceTo(line.End);
 
         if (byteSizeOfData == -1)
         {
             return null;
         }
 
-        if (ReadResult.IsCompleted && ReadResult.Buffer.IsEmpty)
+        if (readResult is { IsCompleted: true, Buffer.IsEmpty: true })
         {
             throw new RedisDataException("ReadResult is completed and buffer is empty starting ReadData");
         }
 
-        ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken);
+        readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken);
 
-        var buffer = ReadResult.Buffer;
+        var buffer = readResult.Buffer;
 
         if (byteSizeOfData == 0)
         {
@@ -111,30 +97,30 @@ public abstract class AbstractResultProcessor<T> : AbstractResultProcessor
 
         if (bytesReceived >= byteSizeOfData)
         {
-            alreadyReadToLineTerminator = TryAdvanceToLineTerminator(ref buffer);
+            alreadyReadToLineTerminator = TryAdvanceToLineTerminator(ref buffer, readResult, pipeReader);
         }
         else
         {
-            PipeReader.AdvanceTo(buffer.End);
+            pipeReader.AdvanceTo(buffer.End);
         }
 
         while (bytesReceived < byteSizeOfData)
         {
-            if (ReadResult.IsCompleted && ReadResult.Buffer.IsEmpty)
+            if (readResult is { IsCompleted: true, Buffer.IsEmpty: true })
             {
                 throw new RedisDataException(
                     "ReadResult is completed and buffer is empty reading in loop in ReadData");
             }
 
-            if (ReadResult.IsCanceled)
+            if (readResult.IsCanceled)
             {
                 throw new RedisDataException("ReadResult is cancelled reading in loop in ReadData");
             }
 
-            ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken);
+            readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken);
 
-            buffer = ReadResult.Buffer.Slice(ReadResult.Buffer.Start,
-                Math.Min(ReadResult.Buffer.Length, byteSizeOfData - bytesReceived));
+            buffer = readResult.Buffer.Slice(readResult.Buffer.Start,
+                Math.Min(readResult.Buffer.Length, byteSizeOfData - bytesReceived));
 
             buffer
                 .CopyTo(dataByteStorage.Slice((int) bytesReceived,
@@ -144,82 +130,89 @@ public abstract class AbstractResultProcessor<T> : AbstractResultProcessor
 
             if (bytesReceived >= byteSizeOfData)
             {
-                alreadyReadToLineTerminator = TryAdvanceToLineTerminator(ref buffer);
+                alreadyReadToLineTerminator = TryAdvanceToLineTerminator(ref buffer, readResult, pipeReader);
             }
             else
             {
-                PipeReader.AdvanceTo(buffer.End);
+                pipeReader.AdvanceTo(buffer.End);
             }
         }
 
         if (!alreadyReadToLineTerminator)
         {
-            ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken);
+            readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken);
 
-            await PipeReader.AdvanceToLineTerminator(ReadResult, CancellationToken);
+            await pipeReader.AdvanceToLineTerminator(readResult, cancellationToken);
         }
 
         return dataByteStorage;
     }
 
-    private bool TryAdvanceToLineTerminator(ref ReadOnlySequence<byte> buffer)
+    private bool TryAdvanceToLineTerminator(ref ReadOnlySequence<byte> buffer, ReadResult readResult, PipeReader pipeReader)
     {
-        var slicedBytes = ReadResult.Buffer.Slice(buffer.End);
+        var slicedBytes = readResult.Buffer.Slice(buffer.End);
         if (slicedBytes.IsEmpty)
         {
-            PipeReader.AdvanceTo(buffer.End);
+            pipeReader.AdvanceTo(buffer.End);
             return false;
         }
 
         var endOfLinePosition = slicedBytes.GetEndOfLinePosition();
         if (endOfLinePosition == null)
         {
-            PipeReader.AdvanceTo(buffer.End);
+            pipeReader.AdvanceTo(buffer.End);
             return false;
         }
             
-        PipeReader.AdvanceTo(endOfLinePosition.Value);
+        pipeReader.AdvanceTo(endOfLinePosition.Value);
         return true;
     }
 
-    protected async ValueTask<byte> ReadByte()
+    protected async ValueTask<byte> ReadByte(PipeReader pipeReader, CancellationToken cancellationToken)
     {
-        ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken);
+        var readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken);
 
-        if (ReadResult.Buffer.IsEmpty)
+        if (readResult.Buffer.IsEmpty)
         {
             throw new RedisDataException("Empty buffer in ReadByte");
         }
 
-        return ReadResult.Buffer.Slice(ReadResult.Buffer.Start, 1).First.Span[0];
+        return readResult.Buffer.Slice(readResult.Buffer.Start, 1).First.Span[0];
     }
 
-    protected async ValueTask<ReadOnlySequence<byte>> ReadLine()
+    protected async ValueTask<ReadOnlySequence<byte>> ReadLine(
+        PipeReader pipeReader, 
+        CancellationToken cancellationToken
+        )
     {
-        ReadResult = await PipeReader.ReadAsyncOrThrowReadTimeout(CancellationToken);
+        var readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken);
 
-        var endOfLinePosition = ReadResult.Buffer.GetEndOfLinePosition();
+        var endOfLinePosition = readResult.Buffer.GetEndOfLinePosition();
         if (endOfLinePosition != null)
         {
-            return ReadResult.Buffer.Slice(ReadResult.Buffer.Start, endOfLinePosition.Value);
+            return readResult.Buffer.Slice(readResult.Buffer.Start, endOfLinePosition.Value);
         }
 
-        if (ReadResult.IsCompleted && ReadResult.Buffer.IsEmpty)
+        if (readResult is { IsCompleted: true, Buffer.IsEmpty: true })
         {
             throw new RedisDataException("Read is completed and buffer is empty - Can't find a complete line in ReadLine'");
         }
 
-        return await ReadLineAsync();
+        return await ReadLineAsync(pipeReader, readResult, cancellationToken);
     }
 
-    private async ValueTask<ReadOnlySequence<byte>> ReadLineAsync()
+    private async ValueTask<ReadOnlySequence<byte>> ReadLineAsync(
+        PipeReader pipeReader, 
+        ReadResult readResult,
+        CancellationToken cancellationToken
+    )
     {
-        var endOfLinePosition = ReadResult.Buffer.GetEndOfLinePosition();
+        var endOfLinePosition = readResult.Buffer.GetEndOfLinePosition();
         if (endOfLinePosition == null)
         {
-            ReadResult = await PipeReader.ReadUntilEndOfLineFound(ReadResult, CancellationToken);
+            readResult = await pipeReader.ReadUntilEndOfLineFound(readResult, cancellationToken);
             
-            endOfLinePosition = ReadResult.Buffer.GetEndOfLinePosition();
+            endOfLinePosition = readResult.Buffer.GetEndOfLinePosition();
         }
 
         if (endOfLinePosition == null)
@@ -227,7 +220,7 @@ public abstract class AbstractResultProcessor<T> : AbstractResultProcessor
             throw new RedisDataException("Can't find EOL in ReadLine");
         }
 
-        var buffer = ReadResult.Buffer;
+        var buffer = readResult.Buffer;
 
         return buffer.Slice(buffer.Start, endOfLinePosition.Value);
     }

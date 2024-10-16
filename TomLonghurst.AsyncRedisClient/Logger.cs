@@ -6,7 +6,7 @@ internal class Logger
     {
         if (RedisClientSettings.LogLevel >= LogLevel.Info)
         {
-            log(message);
+            Log(message);
         }
     }
 
@@ -14,7 +14,7 @@ internal class Logger
     {
         if (RedisClientSettings.LogLevel >= LogLevel.Debug)
         {
-            log(message);
+            Log(message);
         }
     }
 
@@ -22,7 +22,7 @@ internal class Logger
     {
         if (RedisClientSettings.LogLevel >= LogLevel.Error)
         {
-            log(message);
+            Log(message);
         }
     }
 
@@ -30,12 +30,12 @@ internal class Logger
     {
         if (RedisClientSettings.LogLevel >= LogLevel.Info)
         {
-            log(message);
-            log(ex.ToString());
+            Log(message);
+            Log(ex.ToString());
         }
     }
 
-    private void log(string message)
+    private void Log(string message)
     {
         Console.WriteLine($"RedisClient ----- {message}");
     }
