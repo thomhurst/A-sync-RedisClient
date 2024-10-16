@@ -9,7 +9,6 @@ public class BenchmarkBase
 {
     protected RedisContainer RedisContainer { get; private set; } = null!;
 
-    [GlobalSetup]
     public async Task ContainerSetup()
     {
         RedisContainer =  new RedisBuilder()
@@ -19,7 +18,6 @@ public class BenchmarkBase
         await RedisContainer.StartAsync();
     }
 
-    [GlobalCleanup]
     public async Task ContainerCleanup()
     {
         await RedisContainer.DisposeAsync();

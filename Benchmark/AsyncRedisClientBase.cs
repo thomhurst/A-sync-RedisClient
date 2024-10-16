@@ -4,17 +4,16 @@ using TomLonghurst.AsyncRedisClient.Client;
 
 namespace Benchmark;
 
-[MarkdownExporterAttribute.GitHub]
-[SimpleJob(RuntimeMoniker.Net90)]
 public class AsyncRedisClientBase : BenchmarkBase
 {
     private RedisClientManager _redisClientManager = null!;
 
     public RedisClient Client { get; private set; } = null!;
 
-    [IterationSetup]
+    [GlobalSetup]
     public async Task Setup()
     {
+        await ContainerSetup();
         var connectionString = new Uri($"https://{RedisContainer.GetConnectionString()}");
         
         _redisClientManager = await RedisClientManager.ConnectAsync(new RedisClientConfig(connectionString.Host, connectionString.Port)
@@ -25,10 +24,11 @@ public class AsyncRedisClientBase : BenchmarkBase
         Client = _redisClientManager.GetRedisClient();
     }
 
-    [IterationCleanup]
+    [GlobalCleanup]
     public async Task Cleanup()
     {
         await RedisContainer.DisposeAsync();
         await _redisClientManager.DisposeAsync();
+        await ContainerCleanup();
     }
 }
