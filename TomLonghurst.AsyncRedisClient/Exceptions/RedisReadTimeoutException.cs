@@ -1,17 +1,13 @@
-using System;
-using TomLonghurst.AsyncRedisClient.Helpers;
+namespace TomLonghurst.AsyncRedisClient.Exceptions;
 
-namespace TomLonghurst.AsyncRedisClient.Exceptions
+public class RedisReadTimeoutException : RedisNonRecoverableException
 {
-    public class RedisReadTimeoutException : RedisNonRecoverableException
+    private readonly Exception _exception;
+
+    public RedisReadTimeoutException(Exception exception)
     {
-        private readonly Exception _exception;
-
-        public RedisReadTimeoutException(Exception exception)
-        {
-            _exception = exception;
-        }
-
-        public override Exception GetBaseException() => _exception;
+        _exception = exception;
     }
+
+    public override Exception GetBaseException() => _exception;
 }

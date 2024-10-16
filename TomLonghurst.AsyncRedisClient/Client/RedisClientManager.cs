@@ -1,99 +1,38 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using TomLonghurst.AsyncRedisClient.Extensions;
+﻿namespace TomLonghurst.AsyncRedisClient.Client;
 
-namespace TomLonghurst.AsyncRedisClient.Client
+public class RedisClientManager
 {
-    public class RedisClientManager
+    public RedisClientConfig ClientConfig { get; }
+    private readonly CircularQueue<RedisClient> _redisClients;
+
+    public static async Task<RedisClientManager> ConnectAsync(RedisClientConfig clientConfig, int redisClientPoolSize)
     {
-        public RedisClientConfig ClientConfig { get; }
-        private readonly List<Task<RedisClient>> _redisClients = new List<Task<RedisClient>>();
+        var manager = new RedisClientManager(clientConfig, redisClientPoolSize);
 
-        public RedisClientManager(RedisClientConfig clientConfig, int redisClientPoolSize)
+        await manager.InitializeAsync();
+        
+        return manager;
+    }
+    
+    private RedisClientManager(RedisClientConfig clientConfig, int redisClientPoolSize)
+    {
+        if (redisClientPoolSize < 1)
         {
-            if (redisClientPoolSize < 1)
-            {
-                throw new ArgumentOutOfRangeException(nameof(redisClientPoolSize), "Pool size must be 1 or more");
-            }
-
-            ClientConfig = clientConfig;
-
-            for (var i = 0; i < redisClientPoolSize; i++)
-            {
-                _redisClients.Add(RedisClient.ConnectAsync(clientConfig));
-            }
+            throw new ArgumentOutOfRangeException(nameof(redisClientPoolSize), "Pool size must be 1 or more");
         }
 
-        public async Task<RedisClient> GetRedisClientAsync()
-        {
-            if (_redisClients.Count == 1)
-            {
-                return await _redisClients.First().ConfigureAwait(false);
-            }
+        ClientConfig = clientConfig;
 
-            var redisClientsLoaded = _redisClients.Where(x => x.IsCompleted).ToList();
+        _redisClients = new(async () => await RedisClient.ConnectAsync(clientConfig), redisClientPoolSize);
+    }
 
-            if (redisClientsLoaded.Count != _redisClients.Count)
-            {
-                return await _redisClients.WhenAny(x => x.IsConnected).ConfigureAwait(false)
-                    ?? await Task.WhenAny(_redisClients).Unwrap().ConfigureAwait(false);
-            }
+    private Task InitializeAsync()
+    {
+        return _redisClients.InitializeAsync();
+    }
 
-            var orderByLeastOutstandingOperations = (await Task.WhenAll(_redisClients).ConfigureAwait(false)).OrderBy(client => client.OutstandingOperations).ToList();
-                
-            var connectedClient = orderByLeastOutstandingOperations.FirstOrDefault(client => client.IsConnected);
-
-            return connectedClient ?? orderByLeastOutstandingOperations.First();
-        }
-
-        private void SetConnectionCallbacks()
-        {
-            foreach (var redisClient in _redisClients)
-            {
-                redisClient.ContinueWith(task =>
-                {
-                    var client = task.Result;
-
-                    if (client.OnConnectionFailed == null)
-                    {
-                        client.OnConnectionFailed = OnConnectionFailed;
-                    }
-
-                    if (client.OnConnectionEstablished == null)
-                    {
-                        client.OnConnectionEstablished = OnConnectionEstablished;
-                    }
-                });
-            }
-        }
-
-        public async Task<RedisClient[]> GetAllRedisClients()
-        {
-            return await Task.WhenAll(_redisClients.Select(task => task));
-        }
-
-        private Func<RedisClient, Task> _onConnectionEstablished;
-        public Func<RedisClient, Task> OnConnectionEstablished
-        {
-            get => _onConnectionEstablished;
-            set
-            {
-                _onConnectionEstablished = value;
-                SetConnectionCallbacks();
-            }
-        }
-
-        private Func<RedisClient, Task> _onConnectionFailed;
-        public Func<RedisClient, Task> OnConnectionFailed
-        {
-            get => _onConnectionFailed;
-            set
-            {
-                _onConnectionFailed = value;
-                SetConnectionCallbacks();
-            }
-        }
+    public RedisClient GetRedisClient()
+    {
+        return _redisClients.Get();
     }
 }

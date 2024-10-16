@@ -1,22 +1,18 @@
-using System.Buffers;
-using System.Threading.Tasks;
+namespace TomLonghurst.AsyncRedisClient.Client;
 
-namespace TomLonghurst.AsyncRedisClient.Client
+public partial class RedisClient
 {
-    public partial class RedisClient
+    protected RedisClient()
     {
-        protected RedisClient()
-        {
-            CreateCommandClasses();
+        CreateCommandClasses();
 
-            StartBacklogProcessor();
-        }
+        StartBacklogProcessor();
+    }
 
-        private void CreateCommandClasses()
-        {
-            _clusterCommands = new ClusterCommands(this);
-            _serverCommands = new ServerCommands(this);
-            _scriptCommands = new ScriptCommands(this);
-        }
+    private void CreateCommandClasses()
+    {
+        _clusterCommands = new ClusterCommands(this);
+        _serverCommands = new ServerCommands(this);
+        _scriptCommands = new ScriptCommands(this);
     }
 }

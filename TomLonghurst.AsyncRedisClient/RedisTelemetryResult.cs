@@ -1,18 +1,15 @@
-using System;
+namespace TomLonghurst.AsyncRedisClient;
 
-namespace TomLonghurst.AsyncRedisClient
+public class RedisTelemetryResult
 {
-    public class RedisTelemetryResult
-    {
-        private readonly string _command;
-        private readonly TimeSpan _duration;
+    private readonly string _command;
+    private readonly TimeSpan _duration;
 
-        // TODO - More metrics here
+    // TODO - More metrics here
         
-        internal RedisTelemetryResult(string command, TimeSpan duration)
-        {
-            _command = command;
-            _duration = duration;
-        }
+    internal RedisTelemetryResult(string command, TimeSpan duration)
+    {
+        _command = command;
+        _duration = duration;
     }
 }

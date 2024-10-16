@@ -1,8 +1,7 @@
-namespace TomLonghurst.AsyncRedisClient.Enums
+namespace TomLonghurst.AsyncRedisClient.Enums;
+
+public enum AwaitOptions
 {
-    public enum AwaitOptions
-    {
-        AwaitCompletion,
-        FireAndForget
-    }
+    AwaitCompletion,
+    FireAndForget
 }

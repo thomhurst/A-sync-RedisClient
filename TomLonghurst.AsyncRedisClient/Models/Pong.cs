@@ -1,18 +1,15 @@
-using System;
+namespace TomLonghurst.AsyncRedisClient.Models;
 
-namespace TomLonghurst.AsyncRedisClient.Models
+public struct Pong
 {
-    public struct Pong
+    public TimeSpan TimeTaken { get; }
+    public string Message { get; }
+
+    public bool IsSuccessful => Message == "PONG";
+
+    internal Pong(TimeSpan timeTaken, string message)
     {
-        public TimeSpan TimeTaken { get; }
-        public string Message { get; }
-
-        public bool IsSuccessful => Message == "PONG";
-
-        internal Pong(TimeSpan timeTaken, string message)
-        {
-            TimeTaken = timeTaken;
-            Message = message;
-        }
+        TimeTaken = timeTaken;
+        Message = message;
     }
 }

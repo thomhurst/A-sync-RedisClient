@@ -1,21 +1,18 @@
-using System;
+namespace TomLonghurst.AsyncRedisClient.Exceptions;
 
-namespace TomLonghurst.AsyncRedisClient.Exceptions
+public class RedisConnectionException : RedisNonRecoverableException
 {
-    public class RedisConnectionException : RedisNonRecoverableException
+    private readonly Exception _innerException;
+
+    public override Exception GetBaseException()
     {
-        private readonly Exception _innerException;
+        return _innerException;
+    }
 
-        public override Exception GetBaseException()
-        {
-            return _innerException;
-        }
+    public override string Message => $"{_innerException.Message} - {_innerException.GetType().Name}\n{_innerException}";
 
-        public override string Message => $"{_innerException.Message} - {_innerException.GetType().Name}\n{_innerException}";
-
-        public RedisConnectionException(Exception innerException)
-        {
-            _innerException = innerException;
-        }
+    public RedisConnectionException(Exception innerException)
+    {
+        _innerException = innerException;
     }
 }

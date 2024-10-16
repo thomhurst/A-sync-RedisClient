@@ -1,44 +1,43 @@
 using System.Net.Sockets;
 
-namespace TomLonghurst.AsyncRedisClient
+namespace TomLonghurst.AsyncRedisClient;
+
+internal class RedisSocket : Socket
 {
-    internal class RedisSocket : Socket
+    internal bool IsDisposed { get; private set; }
+    public bool IsClosed { get; private set; }
+
+    ~RedisSocket()
     {
-        internal bool IsDisposed { get; private set; }
-        public bool IsClosed { get; private set; }
-
-        ~RedisSocket()
-        {
-            Close();
-            Dispose();
-        }
+        Close();
+        Dispose();
+    }
         
-        internal RedisSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType) : base(addressFamily, socketType, protocolType)
-        {
-        }
+    internal RedisSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType) : base(addressFamily, socketType, protocolType)
+    {
+    }
 
-        internal RedisSocket(SocketInformation socketInformation) : base(socketInformation)
-        {
-        }
+    internal RedisSocket(SocketInformation socketInformation) : base(socketInformation)
+    {
+    }
 
-        internal RedisSocket(SocketType socketType, ProtocolType protocolType) : base(socketType, protocolType)
-        {
-        }
+    internal RedisSocket(SocketType socketType, ProtocolType protocolType) : base(socketType, protocolType)
+    {
+    }
 
-        public new void Close()
-        {
-            IsClosed = true;
-            base.Close();
-        }
+    public new void Close()
+    {
+        IsClosed = true;
+        base.Close();
+    }
 
-        protected override void Dispose(bool disposing)
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
         {
-            if (disposing)
-            {
-                IsDisposed = true;
-            }
+            IsDisposed = true;
+        }
             
-            base.Dispose(disposing);
-        }
+        base.Dispose(disposing);
     }
 }

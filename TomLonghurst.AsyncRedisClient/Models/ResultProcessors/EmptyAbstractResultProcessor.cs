@@ -1,13 +1,10 @@
-using System.Threading.Tasks;
+namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors;
 
-namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
+public class EmptyResultProcessor : AbstractResultProcessor<object>
 {
-    public class EmptyResultProcessor : AbstractResultProcessor<object>
+    internal override ValueTask<object> Process()
     {
-        internal override ValueTask<object> Process()
-        {
-            // Do Nothing!
-            return new ValueTask<object>();
-        }
+        // Do Nothing!
+        return new ValueTask<object>();
     }
 }

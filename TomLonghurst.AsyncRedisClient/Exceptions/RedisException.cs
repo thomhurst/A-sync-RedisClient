@@ -1,9 +1,6 @@
-using System;
+namespace TomLonghurst.AsyncRedisClient.Exceptions;
 
-namespace TomLonghurst.AsyncRedisClient.Exceptions
+public abstract class RedisException : Exception
 {
-    public abstract class RedisException : Exception
-    {
         
-    }
 }

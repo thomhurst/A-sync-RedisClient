@@ -1,16 +1,12 @@
-using System;
-using TomLonghurst.AsyncRedisClient.Constants;
+namespace TomLonghurst.AsyncRedisClient.Models;
 
-namespace TomLonghurst.AsyncRedisClient.Models
+public struct StringRedisValue
 {
-    public struct StringRedisValue
-    {
-        public string Value { get; }
-        public bool HasValue => !string.IsNullOrEmpty(Value);
+    public string Value { get; }
+    public bool HasValue => !string.IsNullOrEmpty(Value);
 
-        internal StringRedisValue(string value)
-        {
-            Value = value;
-        }
+    internal StringRedisValue(string value)
+    {
+        Value = value;
     }
 }

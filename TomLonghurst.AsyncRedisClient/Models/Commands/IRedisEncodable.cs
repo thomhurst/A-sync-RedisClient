@@ -1,8 +1,7 @@
-namespace TomLonghurst.AsyncRedisClient.Models.Commands
+namespace TomLonghurst.AsyncRedisClient.Models.Commands;
+
+public interface IRedisEncodable
 {
-    public interface IRedisEncodable
-    {
-        string AsString { get; }
-        byte[] RedisEncodedBytes { get; }
-    }
+    string AsString { get; }
+    byte[] RedisEncodedBytes { get; }
 }

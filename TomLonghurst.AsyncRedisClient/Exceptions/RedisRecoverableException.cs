@@ -1,7 +1,6 @@
-namespace TomLonghurst.AsyncRedisClient.Exceptions
+namespace TomLonghurst.AsyncRedisClient.Exceptions;
+
+public abstract class RedisRecoverableException : RedisException
 {
-    public abstract class RedisRecoverableException : RedisException
-    {
         
-    }
 }

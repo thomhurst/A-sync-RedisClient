@@ -1,33 +1,21 @@
-﻿using System;
-using System.Net.Security;
+﻿using System.Net.Security;
 
-namespace TomLonghurst.AsyncRedisClient.Client
+namespace TomLonghurst.AsyncRedisClient.Client;
+
+public record RedisClientConfig(string Host, int Port)
 {
-    public class RedisClientConfig
-    {
-        public RedisClientConfig(string host, int port)
-        {
-            Host = host;
-            Port = port;
-        }
-        
-        public RedisClientConfig(string host, int port, string password)
-        {
-            Host = host;
-            Port = port;
-            Password = password;
-        }
+    public bool Ssl { get; init; }
+    public int Db { get; init; }
+    public int SendTimeoutMillis { get; init; } = 5000;
+    public int ReceiveTimeoutMillis { get; init; } = 5000;
+    public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(5);
+    public string? Password { get; init; }
+    public string? ClientName { get; init; }
+    public RemoteCertificateValidationCallback? CertificateValidationCallback { get; init; }
+    public LocalCertificateSelectionCallback? CertificateSelectionCallback { get; init; }
+    
+    
+    public Func<RedisClient, Task>? OnConnectionEstablished { get; init; }
 
-        public string Host { get; }
-        public int Port { get; }
-        public bool Ssl { get; set; }
-        public int Db { get; set; }
-        public int SendTimeoutMillis { get; set; } = 5000;
-        public int ReceiveTimeoutMillis { get; set; } = 5000;
-        public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(5);
-        public string Password { get; }
-        public string ClientName { get; set; }
-        public RemoteCertificateValidationCallback CertificateValidationCallback { get; set; }
-        public LocalCertificateSelectionCallback CertificateSelectionCallback { get; set; }
-    }
+    public Func<RedisClient, Task>? OnConnectionFailed { get; init; }
 }

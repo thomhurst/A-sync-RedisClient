@@ -1,13 +1,11 @@
-using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Extensions;
 
-namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
+namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors;
+
+public class DataResultProcessor : AbstractResultProcessor<string>
 {
-    public class DataResultProcessor : AbstractResultProcessor<string>
+    internal override async ValueTask<string> Process()
     {
-        internal override async ValueTask<string> Process()
-        {
-            return (await ReadData()).AsString();
-        }
+        return (await ReadData()).AsString();
     }
 }

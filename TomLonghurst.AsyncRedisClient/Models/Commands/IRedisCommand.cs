@@ -1,10 +1,7 @@
-using System.Collections.Generic;
+namespace TomLonghurst.AsyncRedisClient.Models.Commands;
 
-namespace TomLonghurst.AsyncRedisClient.Models.Commands
+public interface IRedisCommand
 {
-    public interface IRedisCommand
-    {
-        IList<byte[]> EncodedCommandList { get; }
-        string AsString { get; }
-    }
+    IList<byte[]> EncodedCommandList { get; }
+    string AsString { get; }
 }
