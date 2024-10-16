@@ -7,7 +7,7 @@ namespace TomLonghurst.AsyncRedisClient.Extensions;
 public static class PipeExtensions
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static async ValueTask<ReadResult> ReadAsyncOrThrowReadTimeout(this PipeReader? pipeReader, CancellationToken cancellationToken)
+    public static async ValueTask<ReadResult> ReadAsyncOrThrowReadTimeout(this PipeReader pipeReader, CancellationToken cancellationToken)
     {
         try
         {

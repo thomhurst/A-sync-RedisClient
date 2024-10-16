@@ -4,8 +4,8 @@ namespace TomLonghurst.AsyncRedisClient.Client;
 
 public partial class RedisClient : IDisposable
 {
-    private ClusterCommands? _clusterCommands;
-    public ClusterCommands? Cluster => _clusterCommands;
+    public ClusterCommands Cluster { get; }
+
     public class ClusterCommands
     {
         private readonly RedisClient _redisClient;

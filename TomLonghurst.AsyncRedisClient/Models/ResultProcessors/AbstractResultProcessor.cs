@@ -5,7 +5,6 @@ using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Extensions;
 using TomLonghurst.AsyncRedisClient.Helpers;
-using TomLonghurst.AsyncRedisClient.Models.Commands;
 
 namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors;
 

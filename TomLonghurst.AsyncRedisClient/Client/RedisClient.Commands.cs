@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using TomLonghurst.AsyncRedisClient.Constants;
+using TomLonghurst.AsyncRedisClient.Extensions;
 using TomLonghurst.AsyncRedisClient.Models;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
 using TomLonghurst.AsyncRedisClient.Models.RequestModels;
-using TomLonghurst.AsyncRedisClient.Extensions;
 
 namespace TomLonghurst.AsyncRedisClient.Client;
 

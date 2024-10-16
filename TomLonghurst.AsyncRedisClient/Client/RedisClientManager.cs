@@ -5,7 +5,7 @@ public class RedisClientManager : IAsyncDisposable
     public RedisClientConfig? ClientConfig { get; }
     private readonly CircularQueue<RedisClient> _redisClients;
 
-    public static async Task<RedisClientManager> ConnectAsync(RedisClientConfig? clientConfig)
+    public static async Task<RedisClientManager> ConnectAsync(RedisClientConfig clientConfig)
     {
         var manager = new RedisClientManager(clientConfig);
 
@@ -14,7 +14,7 @@ public class RedisClientManager : IAsyncDisposable
         return manager;
     }
     
-    private RedisClientManager(RedisClientConfig? clientConfig)
+    private RedisClientManager(RedisClientConfig clientConfig)
     {
         var redisClientPoolSize = clientConfig.PoolSize;
         

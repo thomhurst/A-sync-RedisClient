@@ -2,10 +2,6 @@ using System.Buffers;
 using System.IO.Pipelines;
 using System.Net.Sockets;
 
-#if NETSTANDARD2_0
-using TomLonghurst.AsyncRedisClient.Extensions;
-#endif
-
 namespace TomLonghurst.AsyncRedisClient.Pipes;
 
 public class SocketPipe : IDuplexPipe
@@ -45,14 +41,14 @@ public class SocketPipe : IDuplexPipe
         {
             _readPipe = new Pipe(receivePipeOptions);
                 
-            receivePipeOptions.ReaderScheduler.Schedule(_ => CopyFromSocketToReadPipe(), null);
+            receivePipeOptions.ReaderScheduler.Schedule(o => _ = CopyFromSocketToReadPipe(), null);
         }
             
         if (write)
         {
             _writePipe = new Pipe(sendPipeOptions);
                 
-            sendPipeOptions.WriterScheduler.Schedule(_ => CopyFromWritePipeToSocket(), null);
+            sendPipeOptions.WriterScheduler.Schedule(o => _ = CopyFromWritePipeToSocket(), null);
         }
     }
 
@@ -74,14 +70,8 @@ public class SocketPipe : IDuplexPipe
                 try
                 {
                     var memory = writer.GetMemory(512);
-#if !NETSTANDARD2_0
-                    var bytesRead = await _innerSocket.ReceiveAsync(memory, SocketFlags.None);
-#else
-                        var arr = memory.GetArraySegment();
-                        
-                        var bytesRead = await _innerSocket.ReceiveAsync(arr, SocketFlags.None)
-                            ;
-#endif
+
+                    var bytesRead = await _innerSocket!.ReceiveAsync(memory, SocketFlags.None);
 
                     if (bytesRead == 0)
                     {
@@ -170,27 +160,15 @@ public class SocketPipe : IDuplexPipe
 
     private Task WriteSingle(in ReadOnlySequence<byte> buffer)
     {
-#if !NETSTANDARD2_0
-        var valueTask = _innerSocket.SendAsync(buffer.First, SocketFlags.None);
+        var valueTask = _innerSocket!.SendAsync(buffer.First, SocketFlags.None);
         return valueTask.IsCompletedSuccessfully ? Task.CompletedTask : valueTask.AsTask();
-#else
-            var arr = buffer.First.GetArraySegment();
-            return _innerSocket.SendAsync(arr, SocketFlags.None);
-#endif
     }
 
     private async Task WriteMultiple(ReadOnlySequence<byte> buffer)
     {
         foreach (var segment in buffer)
         {
-#if !NETSTANDARD2_0
-            await _innerSocket.SendAsync(segment, SocketFlags.None);
-#else
-                var arraySegment = segment.GetArraySegment();
-                await _innerSocket
-                    .SendAsync(arraySegment, SocketFlags.None)
-                    ;
-#endif
+            await _innerSocket!.SendAsync(segment, SocketFlags.None);
         }
     }
 }

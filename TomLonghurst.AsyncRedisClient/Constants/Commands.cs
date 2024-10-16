@@ -1,14 +1,14 @@
 ﻿// ReSharper disable InconsistentNaming
 // ReSharper disable IdentifierTypo
 
-using TomLonghurst.AsyncRedisClient.Models.Commands;
 using TomLonghurst.AsyncRedisClient.Extensions;
+using TomLonghurst.AsyncRedisClient.Models.Commands;
 
 namespace TomLonghurst.AsyncRedisClient.Constants;
 
 internal static class Commands
 {
-    internal static readonly IRedisCommand? Quit = "QUIT".ToRedisCommand();
+    internal static readonly IRedisCommand Quit = "QUIT".ToRedisCommand();
     internal static readonly IRedisEncodable Auth = "AUTH".ToRedisEncoded();
     internal static readonly IRedisEncodable Exists = "EXISTS".ToRedisEncoded();
     internal static readonly IRedisEncodable Del = "DEL".ToRedisEncoded();
@@ -19,25 +19,25 @@ internal static class Commands
     internal static readonly IRedisEncodable RenameNx = "RENAMENX".ToRedisEncoded();
     internal static readonly IRedisEncodable PExpire = "PEXPIRE".ToRedisEncoded();
     internal static readonly IRedisEncodable PExpireAt = "PEXPIREAT".ToRedisEncoded();
-    internal static readonly IRedisCommand? DbSize = "DBSIZE".ToRedisCommand();
+    internal static readonly IRedisCommand DbSize = "DBSIZE".ToRedisCommand();
     internal static readonly IRedisEncodable Expire = "EXPIRE".ToRedisEncoded();
     internal static readonly IRedisEncodable ExpireAt = "EXPIREAT".ToRedisEncoded();
     internal static readonly IRedisEncodable Ttl = "TTL".ToRedisEncoded();
     internal static readonly IRedisEncodable PTtl = "PTTL".ToRedisEncoded();
     internal static readonly IRedisEncodable Select = "SELECT".ToRedisEncoded();
-    internal static readonly IRedisCommand? FlushDb = "FLUSHDB".ToRedisCommand();
-    internal static readonly IRedisCommand? FlushAll = "FLUSHALL".ToRedisCommand();
-    internal static readonly IRedisCommand? Ping = "PING".ToRedisCommand();
+    internal static readonly IRedisCommand FlushDb = "FLUSHDB".ToRedisCommand();
+    internal static readonly IRedisCommand FlushAll = "FLUSHALL".ToRedisCommand();
+    internal static readonly IRedisCommand Ping = "PING".ToRedisCommand();
     internal static readonly IRedisEncodable Echo = "ECHO".ToRedisEncoded();
 
     internal static readonly IRedisEncodable Save = "SAVE".ToRedisEncoded();
-    internal static readonly IRedisCommand? BgSave = "BGSAVE".ToRedisCommand();
+    internal static readonly IRedisCommand BgSave = "BGSAVE".ToRedisCommand();
     internal static readonly IRedisEncodable LastSave = "LASTSAVE".ToRedisEncoded();
-    internal static readonly IRedisCommand? Shutdown = "SHUTDOWN".ToRedisCommand();
+    internal static readonly IRedisCommand Shutdown = "SHUTDOWN".ToRedisCommand();
     internal static readonly IRedisEncodable NoSave = "NOSAVE".ToRedisEncoded();
     internal static readonly IRedisEncodable BgRewriteAof = "BGREWRITEAOF".ToRedisEncoded();
 
-    internal static readonly IRedisCommand? Info = "INFO".ToRedisCommand();
+    internal static readonly IRedisCommand Info = "INFO".ToRedisCommand();
     internal static readonly IRedisEncodable SlaveOf = "SLAVEOF".ToRedisEncoded();
     internal static readonly IRedisEncodable No = "NO".ToRedisEncoded();
     internal static readonly IRedisEncodable One = "ONE".ToRedisEncoded();
@@ -124,12 +124,12 @@ internal static class Commands
     internal static readonly IRedisEncodable PUnSubscribe = "PUNSUBSCRIBE".ToRedisEncoded();
     internal static readonly IRedisEncodable Publish = "PUBLISH".ToRedisEncoded();
 
-    internal static readonly IRedisCommand? ClusterInfo = "CLUSTER INFO".ToRedisCommand();
+    internal static readonly IRedisCommand ClusterInfo = "CLUSTER INFO".ToRedisCommand();
 
-    internal static readonly IRedisCommand? ScriptFlush = "SCRIPT FLUSH".ToRedisCommand();
+    internal static readonly IRedisCommand ScriptFlush = "SCRIPT FLUSH".ToRedisCommand();
 
     internal static readonly IEnumerable<IRedisEncodable> ScriptLoad =
-        new List<IRedisEncodable> {{"SCRIPT".ToRedisEncoded()}, "LOAD".ToRedisEncoded()};
+        new List<IRedisEncodable> {"SCRIPT".ToRedisEncoded(), "LOAD".ToRedisEncoded()};
         
     internal static readonly IRedisEncodable Script = "SCRIPT".ToRedisEncoded();
     internal static readonly IRedisEncodable Load = "LOAD".ToRedisEncoded();

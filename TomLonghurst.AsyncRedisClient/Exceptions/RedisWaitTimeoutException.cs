@@ -1,12 +1,13 @@
+using TomLonghurst.AsyncRedisClient.Client;
 using TomLonghurst.AsyncRedisClient.Helpers;
 
 namespace TomLonghurst.AsyncRedisClient.Exceptions;
 
 public class RedisWaitTimeoutException : RedisRecoverableException
 {
-    private readonly Client.RedisClient _redisClient;
+    private readonly RedisClient _redisClient;
 
-    internal RedisWaitTimeoutException(Client.RedisClient redisClient)
+    internal RedisWaitTimeoutException(RedisClient redisClient)
     {
         _redisClient = redisClient;
     }
@@ -20,7 +21,7 @@ public class RedisWaitTimeoutException : RedisRecoverableException
                     Client {_redisClient.ClientId}
                     {workerThreadStats}
                     {ioThreadStats}
-                    Last Command: {_redisClient.LastCommand.AsString}
+                    Last Command: {_redisClient.LastCommand?.AsString}
                     """;
         }
     }

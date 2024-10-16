@@ -4,8 +4,8 @@ namespace TomLonghurst.AsyncRedisClient.Client;
 
 public partial class RedisClient : IDisposable
 {
-    private ServerCommands? _serverCommands;
-    public ServerCommands? Server => _serverCommands;
+    public ServerCommands Server { get; }
+
     public class ServerCommands
     {
         private readonly RedisClient _redisClient;

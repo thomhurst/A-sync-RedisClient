@@ -9,22 +9,15 @@ public class RedisCommand : IRedisCommand
 
     private byte[][]? _encodedCommand;
 
-    public IList<byte[]>? EncodedCommandList
+    public byte[][] EncodedCommandList
     {
         get
         {
-            if (_encodedCommand != null)
-            {
-                return _encodedCommand;
-            }
-
-            _encodedCommand =
+            return _encodedCommand ??=
             [
                 $"*{RawBytes.Length}".ToUtf8BytesWithTerminator(),
                 ..EncodeRawBytes()
             ];
-
-            return _encodedCommand;
         }
     }
 

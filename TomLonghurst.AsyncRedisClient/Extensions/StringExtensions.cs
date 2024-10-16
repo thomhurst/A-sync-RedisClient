@@ -86,47 +86,38 @@ internal static class StringExtensions
         return value.Split([delimiter], StringSplitOptions.RemoveEmptyEntries);
     }
 
-    internal static IRedisCommand? ToFireAndForgetCommand(this IEnumerable<RedisCommand?> commands)
+    internal static IRedisCommand ToFireAndForgetCommand(this IEnumerable<RedisCommand> commands)
     {
         var enumerable = commands.ToList();
         if (enumerable.Count > 1)
         {
-            var clientReplyOff = RedisCommand.From("CLIENT".ToRedisEncoded(),
-                "REPLY".ToRedisEncoded(),
-                "OFF".ToRedisEncoded());
+            return MultiRedisCommand.From(
+                [
+                    RedisCommand.From("CLIENT".ToRedisEncoded(),
+                        "REPLY".ToRedisEncoded(),
+                        "OFF".ToRedisEncoded()),
 
-            var fireAndForgetCommands = new List<RedisCommand?> { clientReplyOff };
-                
-            fireAndForgetCommands.AddRange(enumerable);
-                
-            var clientReplyOn = RedisCommand.From("CLIENT".ToRedisEncoded(),
-                "REPLY".ToRedisEncoded(),
-                "ON".ToRedisEncoded());
-            
-            fireAndForgetCommands.Add(clientReplyOn);
-                
-            return MultiRedisCommand.From(fireAndForgetCommands);
+                    ..enumerable,
+
+                    RedisCommand.From("CLIENT".ToRedisEncoded(),
+                        "REPLY".ToRedisEncoded(),
+                        "ON".ToRedisEncoded())
+                ]
+            );
         }
-        else
-        {
-            return enumerable.First();
-        }
+
+        return enumerable.First();
     }
         
-    internal static IRedisCommand? ToPipelinedCommand(this IEnumerable<IRedisCommand?> commands)
+    internal static IRedisCommand ToPipelinedCommand(this IEnumerable<IRedisCommand> commands)
     {
         var enumerable = commands.ToList();
+        
         if (enumerable.Count > 1)
         {
-            var fireAndForgetCommands = new List<IRedisCommand?>();
-                
-            fireAndForgetCommands.AddRange(enumerable);
+            return MultiRedisCommand.From(enumerable);
+        }
 
-            return MultiRedisCommand.From(fireAndForgetCommands);
-        }
-        else
-        {
-            return enumerable.First();
-        }
+        return enumerable[0];
     }
 }

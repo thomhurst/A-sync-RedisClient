@@ -21,7 +21,7 @@ public partial class RedisClient : IDisposable
 
     private readonly SemaphoreSlim _connectSemaphoreSlim = new(1, 1);
 
-    public RedisClientConfig? ClientConfig { get; }
+    public RedisClientConfig ClientConfig { get; }
 
     private RedisSocket? _socket;
 
@@ -69,9 +69,16 @@ public partial class RedisClient : IDisposable
         }
     }
 
-    protected RedisClient(RedisClientConfig? redisClientConfig) : this()
+    protected RedisClient(RedisClientConfig redisClientConfig)
     {
         ClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
+
+        Cluster = new ClusterCommands(this);
+        Server = new ServerCommands(this);
+        Scripts = new ScriptCommands(this);
+        
+        StartBacklogProcessor();
+        
         _connectionChecker = new Timer(CheckConnection, null, 2500, 250);
     }
 
@@ -88,12 +95,12 @@ public partial class RedisClient : IDisposable
         }
     }
 
-    internal static Task<RedisClient> ConnectAsync(RedisClientConfig? redisClientConfig)
+    internal static Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig)
     {
         return ConnectAsync(redisClientConfig, CancellationToken.None);
     }
 
-    internal static async Task<RedisClient> ConnectAsync(RedisClientConfig? redisClientConfig, CancellationToken cancellationToken)
+    internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
     {
         var redisClient = new RedisClient(redisClientConfig);
         await redisClient.TryConnectAsync(cancellationToken);
@@ -197,7 +204,7 @@ public partial class RedisClient : IDisposable
             }
             else
             {
-                _socketPipe = SocketPipe.GetDuplexPipe(_socket, redisPipeOptions.SendOptions, redisPipeOptions.ReceiveOptions);
+                _socketPipe = SocketPipe.GetDuplexPipe(_socket, redisPipeOptions.SendOptions ?? new PipeOptions(), redisPipeOptions.ReceiveOptions ?? new PipeOptions());
                 _pipeWriter = _socketPipe.Output;
                 _pipeReader = _socketPipe.Input;
             }
@@ -227,7 +234,7 @@ public partial class RedisClient : IDisposable
 
     private void OptimiseSocket()
     {
-        if (_socket.AddressFamily == AddressFamily.Unix)
+        if (_socket!.AddressFamily == AddressFamily.Unix)
         {
             return;
         }
