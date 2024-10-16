@@ -13,8 +13,8 @@ public partial class RedisClient : IDisposable
     {
         private readonly RedisClient _redisClient;
 
-        internal LuaScript MultiExpireScript;
-        internal LuaScript MultiSetexScript;
+        internal LuaScript? MultiExpireScript;
+        internal LuaScript? MultiSetexScript;
 
         internal ScriptCommands(RedisClient redisClient)
         {

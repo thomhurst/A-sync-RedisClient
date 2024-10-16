@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Helpers;
 using TomLonghurst.AsyncRedisClient.Models.Backlog;
@@ -181,18 +182,19 @@ public partial class RedisClient : IDisposable
     }
 
         
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private async ValueTask RunWithTimeout(Func<CancellationToken, ValueTask> action,
         CancellationToken originalCancellationToken)
     {
         originalCancellationToken.ThrowIfCancellationRequested();
 
-        var cancellationTokenWithTimeout =
-            CancellationTokenHelper.CancellationTokenWithTimeout(ClientConfig.Timeout,
-                originalCancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(originalCancellationToken);
+        
+        cts.CancelAfter(ClientConfig.Timeout);
 
         try
         {
-            await action.Invoke(cancellationTokenWithTimeout.Token);
+            await action.Invoke(cts.Token);
         }
         catch (OperationCanceledException operationCanceledException)
         {
@@ -207,10 +209,6 @@ public partial class RedisClient : IDisposable
             }
 
             throw;
-        }
-        finally
-        {
-            cancellationTokenWithTimeout.Dispose();
         }
     }
 

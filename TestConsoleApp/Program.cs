@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Testcontainers.Redis;
 using TomLonghurst.AsyncRedisClient.Client;
-using TomLonghurst.AsyncRedisClient.Enums;
 
 namespace TestConsoleApp;
 
@@ -103,8 +102,7 @@ class Program
         {
             var (key, value) = TestData.PickRandom();
                 
-            await TomLonghurstRedisClient.StringSetAsync(key, value, 120,
-                AwaitOptions.FireAndForget);
+            await TomLonghurstRedisClient.StringSetAsync(key, value, 120);
         }
     } 
         

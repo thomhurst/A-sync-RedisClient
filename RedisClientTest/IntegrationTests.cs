@@ -8,7 +8,6 @@ using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using StackExchange.Redis;
 using TomLonghurst.AsyncRedisClient.Client;
-using TomLonghurst.AsyncRedisClient.Enums;
 using TomLonghurst.AsyncRedisClient.Models.RequestModels;
 using Assembly = System.Reflection.Assembly;
 
@@ -43,7 +42,7 @@ public class Tests : TestBase
     [Test]
     public async Task Values(string value)
     {
-        await Client.StringSetAsync("key", value, AwaitOptions.AwaitCompletion);
+        await Client.StringSetAsync("key", value);
         var redisValue = await Client.StringGetAsync("key");
             
         await Assert.That(redisValue.Value).IsEqualTo(value);
@@ -60,7 +59,7 @@ public class Tests : TestBase
             new("key3", "value with a space3")
         };
             
-        await Client.StringSetAsync(data, AwaitOptions.AwaitCompletion);
+        await Client.StringSetAsync(data);
             
         var redisValue1 = await Client.StringGetAsync("key1");
         await Assert.That(redisValue1.Value).IsEqualTo("value with a space1");
@@ -87,7 +86,7 @@ public class Tests : TestBase
     public async Task LargeValue(string key, string filename)
     {
         var largeValueJson = await File.ReadAllTextAsync(filename);
-        await Client.StringSetAsync(key, largeValueJson, AwaitOptions.AwaitCompletion);
+        await Client.StringSetAsync(key, largeValueJson);
         var result = await Client.StringGetAsync(key);
         await Client.ExpireAsync(key, 120);
             
@@ -130,8 +129,7 @@ public class Tests : TestBase
                             
                         await Time("Set", async delegate
                         {
-                            await client.StringSetAsync($"MemoryTestKey{i1}", largeJsonContents, 120,
-                                AwaitOptions.AwaitCompletion);
+                            await client.StringSetAsync($"MemoryTestKey{i1}", largeJsonContents, 120);
                         });
 
                         await Time("Get", async delegate
@@ -142,7 +140,7 @@ public class Tests : TestBase
 
                         await Time("Delete", async delegate
                         {
-                            await client.DeleteKeyAsync($"MultiTestKey{i1}", AwaitOptions.AwaitCompletion);
+                            await client.DeleteKeyAsync($"MultiTestKey{i1}");
                         });
                     }
                     catch (Exception e)
@@ -207,8 +205,7 @@ public class Tests : TestBase
                 {
                     await Client.StringSetAsync("SingleKey",
                         "123",
-                        120,
-                        AwaitOptions.AwaitCompletion);
+                        120);
 
                     for (var outer = 0; outer < 5; outer++)
                     {
@@ -268,8 +265,7 @@ public class Tests : TestBase
             var client = Client;
             await client.StringSetAsync("SingleKey",
                 "123",
-                120,
-                AwaitOptions.AwaitCompletion);
+                120);
 
             var tomLonghurstRedisClientStopwatch = Stopwatch.StartNew();
 
@@ -300,9 +296,9 @@ public class Tests : TestBase
         await Assert.That(getDoesntExist.Count).IsEqualTo(2);
         await Assert.That(getDoesntExist.Count(value => value.HasValue)).IsEqualTo(0);
             
-        await Client.StringSetAsync("TestyMcTestFace", "123", 120, AwaitOptions.FireAndForget);
-        await Client.StringSetAsync("TestyMcTestFace2", "1234", 120, AwaitOptions.FireAndForget);
-        await Client.StringSetAsync("TestyMcTestFace3", "12345", 120, AwaitOptions.FireAndForget);
+        await Client.StringSetAsync("TestyMcTestFace", "123", 120);
+        await Client.StringSetAsync("TestyMcTestFace2", "1234", 120);
+        await Client.StringSetAsync("TestyMcTestFace3", "12345", 120);
             
         var getValue = await Client.StringGetAsync(["TestyMcTestFace", "TestyMcTestFace2", "TestyMcTestFace3"
         ]);
@@ -312,7 +308,7 @@ public class Tests : TestBase
         await Assert.That(getValueSingle.Value).IsEqualTo("123");
 
             
-        await Client.StringSetAsync("KeyExists", "123", AwaitOptions.AwaitCompletion);
+        await Client.StringSetAsync("KeyExists", "123");
         var keyExistsFalse = await Client.KeyExistsAsync("KeyDoesntExist");
         await Assert.That(keyExistsFalse).IsEqualTo(false);
         var keyExistsTrue = await Client.KeyExistsAsync("KeyExists");
@@ -355,7 +351,7 @@ public class Tests : TestBase
     [Repeat(2)]
     public async Task GetExistingKeyAmongstNonExistingKeys()
     {
-        await Client.StringSetAsync("Exists", "123", 30, AwaitOptions.AwaitCompletion);
+        await Client.StringSetAsync("Exists", "123", 30);
         var values = (await Client.StringGetAsync(["Blah1", "Blah2", "Exists", "Blah4", "Blah5"
         ])).ToList();
         await Assert.That(values.Count).IsEqualTo(5);
@@ -366,11 +362,11 @@ public class Tests : TestBase
     [Repeat(2)]
     public async Task SetGetDeleteSingleKey()
     {
-        await Client.StringSetAsync("SingleKey", "123", AwaitOptions.AwaitCompletion);
+        await Client.StringSetAsync("SingleKey", "123");
         var redisValue = await Client.StringGetAsync("SingleKey");
         await Assert.That(redisValue.Value).IsEqualTo("123");
             
-        await Client.DeleteKeyAsync("SingleKey", AwaitOptions.AwaitCompletion);
+        await Client.DeleteKeyAsync("SingleKey");
         redisValue = await Client.StringGetAsync("SingleKey");
         await Assert.That(redisValue.HasValue).IsEqualTo(false);
     }
@@ -379,7 +375,7 @@ public class Tests : TestBase
     [Repeat(2)]
     public async Task SetGetSingleKeyWithTtl()
     {
-        await Client.StringSetAsync("SingleKeyWithTtl", "123", 30, AwaitOptions.AwaitCompletion);
+        await Client.StringSetAsync("SingleKeyWithTtl", "123", 30);
         var redisValue = await Client.StringGetAsync("SingleKeyWithTtl");
         await Assert.That(redisValue.Value).IsEqualTo("123");
     }
@@ -397,8 +393,7 @@ public class Tests : TestBase
                 new("BlahTTL4", "Blah4"),
                 new("BlahTTL5", "Blah5")
             },
-            120,
-            AwaitOptions.AwaitCompletion);
+            120);
 
         var ttl = await client.TimeToLiveAsync("BlahTTL1");
         await Assert.That(ttl).IsPositive().And.IsLessThanOrEqualTo(125);
@@ -416,8 +411,7 @@ public class Tests : TestBase
                 new("BlahExpire3", "Blah3"),
                 new("BlahExpire4", "Blah4"),
                 new("BlahExpire5", "Blah5")
-            },
-            AwaitOptions.AwaitCompletion);
+            });
 
         await client.ExpireAsync(new List<string>
         {
@@ -426,7 +420,7 @@ public class Tests : TestBase
             "BlahExpire3",
             "BlahExpire4",
             "BlahExpire5"
-        }, 120, AwaitOptions.AwaitCompletion);
+        }, 120);
 
         var ttl = await client.TimeToLiveAsync("BlahExpire1");
         await Assert.That(ttl).IsPositive().And.IsLessThanOrEqualTo(125);
@@ -443,7 +437,7 @@ public class Tests : TestBase
             new("MultiKey3", "3")
         };
             
-        await Client.StringSetAsync(keyValues, AwaitOptions.AwaitCompletion);
+        await Client.StringSetAsync(keyValues);
         var redisValues = (await Client.StringGetAsync(["MultiKey1", "MultiKey2", "MultiKey3"])).ToList();
         await Assert.That(redisValues.Count).IsEqualTo(3);
         await Assert.That(redisValues[0].Value).IsEqualTo("1");
@@ -461,7 +455,7 @@ public class Tests : TestBase
         {
             "Pipeline1", "Pipeline2", "Pipeline3", "Pipeline4", "Pipeline5", "Pipeline6", "Pipeline7", "Pipeline8"
         };
-        var results = keys.Select(key => tomLonghurstRedisClient.StringSetAsync(key, "123", 30, AwaitOptions.FireAndForget));
+        var results = keys.Select(key => tomLonghurstRedisClient.StringSetAsync(key, "123", 30));
             
         await Task.WhenAll(results);
 
@@ -471,25 +465,21 @@ public class Tests : TestBase
             await Assert.That(value.Value).IsEqualTo("123");
         }
     }
-
-    [Arguments(AwaitOptions.AwaitCompletion)]
-    [Arguments(AwaitOptions.FireAndForget)]
+    
     [Test]
     [Repeat(2)]
-    public async Task SetGetMultipleKeyWithTtlMultiple(AwaitOptions awaitOptions)
+    public async Task SetGetMultipleKeyWithTtlMultiple()
     {
-        await SetGetMultipleKeyWithTtl(awaitOptions);
-        await SetGetMultipleKeyWithTtl(awaitOptions);
-        await SetGetMultipleKeyWithTtl(awaitOptions);
-        await SetGetMultipleKeyWithTtl(awaitOptions);
-        await SetGetMultipleKeyWithTtl(awaitOptions);
+        await SetGetMultipleKeyWithTtl();
+        await SetGetMultipleKeyWithTtl();
+        await SetGetMultipleKeyWithTtl();
+        await SetGetMultipleKeyWithTtl();
+        await SetGetMultipleKeyWithTtl();
     }
-        
-    [Arguments(AwaitOptions.AwaitCompletion)]
-    [Arguments(AwaitOptions.FireAndForget)]
+    
     [Test]
     [Repeat(2)]
-    public async Task SetGetMultipleKeyWithTtl(AwaitOptions awaitOptions)
+    public async Task SetGetMultipleKeyWithTtl()
     {
         var keyValues = new List<RedisKeyValue>
         {
@@ -498,7 +488,7 @@ public class Tests : TestBase
             new("MultiKeyWithTtl3", "3")
         };
             
-        await Client.StringSetAsync(keyValues, 120, awaitOptions);
+        await Client.StringSetAsync(keyValues, 120);
         var redisValues = (await Client.StringGetAsync(["MultiKeyWithTtl1", "MultiKeyWithTtl2", "MultiKeyWithTtl3"
         ])).ToList();
         await Assert.That(redisValues.Count).IsEqualTo(3);
@@ -520,7 +510,7 @@ public class Tests : TestBase
     [Repeat(2)]
     public async Task KeyExists()
     {
-        await Client.StringSetAsync("KeyExistsCheck", "123", 30, AwaitOptions.AwaitCompletion);
+        await Client.StringSetAsync("KeyExistsCheck", "123", 30);
         var exists = await Client.KeyExistsAsync("KeyExistsCheck");
         var doesntExist = await Client.KeyExistsAsync("KeyDoesntExistsCheck");
             
@@ -542,7 +532,7 @@ public class Tests : TestBase
     public async Task Disconnected()
     {
         var client = _redisManager.GetRedisClient();
-        await client.StringSetAsync("DisconnectTest", "123", 120, AwaitOptions.AwaitCompletion);
+        await client.StringSetAsync("DisconnectTest", "123", 120);
         var redisValue = await client.StringGetAsync("DisconnectTest");
         await Assert.That(redisValue.Value).IsEqualTo("123");
             
@@ -622,7 +612,7 @@ public class Tests : TestBase
     [Repeat(2)]
     public async Task Incr(string key)
     {
-        await Client.DeleteKeyAsync(key, AwaitOptions.AwaitCompletion);
+        await Client.DeleteKeyAsync(key);
             
         var one = await Client.IncrementAsync(key);
         await Assert.That(one).IsEqualTo(1);
@@ -692,7 +682,7 @@ public class Tests : TestBase
     [Repeat(2)]
     public async Task Expire()
     {
-        await Client.StringSetAsync("ExpireKey", "123", AwaitOptions.AwaitCompletion);
+        await Client.StringSetAsync("ExpireKey", "123");
         var ttl = await Client.TimeToLiveAsync("ExpireKey");
         await Assert.That(ttl).IsEqualTo(-1);
             
@@ -713,7 +703,7 @@ public class Tests : TestBase
     [Repeat(2)]
     public async Task ExpireAt()
     {
-        await Client.StringSetAsync("ExpireKeyDateTime", "123", AwaitOptions.AwaitCompletion);
+        await Client.StringSetAsync("ExpireKeyDateTime", "123");
         await Client.ExpireAtAsync("ExpireKeyDateTime", DateTimeOffset.Now.AddSeconds(30));
         var ttl = await Client.TimeToLiveAsync("ExpireKeyDateTime");
         await Assert.That(ttl).IsLessThanOrEqualTo(33);
