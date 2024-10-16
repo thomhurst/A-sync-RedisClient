@@ -149,8 +149,8 @@ public partial class RedisClient : IDisposable
 
             _socket = new RedisSocket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
             {
-                SendTimeout = ClientConfig.SendTimeoutMillis,
-                ReceiveTimeout = ClientConfig.ReceiveTimeoutMillis
+                SendTimeout = ClientConfig.Timeout.Milliseconds,
+                ReceiveTimeout = ClientConfig.Timeout.Milliseconds
             };
                 
             OptimiseSocket();
