@@ -146,12 +146,10 @@ public partial class RedisClient
     {
         originalCancellationToken.ThrowIfCancellationRequested();
             
-        var cancellationTokenWithTimeout =
+        using var cancellationTokenWithTimeout =
             CancellationTokenHelper.CancellationTokenWithTimeout(ClientConfig.Timeout,
                 originalCancellationToken);
-
-        var stopwatch = Stopwatch.StartNew();
-
+        
         try
         {
             return await action.Invoke(cancellationTokenWithTimeout.Token);
@@ -168,11 +166,6 @@ public partial class RedisClient
             }
 
             throw;
-        }
-        finally
-        {
-            InvokeTelemetryCallback(stopwatch);
-            cancellationTokenWithTimeout.Dispose();
         }
     }
 

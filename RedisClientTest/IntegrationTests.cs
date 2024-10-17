@@ -269,7 +269,7 @@ public class Tests : TestBase
 
             for (var i = 0; i < 200; i++)
             {
-                tasks.Add(client.StringGetAsync("SingleKey"));
+                tasks.Add(client.StringGetAsync("SingleKey").AsTask());
             }
                 
             await Task.WhenAll(tasks);
@@ -453,7 +453,7 @@ public class Tests : TestBase
         {
             "Pipeline1", "Pipeline2", "Pipeline3", "Pipeline4", "Pipeline5", "Pipeline6", "Pipeline7", "Pipeline8"
         };
-        var results = keys.Select(key => tomLonghurstRedisClient.StringSetAsync(key, "123", 30));
+        var results = keys.Select(key => tomLonghurstRedisClient.StringSetAsync(key, "123", 30).AsTask());
             
         await Task.WhenAll(results);
 
@@ -563,13 +563,13 @@ public class Tests : TestBase
         var client3 = _redisManager.GetRedisClient();
             
         var resultTask =
-            client1.StringGetAsync(keys);
+            client1.StringGetAsync(keys).AsTask();
             
         var result2Task =
-            client2.StringGetAsync(keys);
+            client2.StringGetAsync(keys).AsTask();
             
         var result3Task =
-            client3.StringGetAsync(keys);
+            client3.StringGetAsync(keys).AsTask();
 
         var result = await Task.WhenAll(resultTask, result2Task, result3Task);
 

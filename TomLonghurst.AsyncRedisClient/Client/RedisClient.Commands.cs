@@ -28,12 +28,12 @@ public partial class RedisClient : IDisposable
         }, cancellationToken);
     }
 
-    public Task<Pong> Ping()
+    public ValueTask<Pong> Ping()
     {
         return Ping(CancellationToken.None);
     }
 
-    public async Task<Pong> Ping(CancellationToken cancellationToken)
+    public async ValueTask<Pong> Ping(CancellationToken cancellationToken)
     {
         return await RunWithTimeout(async token =>
         {
@@ -47,12 +47,12 @@ public partial class RedisClient : IDisposable
         }, cancellationToken);
     }
 
-    public Task<bool> KeyExistsAsync(string key)
+    public ValueTask<bool> KeyExistsAsync(string key)
     {
         return KeyExistsAsync(key, CancellationToken.None);
     }
 
-    public async Task<bool> KeyExistsAsync(string key,
+    public async ValueTask<bool> KeyExistsAsync(string key,
         CancellationToken cancellationToken)
     {
         return await RunWithTimeout(async token =>
@@ -62,12 +62,12 @@ public partial class RedisClient : IDisposable
         }, cancellationToken) == 1;
     }
 
-    public Task<StringRedisValue> StringGetAsync(string key)
+    public ValueTask<StringRedisValue> StringGetAsync(string key)
     {
         return StringGetAsync(key, CancellationToken.None);
     }
 
-    public async Task<StringRedisValue> StringGetAsync(string key,
+    public async ValueTask<StringRedisValue> StringGetAsync(string key,
         CancellationToken cancellationToken)
     {
         return new StringRedisValue(await RunWithTimeout(async token =>
@@ -77,12 +77,12 @@ public partial class RedisClient : IDisposable
         }, cancellationToken));
     }
 
-    public Task<IEnumerable<StringRedisValue>> StringGetAsync(IEnumerable<string> keys)
+    public ValueTask<IEnumerable<StringRedisValue>> StringGetAsync(IEnumerable<string> keys)
     {
         return StringGetAsync(keys, CancellationToken.None);
     }
 
-    public async Task<IEnumerable<StringRedisValue>> StringGetAsync(IEnumerable<string> keys,
+    public async ValueTask<IEnumerable<StringRedisValue>> StringGetAsync(IEnumerable<string> keys,
         CancellationToken cancellationToken)
     {
         return await RunWithTimeout(async token =>
@@ -93,23 +93,23 @@ public partial class RedisClient : IDisposable
         }, cancellationToken);
     }
 
-    public Task StringSetAsync(string key, string value, int timeToLiveInSeconds)
+    public ValueTask StringSetAsync(string key, string value, int timeToLiveInSeconds)
     {
         return StringSetAsync(new RedisKeyValue(key, value), timeToLiveInSeconds);
     }
 
-    private Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds)
+    private ValueTask StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds)
     {
         return StringSetAsync(redisKeyValue, timeToLiveInSeconds, CancellationToken.None);
     }
 
-    public Task StringSetAsync(string key, string value, int timeToLiveInSeconds,
+    public ValueTask StringSetAsync(string key, string value, int timeToLiveInSeconds,
         CancellationToken cancellationToken)
     {
         return StringSetAsync(new RedisKeyValue(key, value), cancellationToken);
     }
         
-    private async Task StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds,
+    private async ValueTask StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds,
         CancellationToken cancellationToken)
     {
         await RunWithTimeout(async token =>
@@ -121,22 +121,22 @@ public partial class RedisClient : IDisposable
         }, cancellationToken);
     }
 
-    public Task StringSetAsync(string key, string value)
+    public ValueTask StringSetAsync(string key, string value)
     {
         return StringSetAsync(new RedisKeyValue(key, value));
     }
         
-    private Task StringSetAsync(RedisKeyValue redisKeyValue)
+    private ValueTask StringSetAsync(RedisKeyValue redisKeyValue)
     {
         return StringSetAsync(redisKeyValue, CancellationToken.None);
     }
 
-    public Task StringSetAsync(string key, string value, CancellationToken cancellationToken)
+    public ValueTask StringSetAsync(string key, string value, CancellationToken cancellationToken)
     {
         return StringSetAsync(new RedisKeyValue(key, value), cancellationToken);
     }
         
-    private async Task StringSetAsync(RedisKeyValue redisKeyValue,
+    private async ValueTask StringSetAsync(RedisKeyValue redisKeyValue,
         CancellationToken cancellationToken)
     {
         await RunWithTimeout(async token =>
@@ -146,12 +146,12 @@ public partial class RedisClient : IDisposable
         }, cancellationToken);
     }
 
-    public Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs)
+    public ValueTask StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs)
     {
         return StringSetAsync(keyValuePairs, CancellationToken.None);
     }
 
-    public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
+    public async ValueTask StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
         CancellationToken cancellationToken)
     {
         await RunWithTimeout(async token =>
@@ -162,13 +162,13 @@ public partial class RedisClient : IDisposable
         }, cancellationToken);
     }
         
-    public Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs, 
+    public ValueTask StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs, 
         int timeToLiveInSeconds)
     {
         return StringSetAsync(keyValuePairs, timeToLiveInSeconds, CancellationToken.None);
     }
 
-    public async Task StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
+    public async ValueTask StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs,
         int timeToLiveInSeconds, 
         CancellationToken cancellationToken)
     {
@@ -192,23 +192,23 @@ public partial class RedisClient : IDisposable
         }, cancellationToken);
     }
 
-    public Task DeleteKeyAsync(string key)
+    public ValueTask DeleteKeyAsync(string key)
     {
         return DeleteKeyAsync(key, CancellationToken.None);
     }
 
-    public Task DeleteKeyAsync(string key,
+    public ValueTask DeleteKeyAsync(string key,
         CancellationToken cancellationToken)
     {
         return DeleteKeyAsync([key], cancellationToken);
     }
 
-    public Task DeleteKeyAsync(IEnumerable<string> keys)
+    public ValueTask DeleteKeyAsync(IEnumerable<string> keys)
     {
         return DeleteKeyAsync(keys, CancellationToken.None);
     }
 
-    public async Task DeleteKeyAsync(IEnumerable<string> keys,
+    public async ValueTask DeleteKeyAsync(IEnumerable<string> keys,
         CancellationToken cancellationToken)
     {
         await RunWithTimeout(async token => 
