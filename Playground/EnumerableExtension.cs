@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace TestConsoleApp;
+namespace Playground;
 
 public static class EnumerableExtension
 {

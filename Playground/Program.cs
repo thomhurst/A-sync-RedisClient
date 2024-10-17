@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Testcontainers.Redis;
 using TomLonghurst.AsyncRedisClient.Client;
 
-namespace TestConsoleApp;
+namespace Playground;
 
 class Program
 {
