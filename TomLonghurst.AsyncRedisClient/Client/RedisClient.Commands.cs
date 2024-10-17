@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using TomLonghurst.AsyncRedisClient.Constants;
-using TomLonghurst.AsyncRedisClient.Extensions;
 using TomLonghurst.AsyncRedisClient.Models;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
 using TomLonghurst.AsyncRedisClient.Models.RequestModels;
@@ -9,13 +8,13 @@ namespace TomLonghurst.AsyncRedisClient.Client;
 
 public partial class RedisClient : IDisposable
 {
-    internal IRedisCommand? LastCommand;
+    internal byte[]? LastCommand;
 
     private async ValueTask Authorize(CancellationToken cancellationToken)
     {
         await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.Auth, ClientConfig.Password!.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.Auth, ClientConfig.Password!);
             await SendOrQueueAsync(command, SuccessResultProcessor, CancellationToken.None, true);
         }, cancellationToken);
     }
@@ -24,7 +23,7 @@ public partial class RedisClient : IDisposable
     {
         await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.Select, ClientConfig.Db.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.Select, ClientConfig.Db);
             await SendOrQueueAsync(command, SuccessResultProcessor, CancellationToken.None, true);
         }, cancellationToken);
     }
@@ -58,7 +57,7 @@ public partial class RedisClient : IDisposable
     {
         return await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.Exists, key.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.Exists, key);
             return await SendOrQueueAsync(command, IntegerResultProcessor, token);
         }, cancellationToken) == 1;
     }
@@ -73,7 +72,7 @@ public partial class RedisClient : IDisposable
     {
         return new StringRedisValue(await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.Get, key.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.Get, key);
             return await SendOrQueueAsync(command, DataResultProcessor, token);
         }, cancellationToken));
     }
@@ -88,7 +87,7 @@ public partial class RedisClient : IDisposable
     {
         return await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.MGet, keys.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.MGet, keys.ToArray());
 
             return await SendOrQueueAsync(command, ArrayResultProcessor, token);
         }, cancellationToken);
@@ -115,8 +114,8 @@ public partial class RedisClient : IDisposable
     {
         await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.SetEx, redisKeyValue.Key.ToRedisEncoded(),
-                timeToLiveInSeconds.ToRedisEncoded(), redisKeyValue.Value.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.SetEx, redisKeyValue.Key,
+                timeToLiveInSeconds, redisKeyValue.Value);
                
             await SendOrQueueAsync(command, SuccessResultProcessor, token);
         }, cancellationToken);
@@ -142,8 +141,7 @@ public partial class RedisClient : IDisposable
     {
         await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.Set, redisKeyValue.Key.ToRedisEncoded(),
-                redisKeyValue.Value.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.Set, redisKeyValue.Key, redisKeyValue.Value);
             await SendOrQueueAsync(command, SuccessResultProcessor, token);
             
         }, cancellationToken);
@@ -159,14 +157,7 @@ public partial class RedisClient : IDisposable
     {
         await RunWithTimeout(async token =>
         {
-            var encodedKeysAndValues = new List<IRedisEncodable>();
-            foreach (var keyValuePair in keyValuePairs)
-            {
-                encodedKeysAndValues.Add(keyValuePair.Key.ToRedisEncoded());
-                encodedKeysAndValues.Add(keyValuePair.Value.ToRedisEncoded());
-            }
-                
-            var command = RedisCommand.From(Commands.MSet, encodedKeysAndValues);
+            var command = RedisCommand.From(Commands.MSet, keyValuePairs.SelectMany<RedisKeyValue, string>(x => [x.Key, x.Value]).ToArray());
             await SendOrQueueAsync(command, SuccessResultProcessor, token);
 
         }, cancellationToken);
@@ -223,7 +214,7 @@ public partial class RedisClient : IDisposable
     {
         await RunWithTimeout(async token => 
         {
-            var command = RedisCommand.From(Commands.Del, keys.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.Del, keys.ToArray());
             await SendOrQueueAsync(command, IntegerResultProcessor, token);
         }, cancellationToken);
     }
@@ -232,7 +223,7 @@ public partial class RedisClient : IDisposable
     {
         await RunWithTimeout(async token => 
         {
-            var command = RedisCommand.From(Commands.Client, Commands.SetName, ClientConfig.ClientName!.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.Client, Commands.SetName, ClientConfig.ClientName!);
             await SendOrQueueAsync(command, SuccessResultProcessor, token, true);
         }, cancellationToken);
     }
@@ -246,7 +237,7 @@ public partial class RedisClient : IDisposable
     {
         return await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.Incr, key.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.Incr, key);
             return await SendOrQueueAsync(command, IntegerResultProcessor, token);
         }, cancellationToken);
     }
@@ -260,7 +251,7 @@ public partial class RedisClient : IDisposable
     {
         return await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.IncrBy, key.ToRedisEncoded(), amount.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.IncrBy, key, amount);
             return await SendOrQueueAsync(command, IntegerResultProcessor, token);
         }, cancellationToken);
     }
@@ -274,7 +265,7 @@ public partial class RedisClient : IDisposable
     {
         return await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.IncrByFloat, key.ToRedisEncoded(), amount.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.IncrByFloat, key, amount);
             return await SendOrQueueAsync(command, FloatResultProcessor, token);
         }, cancellationToken);
     }
@@ -288,7 +279,7 @@ public partial class RedisClient : IDisposable
     {
         return await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.Decr, key.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.Decr, key);
             return await SendOrQueueAsync(command, IntegerResultProcessor, token);
         }, cancellationToken);
     }
@@ -302,7 +293,7 @@ public partial class RedisClient : IDisposable
     {
         return await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.DecrBy, key.ToRedisEncoded(), amount.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.DecrBy, key, amount);
             return await SendOrQueueAsync(command, IntegerResultProcessor, token);
         }, cancellationToken);
     }
@@ -316,7 +307,7 @@ public partial class RedisClient : IDisposable
     {
         await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.Expire, key.ToRedisEncoded(), seconds.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.Expire, key, seconds);
             return await SendOrQueueAsync(command, IntegerResultProcessor, token);
         }, cancellationToken);
     }
@@ -355,7 +346,7 @@ public partial class RedisClient : IDisposable
     {
         await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.ExpireAt, key.ToRedisEncoded(), dateTime.ToUnixTimeSeconds().ToRedisEncoded());
+            var command = RedisCommand.From(Commands.ExpireAt, key, dateTime.ToUnixTimeSeconds());
             return await SendOrQueueAsync(command, IntegerResultProcessor, token);
         }, cancellationToken);
     }
@@ -369,7 +360,7 @@ public partial class RedisClient : IDisposable
     {
         await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.Persist, key.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.Persist, key);
             return await SendOrQueueAsync(command, IntegerResultProcessor, token);
         }, cancellationToken);
     }
@@ -383,7 +374,7 @@ public partial class RedisClient : IDisposable
     {
         return await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.Ttl, key.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.Ttl, key);
             return await SendOrQueueAsync(command, IntegerResultProcessor, token);
         }, cancellationToken);
     }

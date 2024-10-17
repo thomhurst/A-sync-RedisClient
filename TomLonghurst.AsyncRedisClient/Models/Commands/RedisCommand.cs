@@ -1,86 +1,72 @@
-using TomLonghurst.AsyncRedisClient.Extensions;
+using System.Text;
 
 namespace TomLonghurst.AsyncRedisClient.Models.Commands;
 
-public class RedisCommand : IRedisCommand
+public readonly struct RedisCommand
 {
-    internal readonly IEnumerable<IRedisEncodable> RedisEncodables;
-    internal readonly byte[][] RawBytes;
+    public byte[] EncodedBytes { get; }
 
-    private byte[][]? _encodedCommand;
+    public string ConvertToString() => Encoding.UTF8.GetString(EncodedBytes);
 
-    public byte[][] EncodedCommandList
+    private RedisCommand(ReadOnlySpan<byte> input)
     {
-        get
-        {
-            return _encodedCommand ??=
-            [
-                $"*{RawBytes.Length}".ToUtf8BytesWithTerminator(),
-                ..EncodeRawBytes()
-            ];
-        }
+        EncodedBytes = BytesEncoder.EncodeRawBytes(input);
     }
-
-    private IEnumerable<byte[]> EncodeRawBytes()
+    
+    private RedisCommand(ReadOnlySpan<byte> input1, ReadOnlySpan<byte> input2)
     {
-        foreach (var rawByte in RawBytes)
-        {
-            yield return $"${rawByte.Length - 2}".ToUtf8BytesWithTerminator();
-            yield return rawByte;
-        }
+        EncodedBytes = BytesEncoder.EncodeRawBytes(input1, input2);
     }
-
-    public string AsString => string.Join(" ", RedisEncodables.Select(x => x.AsString));
-
-    private RedisCommand(IReadOnlyCollection<IRedisEncodable> redisEncodables)
+    
+    private RedisCommand(ReadOnlySpan<byte> input1, ReadOnlySpan<byte> input2, ReadOnlySpan<byte> input3)
     {
-        RedisEncodables = redisEncodables;
-        RawBytes = redisEncodables.Select(x => x.RedisEncodedBytes).ToArray();
+        EncodedBytes = BytesEncoder.EncodeRawBytes(input1, input2, input3);
     }
-        
-    public static RedisCommand From(IReadOnlyCollection<IRedisEncodable> redisEncodables)
+    
+    private RedisCommand(ReadOnlySpan<byte> input1, ReadOnlySpan<byte> input2, ReadOnlySpan<byte> input3, ReadOnlySpan<byte> input4)
     {
-        return new RedisCommand(redisEncodables);
+        EncodedBytes = BytesEncoder.EncodeRawBytes(input1, input2, input3, input4);
     }
-        
-    private RedisCommand(params IRedisEncodable[] redisEncodables)
+    
+    private RedisCommand(ReadOnlySpan<byte> input1, ReadOnlySpan<byte> input2, ReadOnlySpan<byte> input3, ReadOnlySpan<byte> input4, ReadOnlySpan<byte> input5)
     {
-        RedisEncodables = redisEncodables;
-        RawBytes = redisEncodables.Select(x => x.RedisEncodedBytes).ToArray();
+        EncodedBytes = BytesEncoder.EncodeRawBytes(input1, input2, input3, input4, input5);
     }
-        
-    public static RedisCommand From(params IRedisEncodable[] redisEncodables)
+    
+    private RedisCommand(params byte[][] inputs)
     {
-        return new RedisCommand(redisEncodables);
+        EncodedBytes = BytesEncoder.EncodeRawBytes(inputs);
     }
-        
-    public static RedisCommand FromScript(IRedisEncodable command, IRedisEncodable scriptOrSha1, List<string> keys, IEnumerable<string> args)
+    
+    public static RedisCommand From(RedisInput input)
     {
-        IRedisEncodable[] encodables =
-        [
-            command,
-            scriptOrSha1,
-            keys.Count.ToRedisEncoded(),
-            ..keys.Select(key => key.ToRedisEncoded()),
-            ..args.Select(arg => arg.ToRedisEncoded())
-        ];
-        
-        return new RedisCommand(encodables);
+        return new RedisCommand(input.Bytes);
     }
-
-    private RedisCommand(IRedisEncodable redisEncodable)
+    
+    public static RedisCommand From(RedisInput input1, RedisInput input2)
     {
-        RedisEncodables = [redisEncodable];
-        RawBytes = [redisEncodable.RedisEncodedBytes];
+        return new RedisCommand(input1.Bytes, input2.Bytes);
+    }
+    
+    public static RedisCommand From(RedisInput input1, RedisInput input2, RedisInput input3)
+    {
+        return new RedisCommand(input1.Bytes, input2.Bytes, input3.Bytes);
+    }
+    
+    public static RedisCommand From(RedisInput input1, RedisInput input2, RedisInput input3, RedisInput input4)
+    {
+        return new RedisCommand(input1.Bytes, input2.Bytes, input3.Bytes, input4.Bytes);
+    }
+    
+    public static RedisCommand From(RedisInput input1, RedisInput input2, RedisInput input3, RedisInput input4, RedisInput input5)
+    {
+        return new RedisCommand(input1.Bytes, input2.Bytes, input3.Bytes, input4.Bytes, input5.Bytes);
+    }
+    
+    public static RedisCommand From(byte[][] input)
+    {
+        return new RedisCommand(input);
     }
 
-    public static RedisCommand From(IRedisEncodable redisEncodable)
-    {
-        return new RedisCommand(redisEncodable);
-    }
-
-    public static IRedisCommand From(IRedisEncodable redisEncodable, IEnumerable<IRedisEncodable> redisEncodables)
-    {
-        return new RedisCommand([redisEncodable, ..redisEncodables]);
-    }
+    public static implicit operator byte[](RedisCommand command) => command.EncodedBytes;
 }

@@ -1,4 +1,3 @@
-using TomLonghurst.AsyncRedisClient.Extensions;
 using TomLonghurst.AsyncRedisClient.Models.Backlog;
 
 namespace TomLonghurst.AsyncRedisClient.Client;
@@ -30,8 +29,8 @@ public partial class RedisClient
                     .ToList();
 
                 var pipelinedCommand = validItems
-                    .Select(backlogItem => backlogItem.RedisCommand).ToList()
-                    .ToPipelinedCommand();
+                    .SelectMany(backlogItem => backlogItem.RedisCommand)
+                    .ToArray();
 
                 try
                 {

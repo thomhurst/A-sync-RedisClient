@@ -21,7 +21,7 @@ public class RedisWaitTimeoutException : RedisRecoverableException
                     Client {_redisClient.ClientId}
                     {workerThreadStats}
                     {ioThreadStats}
-                    Last Command: {_redisClient.LastCommand?.AsString}
+                    Last Command: {ToString(_redisClient.LastCommand)}
                     """;
         }
     }

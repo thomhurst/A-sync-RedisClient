@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Runtime.CompilerServices;
+using System.Text;
 using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
 
@@ -6,7 +7,6 @@ namespace TomLonghurst.AsyncRedisClient.Extensions;
 
 internal static class StringExtensions
 {
-        
     internal static unsafe byte[] ToUtf8Bytes(this string value)
     {
         var encodedLength = Encoding.UTF8.GetByteCount(value);
@@ -23,8 +23,8 @@ internal static class StringExtensions
         return byteArray;
     }
 
-        
-    internal static unsafe byte[] ToUtf8BytesWithTerminator(this string value)
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    internal static unsafe byte[] ToUtf8BytesWithTerminator(this ReadOnlySpan<char> value)
     {
         var encodedLength = Encoding.UTF8.GetByteCount(value);
         var byteArray = new byte[encodedLength + 2];
@@ -86,38 +86,32 @@ internal static class StringExtensions
         return value.Split([delimiter], StringSplitOptions.RemoveEmptyEntries);
     }
 
-    internal static IRedisCommand ToFireAndForgetCommand(this IEnumerable<RedisCommand> commands)
+    internal static RedisCommand ToFireAndForgetCommand(this IEnumerable<RedisCommand> commands)
     {
         var enumerable = commands.ToList();
         if (enumerable.Count > 1)
         {
-            return MultiRedisCommand.From(
-                [
-                    RedisCommand.From("CLIENT".ToRedisEncoded(),
-                        "REPLY".ToRedisEncoded(),
-                        "OFF".ToRedisEncoded()),
+            return RedisCommand.From(
+                "CLIENT REPLY OFF",
 
-                    ..enumerable,
+                enumerable.SelectMany(x => x.EncodedBytes).ToArray(),
 
-                    RedisCommand.From("CLIENT".ToRedisEncoded(),
-                        "REPLY".ToRedisEncoded(),
-                        "ON".ToRedisEncoded())
-                ]
+                "CLIENT REPLY ON"
             );
         }
 
         return enumerable.First();
     }
         
-    internal static IRedisCommand ToPipelinedCommand(this IEnumerable<IRedisCommand> commands)
-    {
-        var enumerable = commands.ToList();
-        
-        if (enumerable.Count > 1)
-        {
-            return MultiRedisCommand.From(enumerable);
-        }
-
-        return enumerable[0];
-    }
+    // internal static IRedisCommand ToPipelinedCommand(this IEnumerable<IRedisCommand> commands)
+    // {
+    //     var enumerable = commands.ToList();
+    //     
+    //     if (enumerable.Count > 1)
+    //     {
+    //         return MultiRedisCommand.From(enumerable);
+    //     }
+    //
+    //     return enumerable[0];
+    // }
 }

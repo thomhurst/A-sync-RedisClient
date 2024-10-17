@@ -6,7 +6,6 @@ using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Extensions;
 using TomLonghurst.AsyncRedisClient.Helpers;
 using TomLonghurst.AsyncRedisClient.Models.Backlog;
-using TomLonghurst.AsyncRedisClient.Models.Commands;
 using TomLonghurst.AsyncRedisClient.Models.ResultProcessors;
 using TomLonghurst.AsyncRedisClient.Pipes;
 #if !NETSTANDARD2_0
@@ -45,7 +44,7 @@ public partial class RedisClient
     }
 
         
-    internal ValueTask<T> SendOrQueueAsync<T>(IRedisCommand command,
+    internal ValueTask<T> SendOrQueueAsync<T>(byte[] command,
         AbstractResultProcessor<T> abstractResultProcessor,
         CancellationToken cancellationToken,
         bool isReconnectionAttempt = false)
@@ -64,7 +63,7 @@ public partial class RedisClient
         return QueueToBacklog(command, abstractResultProcessor, cancellationToken);
     }
 
-    private ValueTask<T> QueueToBacklog<T>(IRedisCommand command, AbstractResultProcessor<T> abstractResultProcessor,
+    private ValueTask<T> QueueToBacklog<T>(byte[] command, AbstractResultProcessor<T> abstractResultProcessor,
         CancellationToken cancellationToken)
     {
         var taskCompletionSource = new TaskCompletionSource<T>();
@@ -76,7 +75,7 @@ public partial class RedisClient
         return new ValueTask<T>(taskCompletionSource.Task);
     }
 
-    internal async ValueTask<T> SendAndReceiveAsync<T>(IRedisCommand command, AbstractResultProcessor<T> abstractResultProcessor,
+    internal async ValueTask<T> SendAndReceiveAsync<T>(byte[] command, AbstractResultProcessor<T> abstractResultProcessor,
         CancellationToken cancellationToken, bool isReconnectionAttempt)
     {
         _isBusy = true;
@@ -131,12 +130,11 @@ public partial class RedisClient
         }
     }
 
-    internal ValueTask<FlushResult> Write(IRedisCommand command)
+    internal ValueTask<FlushResult> Write(byte[] command)
     {
         _written++;
-        var encodedCommandList = command.EncodedCommandList;
         
-        return _pipeWriter!.WriteAsync(encodedCommandList.SelectMany(x => x).ToArray());
+        return _pipeWriter!.WriteAsync(command);
     }
 
         

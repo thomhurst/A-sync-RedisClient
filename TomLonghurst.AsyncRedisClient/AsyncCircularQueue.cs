@@ -26,6 +26,11 @@ public class CircularQueue<T> : IAsyncDisposable
 
     public T Get()
     {
+        if (_clients!.Length == 1)
+        {
+            return _clients[0];
+        }
+        
         return _clients![GetIndex()];
     }
 

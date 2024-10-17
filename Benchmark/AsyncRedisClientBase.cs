@@ -1,5 +1,4 @@
 ﻿using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Jobs;
 using TomLonghurst.AsyncRedisClient.Client;
 
 namespace Benchmark;
@@ -18,7 +17,8 @@ public class AsyncRedisClientBase : BenchmarkBase
         
         _redisClientManager = await RedisClientManager.ConnectAsync(new RedisClientConfig(connectionString.Host, connectionString.Port)
         {
-            Ssl = false
+            Ssl = false,
+            PoolSize = 1
         });
 
         Client = _redisClientManager.GetRedisClient();

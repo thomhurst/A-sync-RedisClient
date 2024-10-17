@@ -1,5 +1,4 @@
 using TomLonghurst.AsyncRedisClient.Constants;
-using TomLonghurst.AsyncRedisClient.Extensions;
 using TomLonghurst.AsyncRedisClient.Models;
 using TomLonghurst.AsyncRedisClient.Models.Commands;
 
@@ -31,7 +30,7 @@ public partial class RedisClient : IDisposable
 
         public async Task<LuaScript> LoadScript(string script, CancellationToken cancellationToken)
         {
-            var command = RedisCommand.From(Commands.Script, Commands.Load, script.ToRedisEncoded());
+            var command = RedisCommand.From(Commands.Script, Commands.Load, script);
             var scriptResponse = await _redisClient.RunWithTimeout(async token =>
             {
                 return await _redisClient.SendOrQueueAsync(command, _redisClient.DataResultProcessor, token);
@@ -42,16 +41,18 @@ public partial class RedisClient : IDisposable
 
         internal async Task<RawResult> EvalSha(string sha1Hash, IEnumerable<string> keys, IEnumerable<string> arguments, CancellationToken cancellationToken)
         {
-            var keysList = keys.ToList();
-            var command = RedisCommand.FromScript(Commands.EvalSha, sha1Hash.ToRedisEncoded(), keysList, arguments);
-
-            var scriptResult = await _redisClient.RunWithTimeout(async token =>
-                {
-                    return await _redisClient.SendOrQueueAsync(command, _redisClient.GenericResultProcessor, token);
-                },
-                cancellationToken);
-                
-            return scriptResult;
+            // TODO:
+            return default;
+            // var keysList = keys.ToList();
+            // var command = RedisCommand.FromScript(Commands.EvalSha, sha1Hash.ToRedisEncoded(), keysList, arguments);
+            //
+            // var scriptResult = await _redisClient.RunWithTimeout(async token =>
+            //     {
+            //         return await _redisClient.SendOrQueueAsync(command, _redisClient.GenericResultProcessor, token);
+            //     },
+            //     cancellationToken);
+            //     
+            // return scriptResult;
         }
     }
 }

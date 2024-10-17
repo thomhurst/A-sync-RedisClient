@@ -1,6 +1,5 @@
 using System.IO.Pipelines;
 using TomLonghurst.AsyncRedisClient.Client;
-using TomLonghurst.AsyncRedisClient.Models.Commands;
 using TomLonghurst.AsyncRedisClient.Models.ResultProcessors;
 
 namespace TomLonghurst.AsyncRedisClient.Models.Backlog;
@@ -9,7 +8,7 @@ public struct BacklogItem<T> : IBacklogItem<T>
 {
     public RedisClient RedisClient { get; set; }
     public PipeReader PipeReader { get; set; }
-    public IRedisCommand RedisCommand { get; }
+    public byte[] RedisCommand { get; }
     public CancellationToken CancellationToken { get; }
         
     public void SetCancelled()
@@ -44,7 +43,7 @@ public struct BacklogItem<T> : IBacklogItem<T>
     public TaskCompletionSource<T> TaskCompletionSource { get; }
     public AbstractResultProcessor<T> AbstractResultProcessor { get; }
 
-    public BacklogItem(IRedisCommand redisCommand, CancellationToken cancellationToken, TaskCompletionSource<T> taskCompletionSource, AbstractResultProcessor<T> abstractResultProcessor, RedisClient redisClient, PipeReader pipe)
+    public BacklogItem(byte[] redisCommand, CancellationToken cancellationToken, TaskCompletionSource<T> taskCompletionSource, AbstractResultProcessor<T> abstractResultProcessor, RedisClient redisClient, PipeReader pipe)
     {
         RedisCommand = redisCommand;
         CancellationToken = cancellationToken;
