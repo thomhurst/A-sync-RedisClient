@@ -11,7 +11,7 @@ public partial class RedisClient
     internal IntegerResultProcessor IntegerResultProcessor => new();
     internal FloatResultProcessor FloatResultProcessor => new();
     internal ArrayResultProcessor ArrayResultProcessor => new();
-    internal WordResultProcessor WordResultProcessor => new();
+    internal SimpleStringResultProcessor SimpleStringResultProcessor => new();
 
 }
 

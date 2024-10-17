@@ -2,6 +2,7 @@
 using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Text;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Extensions;
 using TomLonghurst.AsyncRedisClient.Helpers;
@@ -79,10 +80,7 @@ public partial class RedisClient
         CancellationToken cancellationToken, bool isReconnectionAttempt)
     {
         _isBusy = true;
-            
-        Log.Debug($"Executing Command: {command}");
-        LastCommand = command;
-
+        
         Interlocked.Increment(ref _operationsPerformed);
 
         if (!isReconnectionAttempt)
@@ -133,11 +131,16 @@ public partial class RedisClient
     internal ValueTask<FlushResult> Write(byte[] command)
     {
         _written++;
+
+        LastCommand = command;
+
+#if DEBUG
+        Console.WriteLine($"Executing Command: {Encoding.UTF8.GetString(command)}");
+#endif
         
         return _pipeWriter!.WriteAsync(command);
     }
-
-        
+    
     internal async ValueTask<T> RunWithTimeout<T>(Func<CancellationToken, ValueTask<T>> action,
         CancellationToken originalCancellationToken)
     {

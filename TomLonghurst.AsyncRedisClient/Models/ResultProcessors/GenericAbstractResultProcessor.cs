@@ -45,7 +45,7 @@ public class GenericResultProcessor : AbstractResultProcessor<RawResult>
 
         if (firstChar == ByteConstants.Plus)
         {
-            return await redisClient.WordResultProcessor.Process(redisClient, pipeReader, readResult, cancellationToken);
+            return await redisClient.SimpleStringResultProcessor.Process(redisClient, pipeReader, readResult, cancellationToken);
         }
         
         if (firstChar == ByteConstants.Colon)

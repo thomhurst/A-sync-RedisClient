@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.IO.Pipelines;
+using System.Text;
 using TomLonghurst.AsyncRedisClient.Client;
 using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
@@ -50,7 +51,7 @@ public abstract class AbstractResultProcessor<T> : AbstractResultProcessor
 
         if (firstChar != ByteConstants.Dollar)
         {
-            var stringLine = line.AsStringWithoutLineTerminators() ?? string.Empty;
+            var stringLine = line.AsStringWithoutLineTerminators();
             pipeReader.AdvanceTo(line.End);
 
             if (firstChar == ByteConstants.Dash)
@@ -64,7 +65,7 @@ public abstract class AbstractResultProcessor<T> : AbstractResultProcessor
         var alreadyReadToLineTerminator = false;
 
         var byteSizeOfData = SpanNumberParser.Parse(line);
-
+        
         pipeReader.AdvanceTo(line.End);
 
         if (byteSizeOfData == -1)
@@ -77,10 +78,10 @@ public abstract class AbstractResultProcessor<T> : AbstractResultProcessor
             throw new RedisDataException("ReadResult is completed and buffer is empty starting ReadData");
         }
 
-        readResult = await pipeReader.ReadAsyncOrThrowReadTimeout(cancellationToken);
+        readResult = await pipeReader.ReadAtLeastAsync(byteSizeOfData, cancellationToken);
 
         var buffer = readResult.Buffer;
-
+        
         if (byteSizeOfData == 0)
         {
             throw new UnexpectedRedisResponseException("Invalid length");
@@ -92,7 +93,7 @@ public abstract class AbstractResultProcessor<T> : AbstractResultProcessor
 
         var bytesReceived = buffer.Length;
 
-        buffer.CopyTo(dataByteStorage.Slice(0, (int) bytesReceived).Span);
+        buffer.CopyTo(dataByteStorage[..(int) bytesReceived].Span);
 
         if (bytesReceived >= byteSizeOfData)
         {

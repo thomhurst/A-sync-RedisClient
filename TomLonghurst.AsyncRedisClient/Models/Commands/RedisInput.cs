@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Text;
+using TomLonghurst.AsyncRedisClient.Constants;
 
 namespace TomLonghurst.AsyncRedisClient.Models.Commands;
 
@@ -11,8 +12,10 @@ public ref struct RedisInput
     public RedisInput(ReadOnlySpan<char> input)
     {
         var byteCount = Encoding.UTF8.GetByteCount(input);
-        Bytes = new byte[byteCount];
+        Bytes = new byte[byteCount + 2];
         Encoding.UTF8.GetBytes(input, Bytes);
+        Bytes[^2] = ByteConstants.BackslashR;
+        Bytes[^1] = ByteConstants.NewLine;
     }
     
     public RedisInput(byte[] input)

@@ -40,7 +40,7 @@ public partial class RedisClient : IDisposable
             var pingCommand = Commands.Ping;
 
             var sw = Stopwatch.StartNew();
-            var pingResponse = await SendOrQueueAsync(pingCommand, WordResultProcessor, CancellationToken.None);
+            var pingResponse = await SendOrQueueAsync(pingCommand, SimpleStringResultProcessor, CancellationToken.None);
             sw.Stop();
 
             return new Pong(sw.Elapsed, pingResponse);
@@ -143,7 +143,6 @@ public partial class RedisClient : IDisposable
         {
             var command = RedisCommand.From(Commands.Set, redisKeyValue.Key, redisKeyValue.Value);
             await SendOrQueueAsync(command, SuccessResultProcessor, token);
-            
         }, cancellationToken);
     }
 

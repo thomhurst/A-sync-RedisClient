@@ -6,7 +6,7 @@ namespace TomLonghurst.AsyncRedisClient.Helpers;
 
 internal static class SpanNumberParser
 {
-    internal static long Parse(ReadOnlySequence<byte> buffer)
+    internal static int Parse(ReadOnlySequence<byte> buffer)
     {
         if (buffer.IsEmpty)
         {
@@ -36,20 +36,20 @@ internal static class SpanNumberParser
         return (long) byteValues.Select((t, i) => GetValue(t) * Math.Pow(10, (double) byteValues.Length - i - 1)).Sum();
     }
         
-    internal static long ParseSequence(ReadOnlySequence<byte> byteValues)
+    internal static int ParseSequence(ReadOnlySequence<byte> byteValues)
     {
-        var result = 0d;
+        var result = 0;
         var outerIndex = 0;
         foreach (var readOnlyMemory in byteValues)
         {
             foreach (var b in readOnlyMemory.Span)
             {
-                result += (char) GetValue(b) * Math.Pow(10, byteValues.Length - 1 - outerIndex);
+                result += (char) GetValue(b) * (int) Math.Pow(10, byteValues.Length - 1 - outerIndex);
                 outerIndex++;
             }
         }
 
-        return (long) result;
+        return result;
     }
         
     internal static long GetValue(byte byteValue)

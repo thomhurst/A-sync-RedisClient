@@ -33,11 +33,6 @@ public readonly struct RedisCommand
         EncodedBytes = BytesEncoder.EncodeRawBytes(input1, input2, input3, input4, input5);
     }
     
-    private RedisCommand(params byte[][] inputs)
-    {
-        EncodedBytes = BytesEncoder.EncodeRawBytes(inputs);
-    }
-    
     public static RedisCommand From(RedisInput input)
     {
         return new RedisCommand(input.Bytes);
@@ -61,11 +56,6 @@ public readonly struct RedisCommand
     public static RedisCommand From(RedisInput input1, RedisInput input2, RedisInput input3, RedisInput input4, RedisInput input5)
     {
         return new RedisCommand(input1.Bytes, input2.Bytes, input3.Bytes, input4.Bytes, input5.Bytes);
-    }
-    
-    public static RedisCommand From(byte[][] input)
-    {
-        return new RedisCommand(input);
     }
 
     public static implicit operator byte[](RedisCommand command) => command.EncodedBytes;

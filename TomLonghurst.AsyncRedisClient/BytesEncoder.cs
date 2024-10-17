@@ -5,11 +5,17 @@ namespace TomLonghurst.AsyncRedisClient;
 
 internal static class BytesEncoder
 {
+    private static readonly byte[] OneElement = ((ReadOnlySpan<char>)"*1").ToUtf8BytesWithTerminator();
+    private static readonly byte[] TwoElements = ((ReadOnlySpan<char>)"*2").ToUtf8BytesWithTerminator();
+    private static readonly byte[] ThreeElements = ((ReadOnlySpan<char>)"*3").ToUtf8BytesWithTerminator();
+    private static readonly byte[] FourElements = ((ReadOnlySpan<char>)"*4").ToUtf8BytesWithTerminator();
+    private static readonly byte[] FiveElements = ((ReadOnlySpan<char>)"*5").ToUtf8BytesWithTerminator();
     public static byte[] EncodeRawBytes(ReadOnlySpan<byte> bytes)
     {
 
         return
         [
+            ..OneElement,
             ..GetPrefixLengthForBytes(bytes),
             ..bytes
         ];
@@ -18,6 +24,7 @@ internal static class BytesEncoder
     public static byte[] EncodeRawBytes(ReadOnlySpan<byte> bytes1, ReadOnlySpan<byte> bytes2)
     {
         return [
+            ..TwoElements,
             ..GetPrefixLengthForBytes(bytes1), 
             ..bytes1, 
             ..GetPrefixLengthForBytes(bytes2), 
@@ -28,6 +35,7 @@ internal static class BytesEncoder
     public static byte[] EncodeRawBytes(ReadOnlySpan<byte> bytes1, ReadOnlySpan<byte> bytes2, ReadOnlySpan<byte> bytes3)
     {
         return [
+            ..ThreeElements,
             ..GetPrefixLengthForBytes(bytes1), 
             ..bytes1, 
             ..GetPrefixLengthForBytes(bytes2), 
@@ -40,6 +48,7 @@ internal static class BytesEncoder
     public static byte[] EncodeRawBytes(ReadOnlySpan<byte> bytes1, ReadOnlySpan<byte> bytes2, ReadOnlySpan<byte> bytes3, ReadOnlySpan<byte> bytes4)
     {
         return [
+            ..FourElements,
             ..GetPrefixLengthForBytes(bytes1), 
             ..bytes1, 
             ..GetPrefixLengthForBytes(bytes2), 
@@ -54,6 +63,7 @@ internal static class BytesEncoder
     public static byte[] EncodeRawBytes(ReadOnlySpan<byte> bytes1, ReadOnlySpan<byte> bytes2, ReadOnlySpan<byte> bytes3, ReadOnlySpan<byte> bytes4, ReadOnlySpan<byte> bytes5)
     {
         return [
+            ..FiveElements,
             ..GetPrefixLengthForBytes(bytes1), 
             ..bytes1, 
             ..GetPrefixLengthForBytes(bytes2), 
