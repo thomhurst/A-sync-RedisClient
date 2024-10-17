@@ -7,13 +7,9 @@ on:
 
 jobs:
   run-time-benchmarks:
-    strategy: 
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     concurrency: 
-      group: "speed-comparison-run-time-${{matrix.os}}-${{github.ref_name}}"
+      group: "speed-comparison-run-time-${{github.ref_name}}"
       cancel-in-progress: true
 
     steps:
@@ -34,7 +30,7 @@ jobs:
           dotnet-version: 9.0.x
 
       - name: Run Benchmark
-        run: ${{ matrix.os != 'windows-latest' && 'sudo -E ' || '' }}dotnet run -c Release --framework net9.0 --filter '*' --join
+        run: sudo -E dotnet run -c Release --framework net9.0 --filter '*' --join
         working-directory: "tools/speed-comparison/Tests.Benchmark"
 
       - name: Upload Markdown
