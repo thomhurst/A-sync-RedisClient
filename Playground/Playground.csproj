@@ -2,17 +2,16 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>netcoreapp2.2</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <LangVersion>latest</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\RedisClientTest\RedisClientTest.csproj" />
       <ProjectReference Include="..\TomLonghurst.AsyncRedisClient\TomLonghurst.AsyncRedisClient.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="MiniProfiler.AspNetCore" Version="4.1.0" />
+      <PackageReference Include="Testcontainers.Redis" Version="3.10.0" />
     </ItemGroup>
 
 </Project>

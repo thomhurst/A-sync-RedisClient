@@ -7,7 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TomLonghurst.AsyncRedisClie
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RedisClientTest", "RedisClientTest\RedisClientTest.csproj", "{397634B9-CD0F-4E6F-89F1-D861700D6459}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestConsoleApp", "TestConsoleApp\TestConsoleApp.csproj", "{5B2A1F87-B7D8-437F-8642-BB4C9BFF67CA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playground", "Playground\Playground.csproj", "{5B2A1F87-B7D8-437F-8642-BB4C9BFF67CA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmark", "Benchmark\Benchmark.csproj", "{9EFF2272-9629-40E7-AA0B-DA862494F395}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{5B2A1F87-B7D8-437F-8642-BB4C9BFF67CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5B2A1F87-B7D8-437F-8642-BB4C9BFF67CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5B2A1F87-B7D8-437F-8642-BB4C9BFF67CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9EFF2272-9629-40E7-AA0B-DA862494F395}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9EFF2272-9629-40E7-AA0B-DA862494F395}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9EFF2272-9629-40E7-AA0B-DA862494F395}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9EFF2272-9629-40E7-AA0B-DA862494F395}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

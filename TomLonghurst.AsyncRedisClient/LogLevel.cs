@@ -1,10 +1,9 @@
-namespace TomLonghurst.AsyncRedisClient
+namespace TomLonghurst.AsyncRedisClient;
+
+public enum LogLevel
 {
-    public enum LogLevel
-    {
-        None = 1,
-        Error = 2,
-        Debug = 3,
-        Info = 4
-    }
+    None = 1,
+    Error = 2,
+    Debug = 3,
+    Info = 4
 }

@@ -1,48 +1,44 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using TomLonghurst.AsyncRedisClient.Constants;
 
-namespace TomLonghurst.AsyncRedisClient.Client
+namespace TomLonghurst.AsyncRedisClient.Client;
+
+public partial class RedisClient : IDisposable
 {
-    public partial class RedisClient : IDisposable
+    public ServerCommands Server { get; }
+
+    public class ServerCommands
     {
-        private ServerCommands _serverCommands;
-        public ServerCommands Server => _serverCommands;
-        public class ServerCommands
+        private readonly RedisClient _redisClient;
+
+        internal ServerCommands(RedisClient redisClient)
         {
-            private readonly RedisClient _redisClient;
-
-            internal ServerCommands(RedisClient redisClient)
-            {
-                _redisClient = redisClient;
-            }
+            _redisClient = redisClient;
+        }
             
-            public ValueTask<string> Info()
-            {
-                return Info(CancellationToken.None);
-            }
+        public ValueTask<string> Info()
+        {
+            return Info(CancellationToken.None);
+        }
         
-            public async ValueTask<string> Info(CancellationToken cancellationToken)
+        public async ValueTask<string> Info(CancellationToken cancellationToken)
+        {
+            return await  _redisClient.RunWithTimeout(async token =>
             {
-                return await  _redisClient.RunWithTimeout(async token =>
-                {
-                    return await _redisClient.SendOrQueueAsync(Commands.Info, _redisClient.DataResultProcessor, CancellationToken.None);
-                }, cancellationToken);
-            }
+                return await _redisClient.SendOrQueueAsync(Commands.Info, _redisClient.DataResultProcessor, CancellationToken.None);
+            }, cancellationToken);
+        }
 
-            public Task<int> DBSize()
-            {
-                return DBSize(CancellationToken.None);
-            }
+        public Task<int> DbSize()
+        {
+            return DbSize(CancellationToken.None);
+        }
 
-            public async Task<int> DBSize(CancellationToken cancellationToken)
+        public async Task<int> DbSize(CancellationToken cancellationToken)
+        {
+            return await _redisClient.RunWithTimeout(async token =>
             {
-                return await _redisClient.RunWithTimeout(async token =>
-                {
-                    return await _redisClient.SendOrQueueAsync(Commands.DbSize, _redisClient.IntegerResultProcessor, CancellationToken.None);
-                }, cancellationToken);
-            }
+                return await _redisClient.SendOrQueueAsync(Commands.DbSize, _redisClient.IntegerResultProcessor, CancellationToken.None);
+            }, cancellationToken);
         }
     }
 }

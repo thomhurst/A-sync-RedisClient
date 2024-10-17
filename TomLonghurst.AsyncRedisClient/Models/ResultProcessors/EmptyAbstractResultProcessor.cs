@@ -1,13 +1,18 @@
-using System.Threading.Tasks;
+using System.IO.Pipelines;
+using TomLonghurst.AsyncRedisClient.Client;
 
-namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors
+namespace TomLonghurst.AsyncRedisClient.Models.ResultProcessors;
+
+public class EmptyResultProcessor : AbstractResultProcessor<object?>
 {
-    public class EmptyResultProcessor : AbstractResultProcessor<object>
+    internal override ValueTask<object?> Process(
+        RedisClient redisClient, 
+        PipeReader pipeReader, 
+        ReadResult readResult,
+        CancellationToken cancellationToken
+    )
     {
-        internal override ValueTask<object> Process()
-        {
-            // Do Nothing!
-            return new ValueTask<object>();
-        }
+        // Do Nothing!
+        return ValueTask.FromResult<object?>(null);
     }
 }

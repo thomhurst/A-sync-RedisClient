@@ -1,12 +1,11 @@
-namespace TomLonghurst.AsyncRedisClient.Exceptions
-{
-    public class UnexpectedRedisResponseException : RedisNonRecoverableException
-    {
-        public override string Message { get; }
+namespace TomLonghurst.AsyncRedisClient.Exceptions;
 
-        public UnexpectedRedisResponseException(string message)
-        {
-            Message = message;
-        }
+public class UnexpectedRedisResponseException : RedisNonRecoverableException
+{
+    public override string Message { get; }
+
+    public UnexpectedRedisResponseException(string message)
+    {
+        Message = message;
     }
 }

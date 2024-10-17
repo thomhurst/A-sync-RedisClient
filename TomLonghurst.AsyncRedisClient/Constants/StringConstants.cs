@@ -1,13 +1,10 @@
-using System;
+namespace TomLonghurst.AsyncRedisClient.Constants;
 
-namespace TomLonghurst.AsyncRedisClient.Constants
+public static class StringConstants
 {
-    public static class StringConstants
-    {
-        public static string EncodedLineTerminator { get; } = @"\r\n";
-        public static string EncodedNewLine { get; } = @"\n";
+    public static string EncodedLineTerminator { get; } = @"\r\n";
+    public static string EncodedNewLine { get; } = @"\n";
         
-        public static string LineTerminator { get; } = "\r\n";
-        public static string NewLine { get; } = "\n";
-    }
+    public static string LineTerminator { get; } = "\r\n";
+    public static string NewLine { get; } = "\n";
 }

@@ -1,0 +1,46 @@
+name: Speed Comparison
+
+on:
+  push:
+    branches: ["*"]
+  workflow_dispatch:
+
+jobs:
+  run-time-benchmarks:
+    strategy: 
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    concurrency: 
+      group: "speed-comparison-run-time-${{matrix.os}}-${{github.ref_name}}"
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Run Benchmark
+        run: ${{ matrix.os != 'windows-latest' && 'sudo -E ' || '' }}dotnet run -c Release --framework net9.0 --filter '*' --join
+        working-directory: "tools/speed-comparison/Tests.Benchmark"
+
+      - name: Upload Markdown
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ matrix.os }}_markdown_run_time
+          path: |
+            **/BenchmarkDotNet.Artifacts/**

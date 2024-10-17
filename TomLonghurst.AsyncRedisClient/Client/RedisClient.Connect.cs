@@ -1,324 +1,312 @@
-using System;
-using System.Diagnostics;
-using System.IO;
 using System.IO.Pipelines;
-using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Security;
-using System.Threading;
-using System.Threading.Tasks;
-using TomLonghurst.AsyncRedisClient.Constants;
 using TomLonghurst.AsyncRedisClient.Exceptions;
 using TomLonghurst.AsyncRedisClient.Models;
 using TomLonghurst.AsyncRedisClient.Pipes;
-using TomLonghurst.AsyncRedisClient.Extensions;
 
-namespace TomLonghurst.AsyncRedisClient.Client
+namespace TomLonghurst.AsyncRedisClient.Client;
+
+public partial class RedisClient : IDisposable
 {
-    public partial class RedisClient : IDisposable
+    private static long _idCounter;
+    public long ClientId { get; } = Interlocked.Increment(ref _idCounter);
+        
+    private long _reconnectAttempts;
+
+    public long ReconnectAttempts => Interlocked.Read(ref _reconnectAttempts);
+
+    private readonly SemaphoreSlim _connectSemaphoreSlim = new(1, 1);
+
+    public RedisClientConfig ClientConfig { get; }
+
+    private RedisSocket? _socket;
+
+    public Socket? Socket => _socket;
+        
+    private SslStream? _sslStream;
+
+    private bool _isConnected;
+        
+    internal Func<RedisClient, Task>? OnConnectionEstablished { get; set; }
+    internal Func<RedisClient, Task>? OnConnectionFailed { get; set; }
+        
+    public bool IsConnected
     {
-        private static long _idCounter;
-        public long ClientId { get; } = Interlocked.Increment(ref _idCounter);
-        
-        private long _reconnectAttempts;
-
-        public long ReconnectAttempts => Interlocked.Read(ref _reconnectAttempts);
-
-        private readonly SemaphoreSlim _connectSemaphoreSlim = new SemaphoreSlim(1, 1);
-
-        public RedisClientConfig ClientConfig { get; }
-
-        private RedisSocket _socket;
-
-        public Socket Socket => _socket;
-        
-        private SslStream _sslStream;
-
-        private bool _isConnected;
-        
-        internal Func<RedisClient, Task> OnConnectionEstablished { get; set; }
-        internal Func<RedisClient, Task> OnConnectionFailed { get; set; }
-        
-        public bool IsConnected
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        get
         {
-            [MethodImpl(MethodImplOptions.Synchronized)]
-            get
+            if (_socket == null || _socket.IsDisposed || !_socket.Connected || _socket.IsClosed)
             {
-                if (_socket == null || _socket.IsDisposed || !_socket.Connected || _socket.IsClosed)
-                {
-                    _isConnected = false;
-                }
-                
-                return _isConnected;
+                _isConnected = false;
             }
+                
+            return _isConnected;
+        }
             
-            [MethodImpl(MethodImplOptions.Synchronized)]
-            private set
-            {
-                _isConnected = value;
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        private set
+        {
+            _isConnected = value;
                 
-                if (!value)
+            if (!value)
+            {
+                if (OnConnectionFailed != null)
                 {
-                    if (OnConnectionFailed != null)
-                    {
-                        Task.Run(() => OnConnectionFailed.Invoke(this));
-                    }
+                    Task.Run(() => OnConnectionFailed.Invoke(this));
                 }
-                else
+            }
+            else
+            {
+                if (OnConnectionEstablished != null)
                 {
-                    if (OnConnectionEstablished != null)
-                    {
-                        Task.Run(() => OnConnectionEstablished.Invoke(this));
-                    }
+                    Task.Run(() => OnConnectionEstablished.Invoke(this));
                 }
             }
         }
+    }
 
-        protected RedisClient(RedisClientConfig redisClientConfig) : this()
-        {
-            ClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
-            _connectionChecker = new Timer(CheckConnection, null, 2500, 250);
-        }
+    protected RedisClient(RedisClientConfig redisClientConfig)
+    {
+        ClientConfig = redisClientConfig ?? throw new ArgumentNullException(nameof(redisClientConfig));
 
-        ~RedisClient()
-        {
-            Dispose();
-        }
+        Cluster = new ClusterCommands(this);
+        Server = new ServerCommands(this);
+        Scripts = new ScriptCommands(this);
         
-        private void CheckConnection(object state)
-        {
-            if (!IsConnected && !_disposed)
-            {
-                Task.Run(() => TryConnectAsync(CancellationToken.None));
-            }
-        }
-
-        internal static Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig)
-        {
-            return ConnectAsync(redisClientConfig, CancellationToken.None);
-        }
-
-        internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
-        {
-            var redisClient = new RedisClient(redisClientConfig);
-            await redisClient.TryConnectAsync(cancellationToken).ConfigureAwait(false);
-            return redisClient;
-        }
-
-        private async Task TryConnectAsync(CancellationToken cancellationToken)
-        {
-            if (IsConnected)
-            {
-                return;
-            }
-
-            try
-            {
-                await RunWithTimeout(async token =>
-                {
-                    LastAction = LastActionConstants.Reconnecting;
-                    await ConnectAsync(token);
-                }, cancellationToken);
-            }
-            catch (Exception innerException)
-            {
-                DisposeNetwork();
-                throw new RedisConnectionException(innerException);
-            }
-        }
+        StartBacklogProcessor();
         
-        private async Task ConnectAsync(CancellationToken cancellationToken)
-        {
-            if (IsConnected)
-            {
-                return;
-            }
+        _connectionChecker = new Timer(CheckConnection, null, 2500, 250);
+    }
 
-            LastAction = LastActionConstants.WaitingForConnectingLock;
-            await _connectSemaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
-
-            if (IsConnected)
-            {
-                _connectSemaphoreSlim.Release();
-                return;
-            }
-            
-            try
-            {
-                LastAction = LastActionConstants.Connecting;
-                Interlocked.Increment(ref _reconnectAttempts);
-
-                _socket = new RedisSocket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
-                {
-                    SendTimeout = ClientConfig.SendTimeoutMillis,
-                    ReceiveTimeout = ClientConfig.ReceiveTimeoutMillis
-                };
-                
-                OptimiseSocket();
-                
-                if (IPAddress.TryParse(ClientConfig.Host, out var ip))
-                {
-                    await _socket.ConnectAsync(ip, ClientConfig.Port).ConfigureAwait(false);
-                }
-                else
-                {
-                    var addresses = await Dns.GetHostAddressesAsync(ClientConfig.Host);
-                    await _socket.ConnectAsync(
-                        addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork),
-                        ClientConfig.Port).ConfigureAwait(false);
-                }
-                
-
-                if (!_socket.Connected)
-                {
-                    Log.Debug("Socket Connect failed");
-
-                    DisposeNetwork();
-                    return;
-                }
-
-                Log.Debug("Socket Connected");
-
-                Stream networkStream = new NetworkStream(_socket);
-                
-                var redisPipeOptions = GetPipeOptions();
-
-                if (ClientConfig.Ssl)
-                {
-                    _sslStream = new SslStream(networkStream,
-                        false,
-                        ClientConfig.CertificateValidationCallback,
-                        ClientConfig.CertificateSelectionCallback,
-                        EncryptionPolicy.RequireEncryption);
-
-                    LastAction = LastActionConstants.AuthenticatingSSLStreamAsClient;
-                    await _sslStream.AuthenticateAsClientAsync(ClientConfig.Host).ConfigureAwait(false);
-
-                    if (!_sslStream.IsEncrypted)
-                    {
-                        DisposeNetwork();
-                        throw new SecurityException($"Could not establish an encrypted connection to Redis - {ClientConfig.Host}");
-                    }
-
-                    LastAction = LastActionConstants.CreatingSSLStreamPipe;
-                    _pipeWriter = PipeWriter.Create(_sslStream, new StreamPipeWriterOptions(leaveOpen: true));
-                    _pipeReader = PipeReader.Create(_sslStream, new StreamPipeReaderOptions(leaveOpen: true));
-                }
-                else
-                {
-                    LastAction = LastActionConstants.CreatingSocketPipe;
-                    _socketPipe = SocketPipe.GetDuplexPipe(_socket, redisPipeOptions.SendOptions, redisPipeOptions.ReceiveOptions);
-                    _pipeWriter = _socketPipe.Output;
-                    _pipeReader = _socketPipe.Input;
-                }
-
-                if (!string.IsNullOrEmpty(ClientConfig.Password))
-                {
-                    LastAction = LastActionConstants.Authorizing;
-                    await Authorize(cancellationToken);
-                }
-
-                if (ClientConfig.Db != 0)
-                {
-                    LastAction = LastActionConstants.SelectingDatabase;
-                    await SelectDb(cancellationToken);
-                }
-
-                if (ClientConfig.ClientName != null)
-                {
-                    LastAction = LastActionConstants.SettingClientName;
-                    await SetClientNameAsync(cancellationToken);
-                }
-
-                IsConnected = true;
-            }
-            finally
-            {
-                _connectSemaphoreSlim.Release();
-            }
-        }
-
-        private void OptimiseSocket()
-        {
-            if (_socket.AddressFamily == AddressFamily.Unix)
-            {
-                return;
-            }
-
-            try
-            {
-                _socket.NoDelay = true;
-            }
-            catch
-            {
-                // If we can't set this, just continue - There's nothing we can do!
-            }
-        }
+    ~RedisClient()
+    {
+        Dispose();
+    }
         
-        private bool _disposed;
-        private readonly Timer _connectionChecker;
-
-        private static RedisPipeOptions GetPipeOptions()
+    private void CheckConnection(object? state)
+    {
+        if (!IsConnected)
         {
-            const int defaultMinimumSegmentSize = 4 * 16;
+            Task.Run(() => TryConnectAsync(CancellationToken.None));
+        }
+    }
 
-            const long sendPauseWriterThreshold = 512 * 1024;
-            const long sendResumeWriterThreshold = sendPauseWriterThreshold / 2;
+    internal static Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig)
+    {
+        return ConnectAsync(redisClientConfig, CancellationToken.None);
+    }
 
-            const long receivePauseWriterThreshold = 1024 * 1024 * 1024;
-            const long receiveResumeWriterThreshold = receivePauseWriterThreshold / 2;
+    internal static async Task<RedisClient> ConnectAsync(RedisClientConfig redisClientConfig, CancellationToken cancellationToken)
+    {
+        var redisClient = new RedisClient(redisClientConfig);
+        await redisClient.TryConnectAsync(cancellationToken);
+        return redisClient;
+    }
 
-            var scheduler = PipeScheduler.ThreadPool;
-            var defaultPipeOptions = PipeOptions.Default;
-
-            var receivePipeOptions = new PipeOptions(
-                defaultPipeOptions.Pool,
-                scheduler,
-                scheduler,
-                receivePauseWriterThreshold,
-                receiveResumeWriterThreshold,
-                defaultMinimumSegmentSize,
-                false);
-
-            var sendPipeOptions = new PipeOptions(
-                defaultPipeOptions.Pool,
-                scheduler,
-                scheduler,
-                sendPauseWriterThreshold,
-                sendResumeWriterThreshold,
-                defaultMinimumSegmentSize,
-                false);
-
-            return new RedisPipeOptions
-            {
-                SendOptions = sendPipeOptions,
-                ReceiveOptions = receivePipeOptions
-            };
+    private async Task TryConnectAsync(CancellationToken cancellationToken)
+    {
+        if (IsConnected)
+        {
+            return;
         }
 
-        public void Dispose()
+        try
         {
-            _disposed = true;
+            await RunWithTimeout(async token =>
+            {
+                await ConnectAsync(token);
+            }, cancellationToken);
+        }
+        catch (Exception innerException)
+        {
             DisposeNetwork();
-            LastAction = LastActionConstants.DisposingClient;
-            _connectSemaphoreSlim?.Dispose();
-            _sendAndReceiveSemaphoreSlim?.Dispose();
-            _backlog?.Dispose();
-            _connectionChecker?.Dispose();
+            throw new RedisConnectionException(innerException);
+        }
+    }
+        
+    private async Task ConnectAsync(CancellationToken cancellationToken)
+    {
+        if (IsConnected)
+        {
+            return;
         }
 
-        private void DisposeNetwork()
+        await _connectSemaphoreSlim.WaitAsync(cancellationToken);
+
+        if (IsConnected)
         {
-            IsConnected = false;
-            LastAction = LastActionConstants.DisposingNetwork;
-            _pipeReader?.CompleteAsync();
-            _pipeWriter?.CompleteAsync();
-            _socket?.Close();
-            _socket?.Dispose();
-            _sslStream?.Dispose();
+            _connectSemaphoreSlim.Release();
+            return;
         }
+            
+        try
+        {
+            Interlocked.Increment(ref _reconnectAttempts);
+
+            _socket = new RedisSocket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+            {
+                SendTimeout = ClientConfig.Timeout.Milliseconds,
+                ReceiveTimeout = ClientConfig.Timeout.Milliseconds
+            };
+                
+            OptimiseSocket();
+                
+            if (IPAddress.TryParse(ClientConfig.Host, out var ip))
+            {
+                await _socket.ConnectAsync(ip, ClientConfig.Port, cancellationToken);
+            }
+            else
+            {
+                var addresses = await Dns.GetHostAddressesAsync(ClientConfig.Host, cancellationToken);
+                await _socket.ConnectAsync(
+                    addresses.First(a => a.AddressFamily == AddressFamily.InterNetwork),
+                    ClientConfig.Port, cancellationToken);
+            }
+                
+
+            if (!_socket.Connected)
+            {
+                Log.Debug("Socket Connect failed");
+
+                DisposeNetwork();
+                return;
+            }
+
+            Log.Debug("Socket Connected");
+
+            Stream networkStream = new NetworkStream(_socket);
+                
+            var redisPipeOptions = GetPipeOptions();
+
+            if (ClientConfig.Ssl)
+            {
+                _sslStream = new SslStream(networkStream,
+                    false,
+                    ClientConfig.CertificateValidationCallback,
+                    ClientConfig.CertificateSelectionCallback,
+                    EncryptionPolicy.RequireEncryption);
+
+                // TODO
+                // await _sslStream.AuthenticateAsClientAsync(ClientConfig.Host);
+
+                if (!_sslStream.IsEncrypted)
+                {
+                    DisposeNetwork();
+                    throw new SecurityException($"Could not establish an encrypted connection to Redis - {ClientConfig.Host}");
+                }
+
+                _pipeWriter = PipeWriter.Create(_sslStream, new StreamPipeWriterOptions(leaveOpen: true));
+                _pipeReader = PipeReader.Create(_sslStream, new StreamPipeReaderOptions(leaveOpen: true));
+            }
+            else
+            {
+                _socketPipe = SocketPipe.GetDuplexPipe(_socket, redisPipeOptions.SendOptions ?? new PipeOptions(), redisPipeOptions.ReceiveOptions ?? new PipeOptions());
+                _pipeWriter = _socketPipe.Output;
+                _pipeReader = _socketPipe.Input;
+            }
+
+            if (!string.IsNullOrEmpty(ClientConfig.Password))
+            {
+                await Authorize(cancellationToken);
+            }
+
+            if (ClientConfig.Db != 0)
+            {
+                await SelectDb(cancellationToken);
+            }
+
+            if (ClientConfig.ClientName != null)
+            {
+                await SetClientNameAsync(cancellationToken);
+            }
+
+            IsConnected = true;
+        }
+        finally
+        {
+            _connectSemaphoreSlim.Release();
+        }
+    }
+
+    private void OptimiseSocket()
+    {
+        if (_socket!.AddressFamily == AddressFamily.Unix)
+        {
+            return;
+        }
+
+        try
+        {
+            _socket.NoDelay = true;
+        }
+        catch
+        {
+            // If we can't set this, just continue - There's nothing we can do!
+        }
+    }
+        
+    private readonly Timer? _connectionChecker;
+    private bool _disposed;
+
+    private static RedisPipeOptions GetPipeOptions()
+    {
+        const int defaultMinimumSegmentSize = 4 * 16;
+
+        const long sendPauseWriterThreshold = 512 * 1024;
+        const long sendResumeWriterThreshold = sendPauseWriterThreshold / 2;
+
+        const long receivePauseWriterThreshold = 1024 * 1024 * 1024;
+        const long receiveResumeWriterThreshold = receivePauseWriterThreshold / 2;
+
+        var scheduler = PipeScheduler.ThreadPool;
+        var defaultPipeOptions = PipeOptions.Default;
+
+        var receivePipeOptions = new PipeOptions(
+            defaultPipeOptions.Pool,
+            scheduler,
+            scheduler,
+            receivePauseWriterThreshold,
+            receiveResumeWriterThreshold,
+            defaultMinimumSegmentSize,
+            false);
+
+        var sendPipeOptions = new PipeOptions(
+            defaultPipeOptions.Pool,
+            scheduler,
+            scheduler,
+            sendPauseWriterThreshold,
+            sendResumeWriterThreshold,
+            defaultMinimumSegmentSize,
+            false);
+
+        return new RedisPipeOptions
+        {
+            SendOptions = sendPipeOptions,
+            ReceiveOptions = receivePipeOptions
+        };
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        DisposeNetwork();
+        _connectSemaphoreSlim?.Dispose();
+        _sendAndReceiveSemaphoreSlim?.Dispose();
+        _backlog?.Dispose();
+        _connectionChecker?.Dispose();
+    }
+
+    private void DisposeNetwork()
+    {
+        IsConnected = false;
+        _pipeReader?.CompleteAsync();
+        _pipeWriter?.CompleteAsync();
+        _socket?.Close();
+        _socket?.Dispose();
+        _sslStream?.Dispose();
     }
 }
