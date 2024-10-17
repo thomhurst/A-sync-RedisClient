@@ -25,7 +25,7 @@ jobs:
 
       - name: Run Benchmark
         run: sudo -E dotnet run -c Release --framework net9.0 --filter '*' --join
-        working-directory: "/Benchmark"
+        working-directory: "Benchmark"
 
       - name: Upload Markdown
         uses: actions/upload-artifact@v4
