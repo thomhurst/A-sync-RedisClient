@@ -5,6 +5,7 @@ using Testcontainers.Redis;
 namespace Benchmark;
 
 [SimpleJob(RuntimeMoniker.Net90)]
+[MemoryDiagnoser]
 public class BenchmarkBase
 {
     protected RedisContainer RedisContainer { get; private set; } = null!;
