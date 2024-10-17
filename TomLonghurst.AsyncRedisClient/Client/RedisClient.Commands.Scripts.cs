@@ -31,10 +31,8 @@ public partial class RedisClient : IDisposable
         public async Task<LuaScript> LoadScript(string script, CancellationToken cancellationToken)
         {
             var command = RedisCommand.From(Commands.Script, Commands.Load, script);
-            var scriptResponse = await _redisClient.RunWithTimeout(async token =>
-            {
-                return await _redisClient.SendOrQueueAsync(command, _redisClient.DataResultProcessor, token);
-            }, cancellationToken);
+            
+            var scriptResponse = await _redisClient.SendOrQueueAsync(command, _redisClient.DataResultProcessor, cancellationToken);
                 
             return new LuaScript(_redisClient, scriptResponse);
         }

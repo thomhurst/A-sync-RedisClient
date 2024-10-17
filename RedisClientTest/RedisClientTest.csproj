@@ -4,6 +4,8 @@
     <TargetFramework>net8.0</TargetFramework>
 
     <IsPackable>false</IsPackable>
+
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

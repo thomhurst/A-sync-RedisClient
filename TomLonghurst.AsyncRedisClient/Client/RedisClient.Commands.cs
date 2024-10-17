@@ -95,27 +95,16 @@ public partial class RedisClient : IDisposable
 
     public ValueTask StringSetAsync(string key, string value, int timeToLiveInSeconds)
     {
-        return StringSetAsync(new RedisKeyValue(key, value), timeToLiveInSeconds);
+        return StringSetAsync(key, value, timeToLiveInSeconds, CancellationToken.None);
     }
 
-    private ValueTask StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds)
-    {
-        return StringSetAsync(redisKeyValue, timeToLiveInSeconds, CancellationToken.None);
-    }
-
-    public ValueTask StringSetAsync(string key, string value, int timeToLiveInSeconds,
-        CancellationToken cancellationToken)
-    {
-        return StringSetAsync(new RedisKeyValue(key, value), cancellationToken);
-    }
-        
-    private async ValueTask StringSetAsync(RedisKeyValue redisKeyValue, int timeToLiveInSeconds,
+    public async ValueTask StringSetAsync(string key, string value, int timeToLiveInSeconds,
         CancellationToken cancellationToken)
     {
         await RunWithTimeout(async token =>
         {
-            var command = RedisCommand.From(Commands.SetEx, redisKeyValue.Key,
-                timeToLiveInSeconds, redisKeyValue.Value);
+            var command = RedisCommand.From(Commands.SetEx, key,
+                timeToLiveInSeconds, value);
                
             await SendOrQueueAsync(command, SuccessResultProcessor, token);
         }, cancellationToken);
@@ -123,27 +112,13 @@ public partial class RedisClient : IDisposable
 
     public ValueTask StringSetAsync(string key, string value)
     {
-        return StringSetAsync(new RedisKeyValue(key, value));
-    }
-        
-    private ValueTask StringSetAsync(RedisKeyValue redisKeyValue)
-    {
-        return StringSetAsync(redisKeyValue, CancellationToken.None);
+        return StringSetAsync(key, value, CancellationToken.None);
     }
 
-    public ValueTask StringSetAsync(string key, string value, CancellationToken cancellationToken)
+    public async ValueTask StringSetAsync(string key, string value, CancellationToken cancellationToken)
     {
-        return StringSetAsync(new RedisKeyValue(key, value), cancellationToken);
-    }
-        
-    private async ValueTask StringSetAsync(RedisKeyValue redisKeyValue,
-        CancellationToken cancellationToken)
-    {
-        await RunWithTimeout(async token =>
-        {
-            var command = RedisCommand.From(Commands.Set, redisKeyValue.Key, redisKeyValue.Value);
-            await SendOrQueueAsync(command, SuccessResultProcessor, token);
-        }, cancellationToken);
+        var command = RedisCommand.From(Commands.Set, key, value);
+        await SendOrQueueAsync(command, SuccessResultProcessor, cancellationToken);
     }
 
     public ValueTask StringSetAsync(IEnumerable<RedisKeyValue> keyValuePairs)

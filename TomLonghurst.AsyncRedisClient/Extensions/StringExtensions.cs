@@ -85,23 +85,6 @@ internal static class StringExtensions
     {
         return value.Split([delimiter], StringSplitOptions.RemoveEmptyEntries);
     }
-
-    internal static RedisCommand ToFireAndForgetCommand(this IEnumerable<RedisCommand> commands)
-    {
-        var enumerable = commands.ToList();
-        if (enumerable.Count > 1)
-        {
-            return RedisCommand.From(
-                "CLIENT REPLY OFF",
-
-                enumerable.SelectMany(x => x.EncodedBytes).ToArray(),
-
-                "CLIENT REPLY ON"
-            );
-        }
-
-        return enumerable.First();
-    }
         
     // internal static IRedisCommand ToPipelinedCommand(this IEnumerable<IRedisCommand> commands)
     // {

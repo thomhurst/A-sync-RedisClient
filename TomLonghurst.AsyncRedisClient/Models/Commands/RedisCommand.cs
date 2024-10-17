@@ -2,7 +2,7 @@ using System.Text;
 
 namespace TomLonghurst.AsyncRedisClient.Models.Commands;
 
-public readonly struct RedisCommand
+public readonly ref struct RedisCommand
 {
     public byte[] EncodedBytes { get; }
 
